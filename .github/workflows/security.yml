@@ -3,7 +3,7 @@ name: Security
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: ["claude/optimize-all-platform-i3j5id"
   schedule:
     - cron: "17 5 * * 1" # weekly, Monday 05:17 UTC: catch newly published advisories
   workflow_dispatch:

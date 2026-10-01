@@ -168,13 +168,23 @@ test.describe('agency website', () => {
     await expect(page.getByRole('contentinfo').getByText(/Optimize All Creators is run by Optimize All, a marketing agency/)).toBeVisible();
   });
 
-  test('/academy redirects to /learn and /faq to /creators/faq; the academy has its own header and footer', async ({ page }) => {
+  test('/academy redirects to /learn and /faq to /creators/faq; the academy has its own header and footer', async ({ page, isMobile }) => {
     await mockWebsite(page);
     await page.goto('/academy#certificates');
     await expect(page).toHaveURL(/\/learn#certificates$/);
     const header = page.getByRole('banner');
     await expect(header.getByRole('link', { name: 'Optimize All Academy home' })).toBeVisible();
-    await expect(header.getByRole('link', { name: 'Start learning free' }).first()).toHaveAttribute('href', '/learn');
+    if (isMobile) {
+      // The header call to action collapses into the mobile sheet on narrow screens.
+      await header.getByRole('button', { name: 'Open menu' }).click();
+      const drawer = page.getByRole('navigation', { name: 'Mobile' });
+      await expect(drawer.getByRole('link', { name: 'Start learning free' })).toHaveAttribute('href', '/learn');
+      await page.keyboard.press('Escape');
+      await expect(drawer).toBeHidden();
+    } else {
+      await expect(header.getByRole('link', { name: 'Start learning free' })).toBeVisible();
+      await expect(header.getByRole('link', { name: 'Start learning free' })).toHaveAttribute('href', '/learn');
+    }
     await expect(page.getByRole('contentinfo').getByText(/Optimize All Academy is run by Optimize All, a marketing agency/)).toBeVisible();
     await expect(page.getByRole('contentinfo').getByRole('link', { name: /Work with us/ })).toHaveAttribute('href', '/services');
 

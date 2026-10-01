@@ -63,13 +63,16 @@ test.describe('auth', () => {
     await page.getByLabel('Password', { exact: true }).fill('Correct-Horse-42');
     await page.getByLabel('Display name').fill('Grace Hopper');
     await page.getByLabel('Country').selectOption('GB');
-    await page.getByRole('checkbox', { name: /accept the participant rules/i }).check();
+    // The generic /register page asks for the terms and privacy policy (the participant rules are creator-only).
+    await expect(page.getByRole('checkbox', { name: /participant rules/i })).toHaveCount(0);
+    await page.getByRole('checkbox', { name: /accept the terms and privacy policy/i }).check();
     await page.getByRole('button', { name: 'Create account' }).click();
 
     await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible();
     await expect(page.getByText('grace@example.com')).toBeVisible();
     const body = calls.find((c) => c.path === '/auth/register')?.body as Record<string, unknown>;
     expect(body).toMatchObject({ email: 'grace@example.com', countryCode: 'GB', acceptTerms: true });
+    expect(body.audience).toBeUndefined();
   });
 
   test('login shows the server error message', async ({ page }) => {

@@ -70,6 +70,19 @@ class Config:
     youtube_privacy: str = "unlisted"
     youtube_category_id: str = "27"  # Education
     youtube_language: str = "en"
+    # Narration engine: "elevenlabs" (MCP flow or REST API) or "chatterbox" (Chatterbox Multilingual, local model).
+    tts_engine: str = field(default_factory=lambda: os.environ.get("LECTURE_STUDIO_TTS_ENGINE", "elevenlabs"))
+    chatterbox_model: str = "v3"
+    chatterbox_language: str = "en"
+    chatterbox_device: str = "auto"  # auto = cuda, then mps, then cpu
+    chatterbox_exaggeration: float = 0.5
+    chatterbox_cfg_weight: float = 0.5
+    chatterbox_temperature: float = 0.8
+    chatterbox_chunk_chars: int = 280
+    chatterbox_pause_seconds: float = 0.2
+    # Reference recording per course category (a clean 10-30 s WAV of a voice you have the rights to). Categories
+    # without one use the model's built-in default voice.
+    chatterbox_voices: dict = field(default_factory=dict)
 
     @property
     def cache_dir(self) -> Path:
@@ -81,6 +94,27 @@ class Config:
 
     def voice_for(self, category: str | None) -> str:
         return self.voices.get((category or "").lower(), self.fallback_voice)
+
+    def chatterbox_settings(self):
+        from .chatterbox_tts import Settings
+
+        return Settings(model=self.chatterbox_model, language=self.chatterbox_language, device=self.chatterbox_device,
+                        exaggeration=float(self.chatterbox_exaggeration), cfg_weight=float(self.chatterbox_cfg_weight),
+                        temperature=float(self.chatterbox_temperature), chunk_chars=int(self.chatterbox_chunk_chars),
+                        pause_seconds=float(self.chatterbox_pause_seconds))
+
+    def chatterbox_voice(self, category: str | None) -> dict:
+        """{id, name, ref} for a category: the id hashes the reference recording, so a new recording never reuses audio
+        cached for the old one."""
+        from .chatterbox_tts import file_sha
+
+        ref = self.chatterbox_voices.get((category or "").lower()) or self.chatterbox_voices.get("*")
+        if not ref:
+            return {"id": "chatterbox:default", "name": "Chatterbox default voice", "ref": None}
+        path = Path(ref)
+        if not path.is_file():
+            raise FileNotFoundError(f"Chatterbox reference voice not found: {path}")
+        return {"id": f"chatterbox:{file_sha(path)[:16]}", "name": path.stem, "ref": str(path)}
 
     def lesson_url(self, course: str, lesson: str) -> str:
         return f"{self.site_base_url.rstrip('/')}/learn/{course}/{lesson}"
@@ -98,9 +132,15 @@ class Config:
                     raise ValueError(f"unknown config key {key!r} in {p}")
                 if key in ("catalog_dir", "work_dir", "node_modules"):
                     value = (p.parent / value).resolve() if not os.path.isabs(value) else Path(value)
+                if key == "chatterbox_voices":
+                    value = {k.lower(): str((p.parent / v).resolve()) if not os.path.isabs(v) else v for k, v in value.items()}
                 setattr(cfg, key, value)
         if os.environ.get("LECTURE_STUDIO_SITE"):
             cfg.site_base_url = os.environ["LECTURE_STUDIO_SITE"]
+        if os.environ.get("LECTURE_STUDIO_TTS_ENGINE"):
+            cfg.tts_engine = os.environ["LECTURE_STUDIO_TTS_ENGINE"]
+        if cfg.tts_engine not in ("elevenlabs", "chatterbox"):
+            raise ValueError(f"tts_engine must be 'elevenlabs' or 'chatterbox', not {cfg.tts_engine!r}")
         if os.environ.get("LECTURE_STUDIO_WORK"):
             cfg.work_dir = Path(os.environ["LECTURE_STUDIO_WORK"])
         return cfg

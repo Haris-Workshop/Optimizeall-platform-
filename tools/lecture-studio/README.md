@@ -32,6 +32,7 @@ building with a fake HTTP layer, narration cache/ingest — no network, no credi
 | `python3 -m studio plan <course>/<lesson> --summary` | Deterministic render plan: template per scene, chapter titles, TTS text (pronunciations applied), cache keys. |
 | `python3 -m studio render <key> --preview` | **Free design preview**: review stills from estimated timings, before any TTS spend. |
 | `python3 -m studio narrate requests <key>` | JSON list of scenes that still need audio (text to send, voice, model, character count). |
+| `python3 -m studio narrate chatterbox <key>` | Narrates every uncached scene locally with Chatterbox Multilingual v3 (needs `tts_engine: "chatterbox"`; see below). |
 | `python3 -m studio narrate ingest <key> --scene s03 --url <signed url> --credits 482.95` | Downloads one generated clip (only `https://storage.googleapis.com`) into the cache. `ingest-batch --file f.json` does many. |
 | `python3 -m studio narrate api <key>` | Unattended alternative: ElevenLabs REST (`ELEVENLABS_API_KEY`), with character timestamps. |
 | `python3 -m studio narrate collect <key>` / `ledger` | Durations + credits per lecture / totals across the cache. |
@@ -93,6 +94,63 @@ are reported as `needs-narration` instead of spending anything.
   JetBrains Mono, the two-ring logo reproduced from `frontend/src/components/brand/Logo.tsx`.
 * Captions: sidecar WebVTT (≤ 84 chars per cue, two balanced lines), timed from the same sentence timings.
   `--burn-captions` draws them into the picture instead (off by default: YouTube shows the sidecar track).
+
+## Narration with Chatterbox Multilingual v3 (local, no per-character cost)
+
+[Chatterbox Multilingual v3](https://huggingface.co/ResembleAI/chatterbox) (Resemble AI, MIT licence, released June
+2026) is a 0.5B open-source TTS model with zero-shot voice cloning in 23 languages. The studio can use it instead of
+ElevenLabs. Narration is then free per character, and every clip carries Resemble's built-in PerTh watermark.
+
+**Setup** (once, on the machine that renders; a CUDA GPU is strongly recommended, because CPU is far slower than real time):
+
+```bash
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu124   # match your CUDA; see pytorch.org
+pip install -r requirements-chatterbox.txt
+export HF_HOME=/big/disk/hf        # the v3 weights (~3.3 GB) download here on first use
+```
+
+**Configure** `studio.config.json`:
+
+```json
+{
+  "tts_engine": "chatterbox",
+  "chatterbox_model": "v3",
+  "chatterbox_voices": { "ai": "voices/tech-narrator.wav", "marketing": "voices/marketing-narrator.wav",
+                         "sales": "voices/business-narrator.wav", "*": "voices/tech-narrator.wav" }
+}
+```
+
+You can also set the engine with `--engine chatterbox` or `LECTURE_STUDIO_TTS_ENGINE=chatterbox`.
+
+**Reference voices:**
+- Each reference voice is a clean 10–30 s mono WAV of one speaker, with no music.
+- Only use a voice you have the rights to: your own, a contracted voice actor, or a licensed stock voice.
+- Do not clone a person without consent.
+- Do not use another TTS vendor's voices as references unless its terms allow it.
+- A category without a recording uses the model's built-in default voice.
+
+**Tuning** (defaults follow the model card):
+- `chatterbox_exaggeration` is 0.5.
+- `chatterbox_cfg_weight` is 0.5. Lower it to about 0.3 for a fast reference speaker.
+- `chatterbox_chunk_chars` is 280.
+- `chatterbox_pause_seconds` is 0.2.
+
+**Run:**
+- `python3 -m studio narrate chatterbox <course>/<lesson>` narrates one lecture.
+- `--dry-run` lists the scenes and chunks without loading the model.
+- `python3 -m studio run --all-v2 --stream` loads the model once for the whole batch.
+
+**How it works:**
+- One generation is capped at about 40 s of speech, so each scene is split into sentence chunks of at most 280 characters.
+- Each chunk is generated with a seed derived from the cache key, so reruns are reproducible.
+- Chunks are joined with a 0.2 s pause and stored as one WAV in the same content-addressed cache.
+- A chunk whose length is implausible for its words (a hallucinated continuation or a cut-off) is regenerated once with another seed; if it is still implausible, the scene fails rather than caching bad audio.
+- Cache keys include the engine, model, settings and a hash of the reference recording. Changing any of them re-narrates, and ElevenLabs audio is never mixed in.
+- If the settings or the recording change between `plan` and `narrate`, the studio refuses to run and asks you to plan again.
+- YouTube descriptions name the engine ("Narration uses an AI voice (Chatterbox by Resemble AI)").
+
+**Quality:** listen to the first lecture of each voice before batch runs. Chatterbox does not return character timings, so
+sentence timing falls back to silence detection, the same as the ElevenLabs MCP flow.
 
 ## Costs and throughput (measured in the pilot, 2026-09-25)
 

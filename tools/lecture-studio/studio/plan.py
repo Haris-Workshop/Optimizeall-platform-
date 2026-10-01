@@ -196,7 +196,14 @@ def choose_template(scene: dict, parsed: dict, index: int, count: int, blocks: l
 
 def build_plan(ref: LectureRef, cfg: Config) -> dict:
     pack, lesson, lecture = ref.pack, ref.lesson, ref.lecture
-    voice = cfg.voice_for(pack.get("category"))
+    if cfg.tts_engine == "chatterbox":
+        voice_info = cfg.chatterbox_voice(pack.get("category"))
+        model = cfg.chatterbox_settings().signature()
+    else:
+        vid = cfg.voice_for(pack.get("category"))
+        voice_info = {"id": vid, "name": VOICE_NAMES.get(vid, vid)}
+        model = cfg.model_id
+    voice = voice_info["id"]
     pron = lecture.get("pronunciations") or []
     blocks = extract_code_blocks(lesson.get("body", ""))
     scenes_in = lecture["scenes"]
@@ -222,7 +229,7 @@ def build_plan(ref: LectureRef, cfg: Config) -> dict:
                 "narration": s["narration"],
                 "tts": tts,
                 "sentences": split_sentences(s["narration"]),
-                "ttsKey": tts_cache_key(voice, cfg.model_id, tts),
+                "ttsKey": tts_cache_key(voice, model, tts),
                 "targetSeconds": s.get("seconds"),
             }
         )
@@ -240,8 +247,9 @@ def build_plan(ref: LectureRef, cfg: Config) -> dict:
         "module": {"index": ref.module_index + 1, "title": ref.module.get("title", "")},
         "lesson": {"slug": ref.lesson_slug, "title": lesson.get("title", ref.lesson_slug), "number": lesson_number},
         "lectureTitle": ref.title,
-        "voice": {"id": voice, "name": VOICE_NAMES.get(voice, voice)},
-        "model": cfg.model_id,
+        "engine": cfg.tts_engine,
+        "voice": voice_info,
+        "model": model,
         "lessonUrl": cfg.lesson_url(pack["slug"], ref.lesson_slug),
         "ttsCharacters": sum(len(sc["tts"]) for sc in scenes),
         "scenes": scenes,

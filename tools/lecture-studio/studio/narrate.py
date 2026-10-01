@@ -8,6 +8,8 @@ Two backends produce the same cache entries (cache/tts/<sha256(voice+model+text)
   ``narrate requests`` prints exactly which scenes still need audio and the text to send.
 * ``api``: unattended batch mode against the ElevenLabs REST API with ELEVENLABS_API_KEY from the
   environment (``/v1/text-to-speech/{voice}/with-timestamps``), which also returns character timings.
+* ``chatterbox``: Chatterbox Multilingual (v3 by default) running locally (see chatterbox_tts.py); no credits, no
+  network after the one-time weight download. Needs a plan built with ``tts_engine = "chatterbox"``.
 """
 from __future__ import annotations
 
@@ -57,6 +59,8 @@ def status(cfg: Config, plan: dict) -> list[dict]:
 
 def requests_for_agent(cfg: Config, plan: dict) -> dict:
     """What the agent must send to creative_generate_speech (only uncached scenes)."""
+    if plan.get("engine", "elevenlabs") != "elevenlabs":
+        raise NarrationError(f"{plan['key']} is planned for {plan['engine']}: use `narrate chatterbox`")
     missing = [r for r in status(cfg, plan) if not r["cached"]]
     return {
         "lecture": plan["key"],
@@ -146,6 +150,8 @@ def ingest(cfg: Config, plan: dict, scene_id: str, url: str, *, credits: float |
 
 def synthesize_api(cfg: Config, plan: dict, *, api_key: str | None = None, http_post=None, dry_run: bool = False) -> list[dict]:
     """Unattended backend: ElevenLabs REST with timestamps. One request per uncached scene, never retried blindly."""
+    if plan.get("engine", "elevenlabs") != "elevenlabs":
+        raise NarrationError(f"{plan['key']} is planned for {plan['engine']}: use `narrate chatterbox`")
     api_key = api_key or os.environ.get("ELEVENLABS_API_KEY")
     todo = [s for s in plan["scenes"] if cache_paths(cfg, s["ttsKey"])[0] is None]
     if dry_run:
@@ -181,6 +187,54 @@ def synthesize_api(cfg: Config, plan: dict, *, api_key: str | None = None, http_
         }
         _store(cfg, s["ttsKey"], audio, "mp3", meta)
         out.append({"scene": s["id"], "chars": len(s["tts"]), "credits": meta["credits"]})
+    return out
+
+
+def synthesize_chatterbox(cfg: Config, plan: dict, *, synth=None, dry_run: bool = False, log=print) -> list[dict]:
+    """Local backend: Chatterbox Multilingual, one WAV per uncached scene (chunked, seeded, length-checked)."""
+    from . import chatterbox_tts as cb
+
+    if plan.get("engine") != "chatterbox":
+        raise NarrationError(f"{plan['key']} was planned for {plan.get('engine') or 'elevenlabs'}; "
+                             "set tts_engine to 'chatterbox' (or LECTURE_STUDIO_TTS_ENGINE=chatterbox) and plan again")
+    todo = [s for s in plan["scenes"] if cache_paths(cfg, s["ttsKey"])[0] is None]
+    if dry_run:
+        return [{"scene": s["id"], "chars": len(s["tts"]), "chunks": len(cb.split_for_tts(s["tts"], cfg.chatterbox_chunk_chars)),
+                 "dryRun": True} for s in todo]
+    if not todo:
+        return []
+    settings = cfg.chatterbox_settings()
+    if settings.signature() != plan["model"]:
+        raise NarrationError(f"{plan['key']}: the Chatterbox settings changed since the plan was built; plan again")
+    ref = plan["voice"].get("ref")
+    voice_ref = Path(ref) if ref else None
+    if voice_ref is not None and cb.file_sha(voice_ref)[:16] != plan["voice"]["id"].split(":", 1)[1]:
+        raise NarrationError(f"{plan['key']}: the reference recording {voice_ref} changed since the plan was built; plan again")
+    if synth is None:
+        synth = cb.ChatterboxSynthesizer(settings, log=log)
+    out = []
+    for s in todo:
+        started = time.monotonic()
+        try:
+            audio, info = cb.synthesize_scene(synth, s["tts"], key=s["ttsKey"], voice_ref=voice_ref, settings=settings, log=log)
+        except cb.ChatterboxError as exc:
+            raise NarrationError(f"{plan['key']} {s['id']}: {exc}") from exc
+        meta = {
+            "key": s["ttsKey"],
+            "voice": plan["voice"]["id"],
+            "voiceName": plan["voice"]["name"],
+            "model": plan["model"],
+            "chars": len(s["tts"]),
+            "text": s["tts"],
+            "backend": "chatterbox",
+            "credits": 0.0,
+            "chunks": info["chunks"],
+            "renderSeconds": round(time.monotonic() - started, 2),
+            "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+        _store(cfg, s["ttsKey"], audio, "wav", meta)
+        log(f"{s['id']}: {meta['seconds']:.1f}s of audio in {meta['renderSeconds']:.1f}s ({len(info['chunks'])} chunks)")
+        out.append({"scene": s["id"], "chars": len(s["tts"]), "seconds": meta["seconds"]})
     return out
 
 

@@ -20,6 +20,8 @@ def _cfg(args) -> Config:
         cfg.work_dir = Path(args.work)
     if getattr(args, "site", None):
         cfg.site_base_url = args.site
+    if getattr(args, "engine", None):
+        cfg.tts_engine = args.engine
     return cfg
 
 
@@ -78,6 +80,8 @@ def cmd_narrate(args):
             print(f"{sid}: {'cached' if res['cached'] else 'downloaded'} {res.get('seconds', '')}")
     elif args.action == "api":
         _print(narrate.synthesize_api(cfg, plan, dry_run=args.dry_run))
+    elif args.action == "chatterbox":
+        _print(narrate.synthesize_chatterbox(cfg, plan, dry_run=args.dry_run))
     elif args.action == "collect":
         res = narrate.collect(cfg, plan, ldir)
         _print({k: v for k, v in res.items() if k != "scenes"})
@@ -123,6 +127,8 @@ def main(argv=None):
     p.add_argument("--catalog", help="course pack directory (default: repo catalog or $LECTURE_STUDIO_CATALOG)")
     p.add_argument("--work", help="work/cache directory (default: tools/lecture-studio/.work or $LECTURE_STUDIO_WORK)")
     p.add_argument("--site", help="public site base URL used for lesson links")
+    p.add_argument("--engine", choices=["elevenlabs", "chatterbox"],
+                   help="narration engine (default: config tts_engine or $LECTURE_STUDIO_TTS_ENGINE, else elevenlabs)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sp = sub.add_parser("plan", help="build the render plan for course/lesson")
@@ -130,8 +136,8 @@ def main(argv=None):
     sp.add_argument("--summary", action="store_true")
     sp.set_defaults(fn=cmd_plan)
 
-    sp = sub.add_parser("narrate", help="narration audio: requests|status|ingest|api|collect|ledger")
-    sp.add_argument("action", choices=["requests", "status", "ingest", "ingest-batch", "api", "collect", "ledger"])
+    sp = sub.add_parser("narrate", help="narration audio: requests|status|ingest|api|chatterbox|collect|ledger")
+    sp.add_argument("action", choices=["requests", "status", "ingest", "ingest-batch", "api", "chatterbox", "collect", "ledger"])
     sp.add_argument("lecture", nargs="?")
     sp.add_argument("--scene")
     sp.add_argument("--url")

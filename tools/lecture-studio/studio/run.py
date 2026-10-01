@@ -55,6 +55,7 @@ def run_batch(cfg: Config, args, lectures: list[str]) -> dict:
     summary = {"lectures": len(keys), "done": 0, "skipped": 0, "failed": 0, "needNarration": [], "credits": 0.0,
                "missingCharacters": 0}
     lectures_root = cfg.work_dir / "lectures"
+    synth = None
     for key in keys:
         st = state.setdefault(key, {})
         try:
@@ -73,17 +74,25 @@ def run_batch(cfg: Config, args, lectures: list[str]) -> dict:
             if st.get("fingerprint") != fingerprint:
                 st.clear()
                 st["fingerprint"] = fingerprint
-            req = narrate.requests_for_agent(cfg, plan)
-            if req["missing"]:
-                summary["missingCharacters"] += req["missingCharacters"]
+            missing = [r for r in narrate.status(cfg, plan) if not r["cached"]]
+            if missing:
+                missing_chars = sum(r["chars"] for r in missing)
+                summary["missingCharacters"] += missing_chars
                 if args.dry_run:
-                    log(cfg, {"event": "would-narrate", "key": key, "detail": f"{req['missingCharacters']} chars ≈ credits"})
+                    unit = "chars of local Chatterbox audio" if plan.get("engine") == "chatterbox" else "chars ≈ credits"
+                    log(cfg, {"event": "would-narrate", "key": key, "detail": f"{missing_chars} {unit}"})
                     continue
-                if args.narrate_backend == "api":
+                if plan.get("engine") == "chatterbox":
+                    if synth is None:  # one model load for the whole batch
+                        from .chatterbox_tts import ChatterboxSynthesizer
+
+                        synth = ChatterboxSynthesizer(cfg.chatterbox_settings())
+                    narrate.synthesize_chatterbox(cfg, plan, synth=synth)
+                elif args.narrate_backend == "api":
                     narrate.synthesize_api(cfg, plan)
                 else:
                     summary["needNarration"].append(key)
-                    log(cfg, {"event": "needs-narration", "key": key, "detail": f"{len(req['missing'])} scenes"})
+                    log(cfg, {"event": "needs-narration", "key": key, "detail": f"{len(missing)} scenes"})
                     continue
             if args.dry_run:
                 log(cfg, {"event": "would-render", "key": key})

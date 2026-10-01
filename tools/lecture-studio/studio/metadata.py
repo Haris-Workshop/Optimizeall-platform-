@@ -10,6 +10,9 @@ DESC_MAX = 5000
 TAGS_MAX_CHARS = 480  # YouTube allows 500 incl. separators; keep margin
 
 
+VOICE_ENGINES = {"elevenlabs": "ElevenLabs", "chatterbox": "Chatterbox by Resemble AI"}
+
+
 def fmt_chapter(seconds: float) -> str:
     s = int(seconds)
     h, rem = divmod(s, 3600)
@@ -87,7 +90,8 @@ def build(cfg: Config, plan: dict, timeline: dict, pack: dict, *, credits: float
             *ch_lines,
             "",
             f"Module {plan['module']['index']}: {plan['module']['title']} · Lesson {plan['lesson']['number']}",
-            "Narration uses an AI voice (ElevenLabs); script written and reviewed by Optimize All Academy.",
+            f"Narration uses an AI voice ({VOICE_ENGINES.get(plan.get('engine') or 'elevenlabs', 'AI')}); "
+            "script written and reviewed by Optimize All Academy.",
             "",
             "#OptimizeAll #OnlineLearning",
         ]

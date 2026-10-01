@@ -1,0 +1,5 @@
+# Optional: the local Chatterbox Multilingual narration engine (`narrate chatterbox`, tts_engine = "chatterbox").
+# Resemble AI's chatterbox-tts (MIT) pulls in torch/torchaudio; on a CUDA machine install the CUDA build of torch first
+# (https://pytorch.org/get-started/locally/), then this file. Weights (~3.3 GB for v3) download from Hugging Face
+# (ResembleAI/chatterbox) on first use into the HF cache; set HF_HOME to put them on a larger disk.
+chatterbox-tts==0.1.7

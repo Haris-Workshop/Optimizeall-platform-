@@ -47,7 +47,7 @@ public sealed class PartnerContentSeedTests(ApiFactory api) : IClassFixture<ApiF
         {
             Assert.Equal(BlogPostStatus.Published, p.Status);
             Assert.NotNull(p.PublishedAt);
-            Assert.True(p.PublishedAt <= now && p.PublishedAt >= now.AddDays(-31), p.Slug);
+            Assert.True(p.PublishedAt <= now && p.PublishedAt >= now.AddDays(-91), p.Slug);
             Assert.Equal(author.Id, p.AuthorId);
             Assert.NotEmpty(p.CategoryIds);
             Assert.All(p.CategoryIds, id => Assert.Contains(categories, c => c.Id == id));

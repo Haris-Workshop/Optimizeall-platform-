@@ -104,7 +104,7 @@ services:
         sync: false
       - key: YOUTUBE_REFRESH_TOKEN
         sync: false
-      # Public: the Optimize All channel (@optimizeall) is UC2fDn6VljqnoQQhvYCt6o0Q.
+      # Public: the Optimize All channel (@optimizeall) is UC2fDn6VljqnoQQhvYCt6oOQ.
       - key: YOUTUBE_CHANNEL_ID
         sync: false
       # Demo email: written to files and readable at /api/v1/dev/mailbox?to=<email>. Switch to Smtp for real email.

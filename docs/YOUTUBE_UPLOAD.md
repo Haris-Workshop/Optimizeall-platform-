@@ -1,7 +1,7 @@
 # Automatic YouTube upload of lecture videos
 
 Optional feature of the Learning module ([LEARNING.md](LEARNING.md)). An administrator uploads a lecture video once; the
-API queues it, uploads it to the Optimize All YouTube channel (@optimizeall, channel id `UC2fDn6VljqnoQQhvYCt6o0Q`),
+API queues it, uploads it to the Optimize All YouTube channel (@optimizeall, channel id `UC2fDn6VljqnoQQhvYCt6oOQ`),
 waits for YouTube to process it and links it into the lesson as a normal YouTube `src` (nocookie embed). Nothing else
 changes: lessons keep working with any YouTube URL entered by hand.
 
@@ -167,6 +167,7 @@ and the course's upload rows), `POST /courses/{course}/lessons/{lesson}/youtube`
 | Symptom | Cause / fix |
 |---|---|
 | API will not start, names missing `YOUTUBE_*` variables | partial configuration: set all four or clear all |
+| `channel_mismatch` on the very first upload | `YOUTUBE_CHANNEL_ID` was mistyped. YouTube channel ids mix the letter **O** and the digit **0** (and `l`/`I`/`1`), which are easy to confuse when copying. Copy the id from the `channels.list` response (admin YouTube status panel) instead of retyping it |
 | `invalid_grant` | refresh token revoked, expired (app still in *Testing*: 7 days), password changed with Gmail scopes, or the client was deleted. Set the app to **In production**, re-run the consent (section 1.4), replace `YOUTUBE_REFRESH_TOKEN`, restart, retry failed rows |
 | `quotaExceeded` / row waiting | daily quota used (about 6 uploads); it continues after the midnight Pacific reset |
 | Video is Private on YouTube and not shown in the lesson | unverified API project (section 5) |

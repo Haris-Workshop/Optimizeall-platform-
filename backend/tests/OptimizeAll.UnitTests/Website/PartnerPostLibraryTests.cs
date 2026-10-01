@@ -12,13 +12,26 @@ public sealed partial class PartnerPostLibraryTests
 {
     private static IReadOnlyList<PartnerPost> Posts => PartnerPostLibrary.All;
 
-    [Fact]
-    public void All_nineteen_posts_are_embedded_across_the_three_clusters()
+    /// <summary>The nineteen posts that shipped first must always remain (the seeder is insert-only, so they are live).</summary>
+    private static readonly string[] OriginalSlugs =
     {
-        Assert.Equal(19, Posts.Count);
-        Assert.Equal(8, Posts.Count(p => p.Cluster == "pci-ai"));
-        Assert.Equal(10, Posts.Count(p => p.Cluster == "certuvo"));
-        Assert.Equal(1, Posts.Count(p => p.Cluster == "cross"));
+        "what-is-project-controls", "earned-value-management-explained", "ai-in-project-controls",
+        "how-to-become-a-project-controls-professional", "dscr-vs-llcr-vs-plcr", "ppp-and-concession-structures-explained",
+        "agile-vs-hybrid-project-delivery-with-ai", "choosing-a-project-management-certification",
+        "spaced-repetition-and-active-recall-for-exams", "how-to-use-an-ai-study-coach", "how-to-pass-the-cpa-exam",
+        "cma-exam-study-plan", "cia-exam-preparation-guide", "cisa-exam-preparation-guide", "cfa-exam-study-strategies",
+        "pmp-exam-prep-pmbok-7", "nclex-ngn-question-types", "nclex-rn-vs-nclex-pn", "how-to-prepare-for-pci-ai-exams",
+    };
+
+    [Fact]
+    public void The_original_posts_remain_and_the_library_covers_the_three_clusters()
+    {
+        var slugs = Posts.Select(p => p.Slug).ToHashSet(StringComparer.Ordinal);
+        Assert.All(OriginalSlugs, s => Assert.Contains(s, slugs));
+        Assert.True(Posts.Count(p => p.Cluster == "pci-ai") >= 8);
+        Assert.True(Posts.Count(p => p.Cluster == "certuvo") >= 10);
+        Assert.NotEmpty(Posts.Where(p => p.Cluster == "cross"));
+        Assert.All(Posts, p => Assert.Contains(p.Cluster, new[] { "pci-ai", "certuvo", "cross" }));
     }
 
     [Fact]
@@ -53,7 +66,8 @@ public sealed partial class PartnerPostLibraryTests
             Assert.All(p.Categories, c => Assert.Contains(c, categorySlugs));
             Assert.InRange(p.Tags.Count, 1, 12);
             Assert.All(p.Tags, t => Assert.Matches("^[a-z0-9 -]{1,40}$", t));
-            Assert.InRange(p.PublishedDaysAgo, 1, 30);
+            Assert.InRange(p.PublishedDaysAgo, 1, 90);
+            Assert.Equal(Posts.Count, Posts.Select(x => x.PublishedDaysAgo).Distinct().Count()); // staggered: one post per day
         });
     }
 
@@ -120,9 +134,11 @@ public sealed partial class PartnerPostLibraryTests
     {
         Assert.All(Posts.Where(p => p.Cluster == "certuvo"), p => Assert.Contains("](/partners/certuvo)", p.Body));
         Assert.All(Posts.Where(p => p.Cluster == "pci-ai"), p => Assert.Contains("](/partners/pci-ai)", p.Body));
-        var cross = Assert.Single(Posts, p => p.Cluster == "cross");
-        Assert.Contains("](/partners/pci-ai)", cross.Body);
-        Assert.Contains("](/partners/certuvo)", cross.Body);
+        Assert.All(Posts.Where(p => p.Cluster == "cross"), cross =>
+        {
+            Assert.Contains("](/partners/pci-ai)", cross.Body);
+            Assert.Contains("](/partners/certuvo)", cross.Body);
+        });
     }
 
     [Fact]

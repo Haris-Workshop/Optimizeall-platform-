@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using OptimizeAll.Api.Common.Persistence;
 using OptimizeAll.Api.Modules.Learning.Admin;
+using OptimizeAll.Api.Common.Jobs;
 using OptimizeAll.Api.Modules.Learning.Certificates;
+using OptimizeAll.Api.Modules.Learning.YouTubeUploads;
+using Microsoft.Extensions.Options;
 using OptimizeAll.Api.Modules.Website.Public;
 using OptimizeAll.Domain.Learning;
 using OptimizeAll.Infrastructure.Persistence;
@@ -26,6 +29,17 @@ public static class LearningModule
         services.AddScoped<CertificateService>();
         services.AddScoped<LearningAdminService>();
         services.AddScoped<LearningMediaService>();
+
+        // Lecture uploads to YouTube. The credentials are read from the environment variables named in YouTubeOptions; a
+        // partial set fails startup (validated on start), none disables the feature.
+        services.AddOptions<YouTubeOptions>().Configure<IConfiguration>((o, cfg) => YouTubeOptions.Bind(o, cfg)).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<YouTubeOptions>, YouTubeOptionsValidator>();
+        services.AddHostedService<YouTubeStartupLogger>();
+        services.AddSingleton<IYouTubeGateway, GoogleYouTubeGateway>();
+        services.AddSingleton<YouTubeChannelGuard>();
+        services.AddScoped<YouTubeUploadIntake>();
+        services.AddScoped<YouTubeUploadService>();
+        services.AddRecurringJob<YouTubeUploadJob>(TimeSpan.FromMinutes(1));
         services.AddScoped<ISitemapContributor, LearningSitemapContributor>();
         services.AddScoped<LearningCatalogSeeder>();
         services.AddScoped<ISeeder>(sp => sp.GetRequiredService<LearningCatalogSeeder>());

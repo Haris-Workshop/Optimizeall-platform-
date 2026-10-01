@@ -8173,6 +8173,10 @@ namespace OptimizeAll.Infrastructure.Persistence.Migrations
                         .HasPrecision(6)
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("YouTubePlaylistId")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Slug")
@@ -8472,6 +8476,107 @@ namespace OptimizeAll.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("learning_lesson_progress", (string)null);
+                });
+
+            modelBuilder.Entity("OptimizeAll.Domain.Learning.LessonYouTubeUpload", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ActualPrivacy")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<Guid>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<DateTime?>("LeaseUntil")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("LessonSlug")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<DateTime?>("NextAttemptAt")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Notice")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<bool>("PlaylistItemAdded")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Privacy")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<bool>("PublishAfterReady")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<Guid?>("StoredFileId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("ThumbnailFileId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("UploadAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UploadedAt")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("YouTubeVideoId")
+                        .HasMaxLength(11)
+                        .HasColumnType("varchar(11)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId", "LessonSlug")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "NextAttemptAt");
+
+                    b.ToTable("lesson_youtube_uploads", (string)null);
                 });
 
             modelBuilder.Entity("OptimizeAll.Domain.Ledger.EarningEntry", b =>
@@ -17774,6 +17879,15 @@ namespace OptimizeAll.Infrastructure.Persistence.Migrations
                     b.HasOne("OptimizeAll.Domain.Learning.Enrolment", null)
                         .WithMany()
                         .HasForeignKey("EnrolmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OptimizeAll.Domain.Learning.LessonYouTubeUpload", b =>
+                {
+                    b.HasOne("OptimizeAll.Domain.Learning.Course", null)
+                        .WithMany()
+                        .HasForeignKey("CourseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

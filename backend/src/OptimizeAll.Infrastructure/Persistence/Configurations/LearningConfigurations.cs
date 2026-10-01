@@ -16,6 +16,7 @@ internal sealed class CourseConfiguration : IEntityTypeConfiguration<Course>
         b.Property(x => x.Subtitle).HasMaxLength(300).IsRequired();
         b.Property(x => x.BadgeName).HasMaxLength(120).IsRequired();
         b.Property(x => x.Skills).HasJsonList();
+        b.Property(x => x.YouTubePlaylistId).HasMaxLength(64);
         // Catalog: published courses by category, featured first.
         b.HasIndex(x => new { x.Status, x.Category, x.SortOrder });
     }
@@ -127,5 +128,24 @@ internal sealed class CertificateConfiguration : IEntityTypeConfiguration<Certif
         b.HasIndex(x => new { x.CourseId, x.IssuedAt });
         b.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Course>().WithMany().HasForeignKey(x => x.CourseId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class LessonYouTubeUploadConfiguration : IEntityTypeConfiguration<LessonYouTubeUpload>
+{
+    public void Configure(EntityTypeBuilder<LessonYouTubeUpload> b)
+    {
+        b.ToTable("lesson_youtube_uploads");
+        b.Property(x => x.LessonSlug).HasMaxLength(80).IsRequired();
+        b.Property(x => x.FileName).HasMaxLength(200).IsRequired();
+        b.Property(x => x.YouTubeVideoId).HasMaxLength(11);
+        b.Property(x => x.Error).HasMaxLength(1000);
+        b.Property(x => x.ErrorCode).HasMaxLength(40);
+        b.Property(x => x.Notice).HasMaxLength(1000);
+        // A lesson has at most one upload row: enqueueing is idempotent.
+        b.HasIndex(x => new { x.CourseId, x.LessonSlug }).IsUnique();
+        // The job scans for due Pending rows and unfinished ones.
+        b.HasIndex(x => new { x.Status, x.NextAttemptAt });
+        b.HasOne<Course>().WithMany().HasForeignKey(x => x.CourseId).OnDelete(DeleteBehavior.Cascade);
     }
 }

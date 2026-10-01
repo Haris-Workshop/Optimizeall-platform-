@@ -53,7 +53,8 @@ public sealed record CourseDetailDto(
     // Pack v2: review month ("2026-09"), hands-on tools, and total lecture minutes / lessons with a lecture.
     string? LastReviewed, IReadOnlyList<string> Tools, int LectureMinutes, int LectureCount);
 
-public sealed record LessonVideoDto(string? Src, string? Poster, string? Captions, string Transcript);
+/// <summary><see cref="Processing"/>: a lecture upload to YouTube is still in progress for this lesson (the page shows a placeholder).</summary>
+public sealed record LessonVideoDto(string? Src, string? Poster, string? Captions, string Transcript, bool Processing = false);
 
 /// <summary>
 /// One chapter of a lesson lecture (a scene): its title (first on-screen line), slide bullets, the narration (transcript) and
@@ -65,9 +66,11 @@ public sealed record LectureChapterDto(int Index, string Title, IReadOnlyList<st
 /// A lesson's video lecture (pack v2). <see cref="Produced"/> is false until the produced video is attached
 /// (<see cref="Src"/>): the page then shows "coming soon" with the chapters and the full transcript. Lectures are hosted on
 /// YouTube (<see cref="YouTubeId"/>, embedded privacy-enhanced via <see cref="EmbedUrl"/>) or self-hosted (MP4 src).
+/// <see cref="Processing"/> is true while the lecture is being uploaded to or processed by YouTube (no other upload data is public).
 /// </summary>
 public sealed record LessonLectureDto(string Title, int TargetMinutes, int TotalSeconds, bool Produced, string? Src, string? Poster,
-    string? Captions, IReadOnlyList<LectureChapterDto> Chapters, int TranscriptWords, string? YouTubeId, string? EmbedUrl, string? PublishedAt);
+    string? Captions, IReadOnlyList<LectureChapterDto> Chapters, int TranscriptWords, string? YouTubeId, string? EmbedUrl, string? PublishedAt,
+    bool Processing = false);
 
 /// <summary>A knowledge-check question. Not graded for the certificate, so the answer and explanation are included.</summary>
 public sealed record KnowledgeCheckDto(int Index, string Question, IReadOnlyList<string> Options, IReadOnlyList<int> Correct, string Explanation, bool Multiple);

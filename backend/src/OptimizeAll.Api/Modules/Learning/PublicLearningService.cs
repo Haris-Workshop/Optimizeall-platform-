@@ -186,10 +186,13 @@ public sealed partial class PublicLearningService(AppDbContext db, CourseContent
             LearningJsonLd.Breadcrumbs(links, ("Home", "/"), ("Academy", "/learn"), (doc.Pack.Title, LearningLinks.CoursePath(doc.Pack.Slug)), (lesson.Title, path)),
         };
         if (LearningJsonLd.Video(doc.Pack, lesson, excerpt, links, course) is { } video) jsonLd.Add(video);
+        // Only whether a YouTube upload is in flight is public (a placeholder instead of "coming soon"), nothing else about it.
+        var processing = await db.Set<LessonYouTubeUpload>().AsNoTracking().AnyAsync(u => u.CourseId == course.Id && u.LessonSlug == lessonSlug &&
+            u.Status != YouTubeUploadStatus.Ready && u.Status != YouTubeUploadStatus.Failed, ct);
         return new LessonDto(doc.Pack.Slug, doc.Pack.Title, doc.Pack.CategoryValue, r.Module.Slug, r.Module.Title, lesson.Slug, lesson.Title,
             lesson.TypeValue, lesson.DurationMinutes, lesson.Body,
             lesson.TypeValue == LessonType.Video && lesson.Video is not null
-                ? new LessonVideoDto(lesson.Video.Src, lesson.Video.Poster, lesson.Video.Captions, lesson.Video.Script)
+                ? new LessonVideoDto(lesson.Video.Src, lesson.Video.Poster, lesson.Video.Captions, lesson.Video.Script, processing)
                 : null,
             lesson.KeyTakeaways ?? new(),
             (lesson.KnowledgeCheck ?? new()).Select((q, i) => new KnowledgeCheckDto(i, q.Question, q.Options ?? new(), q.Correct ?? new(),
@@ -201,7 +204,7 @@ public sealed partial class PublicLearningService(AppDbContext db, CourseContent
             new LearningSeoDto(SeoTitle($"{lesson.Title} — {doc.Pack.Title}", lesson.Title), excerpt, path,
                 lesson.Lecture?.Poster is { } poster ? links.Absolute(poster)
                 : lesson.Lecture?.YouTubeId is { } yt ? YouTube.Thumbnail(yt) : links.BadgeImage(doc.Pack.Slug), false),
-            jsonLd, Lecture(lesson), doc.Pack.LastReviewed);
+            jsonLd, Lecture(lesson, processing), doc.Pack.LastReviewed);
     }
 
     /// <summary>A published lesson's produced lecture as a site video (server-rendered embed/player), or null.</summary>
@@ -214,7 +217,7 @@ public sealed partial class PublicLearningService(AppDbContext db, CourseContent
     }
 
     /// <summary>The lesson's lecture for the player: chapters from scenes (title = first on-screen line), planned times.</summary>
-    public static LessonLectureDto? Lecture(PackLesson lesson)
+    public static LessonLectureDto? Lecture(PackLesson lesson, bool processing = false)
     {
         if (lesson.Lecture is not { } lecture) return null;
         var chapters = new List<LectureChapterDto>();
@@ -233,7 +236,7 @@ public sealed partial class PublicLearningService(AppDbContext db, CourseContent
         var youTube = lecture.YouTubeId;
         return new LessonLectureDto(lecture.Title ?? lesson.Title, lecture.TargetMinutes, start, lecture.Src is not null, lecture.Src,
             lecture.Poster, lecture.Captions, chapters, lecture.NarrationWords, youTube, youTube is null ? null : YouTube.EmbedUrl(youTube),
-            lecture.PublishedAt);
+            lecture.PublishedAt, processing);
     }
 
     // ---------------------------------------------------------------- text helpers

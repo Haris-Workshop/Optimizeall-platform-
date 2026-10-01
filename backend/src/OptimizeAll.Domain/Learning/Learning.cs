@@ -132,6 +132,8 @@ public class Course : AuditedEntity, IConcurrencyStamped
     public int LessonCount { get; set; }
     public string BadgeName { get; set; } = string.Empty;
     public List<string> Skills { get; set; } = new();
+    /// <summary>The YouTube playlist that collects this course's lecture videos (created on the first upload), or null.</summary>
+    public string? YouTubePlaylistId { get; set; }
     public Guid ConcurrencyStamp { get; set; } = Guid.NewGuid();
 }
 

@@ -15,6 +15,10 @@ public interface IFileStorage
 {
     string NewKey(DateTime nowUtc, string extension);
     Task WriteAsync(string key, ReadOnlyMemory<byte> content, CancellationToken ct = default);
+
+    /// <summary>Streams <paramref name="content"/> into the blob without buffering it whole (large uploads). Deletes the partial blob if the copy fails.</summary>
+    Task WriteAsync(string key, Stream content, CancellationToken ct = default);
+
     Stream? OpenRead(string key);
     void Delete(string key);
 }
@@ -45,6 +49,22 @@ public sealed partial class LocalFileStorage : IFileStorage
         await stream.WriteAsync(content, ct);
     }
 
+    public async Task WriteAsync(string key, Stream content, CancellationToken ct = default)
+    {
+        var path = Resolve(key);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        try
+        {
+            await using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+            await content.CopyToAsync(stream, 81920, ct);
+        }
+        catch
+        {
+            try { File.Delete(path); } catch (IOException) { }
+            throw;
+        }
+    }
+
     public Stream? OpenRead(string key)
     {
         var path = Resolve(key);
@@ -70,9 +90,9 @@ public sealed partial class LocalFileStorage : IFileStorage
         return full;
     }
 
-    [GeneratedRegex(@"^\d{4}/\d{2}/[0-9a-f]{32}\.(png|jpg|webp|pdf|mp4|vtt)$")]
+    [GeneratedRegex(@"^\d{4}/\d{2}/[0-9a-f]{32}\.(png|jpg|webp|pdf|mp4|mov|webm|vtt)$")]
     private static partial Regex KeyRegex();
 
-    [GeneratedRegex(@"^\.(png|jpg|webp|pdf|mp4|vtt)$")]
+    [GeneratedRegex(@"^\.(png|jpg|webp|pdf|mp4|mov|webm|vtt)$")]
     private static partial Regex ExtensionRegex();
 }

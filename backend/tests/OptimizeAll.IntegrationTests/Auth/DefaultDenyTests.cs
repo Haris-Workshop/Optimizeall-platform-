@@ -89,6 +89,10 @@ public sealed class DefaultDenyTests(ApiFactory api) : IClassFixture<ApiFactory>
         "GET sitemaps/{name}.xml",
         "GET llms.txt",
         "GET llms-full.txt",
+        "GET llms/{name}.txt",
+        // Social share cards (1200×630 PNG per indexable page without its own image).
+        "GET og/{**path}",
+        "HEAD og/{**path}",
         "GET _markdown/{**path}",
         "GET .well-known/security.txt",
         "GET humans.txt",

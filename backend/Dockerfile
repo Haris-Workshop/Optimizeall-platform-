@@ -69,6 +69,11 @@ ENTRYPOINT ["/app/efbundle"]
 FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION}-alpine AS runtime
 WORKDIR /app
 
+# The IANA time zone database: Alpine ships without it, and without it TimeZoneInfo cannot resolve any zone, so
+# sign-up ("Use an IANA time zone such as Europe/London" for a valid Asia/Riyadh), payout schedules, campaign
+# deadlines and send-time features all fail. InvariantGlobalization only covers cultures, not time zones.
+RUN apk add --no-cache tzdata
+
 # Writable state lives under /app/storage (uploaded screenshots/files; dev email pickup; with SQLite the database in
 # db/). Data-protection keys are stored in the database, so nothing else needs to be persisted.
 RUN mkdir -p /app/storage/files /app/storage/mail /app/storage/db && chown -R $APP_UID:$APP_UID /app/storage

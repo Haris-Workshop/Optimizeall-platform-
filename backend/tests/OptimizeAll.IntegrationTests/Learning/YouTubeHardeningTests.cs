@@ -217,7 +217,7 @@ public sealed class YouTubeHardeningTests(YouTubeFixture fx) : IClassFixture<You
         foreach (var minutes in new[] { 1, 2, 5, 10, 10 })
         {
             var row = await fx.RowAsync(courseId, slug);
-            Assert.Equal(Now.AddMinutes(minutes), row.NextAttemptAt);
+            Assert.Equal(Now.AddMinutes(minutes), row.NextAttemptAt!.Value, TimeSpan.FromSeconds(1)); // MySQL keeps microseconds, .NET ticks
             fx.Api.Clock.Advance(TimeSpan.FromMinutes(minutes) - TimeSpan.FromSeconds(1));
             await fx.RunProcessingJobAsync();
             Assert.Equal(polls, Gateway.StatusCalls); // not due yet: YouTube is not asked

@@ -145,7 +145,8 @@ jobs:
     name: End-to-end (Playwright, Chromium)
     needs: [backend, frontend]
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # ~20 suites run one after another (a11y ~10 min, crawl ~12+ min) plus the browser install: 40 min no longer fits.
+    timeout-minutes: 90
     services:
       mysql:
         image: mysql:8.0

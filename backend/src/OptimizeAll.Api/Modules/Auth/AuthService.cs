@@ -110,6 +110,7 @@ public sealed class AuthService(
             LanguageCode = string.IsNullOrWhiteSpace(request.LanguageCode) ? "en" : request.LanguageCode.Trim().ToLowerInvariant(),
             TimeZone = timeZone,
             MarketingEmailOptIn = request.MarketingEmailOptIn,
+            Audience = RegistrationHints.Audience(request.Audience),
             ReferralCode = await GenerateReferralCodeAsync(ct),
             LastActiveAt = Now,
         };
@@ -136,7 +137,7 @@ public sealed class AuthService(
             return;
         }
 
-        await SendVerificationEmailAsync(user, raw, ct);
+        await SendVerificationEmailAsync(user, raw, ct, RegistrationHints.ReturnTo(request.ReturnTo));
         await events.PublishAsync(new UserRegistered(user.Id, request.ReferralCode?.Trim(), request.InviteCode?.Trim(),
             privacyHasher.Hash(currentUser.IpAddress), privacyHasher.Hash(request.DeviceId), Now), ct);
     }
@@ -499,7 +500,7 @@ public sealed class AuthService(
         var roles = user.Roles.Select(r => r.Role).ToArray();
         return new SessionUserDto(user.Id, user.Email, user.DisplayName, user.IsEmailVerified, user.CountryCode,
             user.LanguageCode, user.TimeZone, user.Status.ToString(), roles.Select(r => r.ToString()).ToArray(),
-            effectivePermissions.Distinct().OrderBy(p => p).ToArray(), CustomRoles: Array.Empty<string>());
+            effectivePermissions.Distinct().OrderBy(p => p).ToArray(), CustomRoles: Array.Empty<string>(), Audience: user.Audience);
     }
 
     private LoginResult IssueSession(User user, Guid familyId) => IssueSession(user, familyId, out _);
@@ -531,10 +532,10 @@ public sealed class AuthService(
         return record is null || record.UsedAt is not null || record.ExpiresAt <= Now ? null : record;
     }
 
-    private async Task SendVerificationEmailAsync(User user, string rawToken, CancellationToken ct)
+    private async Task SendVerificationEmailAsync(User user, string rawToken, CancellationToken ct, string? returnTo = null)
     {
         // Rendered from the editable "auth.verify_email" template (Admin → Content → Email templates).
-        var result = await accountEmails.SendVerificationAsync(user, rawToken, ct);
+        var result = await accountEmails.SendVerificationAsync(user, rawToken, ct, returnTo);
         if (!result.Success)
             logger.LogWarning("Verification email for user {UserId} failed: {Error}", user.Id, result.Error);
     }

@@ -42,6 +42,7 @@ public static class LearningModule
         services.AddRecurringJob<YouTubeUploadJob>(TimeSpan.FromMinutes(1));
         services.AddRecurringJob<YouTubeProcessingJob>(TimeSpan.FromMinutes(1));
         services.AddScoped<ISitemapContributor, LearningSitemapContributor>();
+        services.AddSingleton<LearningCatalogHealth>();
         services.AddScoped<LearningCatalogSeeder>();
         services.AddScoped<ISeeder>(sp => sp.GetRequiredService<LearningCatalogSeeder>());
         services.AddScoped<LearningDemoSeeder>();
@@ -67,7 +68,7 @@ public sealed class LearningSitemapContributor(AppDbContext db, CourseContentCac
             .OrderBy(c => c.SortOrder).ThenBy(c => c.Slug).ToListAsync(ct);
         var links = new LearningLinks((await issuers.GetAsync(ct)).BaseUrl);
         var lastUpdate = courses.Count == 0 ? (DateTime?)null : courses.Max(c => c.UpdatedAt);
-        var result = new List<SitemapContribution> { new("/learn", lastUpdate, "Academy") };
+        var result = new List<SitemapContribution> { new("/learn", lastUpdate, "Academy"), new("/verify", lastUpdate, "Verify a certificate") };
         // Learning paths with at least one published course (/learn/paths and each path).
         var bySlug = courses.ToDictionary(c => c.Slug, StringComparer.Ordinal);
         var paths = LearningPathLibrary.Paths.Select(p => (Path: p, Courses: LearningPathService.Resolve(p, bySlug))).Where(x => x.Courses.Count > 0).ToList();

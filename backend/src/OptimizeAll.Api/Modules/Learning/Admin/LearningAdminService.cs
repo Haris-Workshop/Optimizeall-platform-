@@ -27,6 +27,21 @@ public sealed class LearningAdminService(
 {
     private DateTime Now => clock.GetUtcNow().UtcDateTime;
 
+    /// <summary>
+    /// How much of the course-pack catalog shipped with the API is live: the number of embedded packs, how many are published
+    /// right now (live count, so staff unpublishing is visible), and the packs the last startup seed found invalid or could
+    /// not apply (empty until the seed has run in this process).
+    /// </summary>
+    public async Task<CatalogHealthDto> CatalogHealthAsync(LearningCatalogHealth health, CancellationToken ct)
+    {
+        var published = await db.Set<Course>().AsNoTracking()
+            .CountAsync(c => c.Origin == CourseSource.Pack && c.Status == CourseStatus.Published && c.PublishedVersionId != null, ct);
+        var run = health.Last;
+        var problems = run?.Problems ?? Array.Empty<CatalogPackProblem>();
+        return new CatalogHealthDto(CoursePackLibrary.Names.Count, published, problems.Count(p => p.Kind == "invalid"), problems.Count(p => p.Kind == "failed"),
+            run is not null, run?.CheckedAt, problems);
+    }
+
     // ---------------------------------------------------------------- list & stats
 
     private sealed record Stats(int Enrolments, int Completions, int Attempts, int Passed, double? Average, int Certificates);

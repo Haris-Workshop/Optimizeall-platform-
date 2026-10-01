@@ -176,6 +176,13 @@ public sealed class AdminCourseQuery : PageQuery
     public CourseStatus? Status { get; set; }
 }
 
+/// <summary>
+/// Health of the course-pack catalog shipped with the API: <see cref="TotalPacks"/> embedded packs, <see cref="PublishedPacks"/>
+/// live now, and what the last startup seed found wrong (<see cref="SeedRan"/> is false until the seed has run in this process).
+/// </summary>
+public sealed record CatalogHealthDto(
+    int TotalPacks, int PublishedPacks, int InvalidPacks, int FailedPacks, bool SeedRan, DateTime? CheckedAt, IReadOnlyList<CatalogPackProblem> Problems);
+
 public sealed record AdminCourseRowDto(
     Guid Id, string Slug, string Title, CourseCategory Category, CourseLevel Level, CourseStatus Status, CourseSource Origin,
     bool IsFeatured, int SortOrder, int LessonCount, int? PublishedVersionNumber, int? LatestVersionNumber, bool PackUpdateAvailable,

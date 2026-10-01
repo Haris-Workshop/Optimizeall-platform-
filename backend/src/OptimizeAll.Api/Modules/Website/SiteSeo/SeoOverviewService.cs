@@ -86,7 +86,7 @@ public sealed class SeoOverviewService(SeoPageResolver resolver, AppDbContext db
             : page.Path switch
             {
                 "/creators" => new SeoCopyKeysDto("creators.seo.title", "creators.seo.description"),
-                // /faq's texts are portal copy (Admin → Content → Portal copy, content.manage), linked through EditPath.
+                // /creators/faq's texts are portal copy (Admin → Content → Portal copy, content.manage), linked through EditPath.
                 _ => null,
             };
         return new SeoOverviewRowDto(page.Path, resolver.Absolute(page.Path), page.Status, title, title.Length, description, description?.Length ?? 0,

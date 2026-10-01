@@ -26,12 +26,14 @@ public sealed partial class SeoPageResolver
     public const string GroupPartners = PartnerSitemapContributor.GroupName;
     /// <summary>The academy (/learn, courses, lessons), contributed by <see cref="Learning.LearningSitemapContributor"/>.</summary>
     public const string GroupLearn = Learning.LearningSitemapContributor.GroupName;
+    /// <summary>The creator programme's own pages (/creators, /creators/faq).</summary>
+    public const string GroupCreators = "creators";
 
     /// <summary>
     /// The content sitemaps, in index order (images and videos are derived from these URLs' media). Groups of
     /// <see cref="ISitemapContributor"/>s must be listed here.
     /// </summary>
-    public static readonly string[] UrlGroups = { GroupPages, GroupServices, GroupCaseStudies, GroupBlog, GroupCareers, GroupLanding, GroupPartners, GroupLearn };
+    public static readonly string[] UrlGroups = { GroupPages, GroupServices, GroupCaseStudies, GroupBlog, GroupCareers, GroupLanding, GroupPartners, GroupLearn, GroupCreators };
 
     private static readonly IReadOnlyList<SeoImage> NoImages = Array.Empty<SeoImage>();
     private static readonly IReadOnlyList<SeoVideo> NoVideos = Array.Empty<SeoVideo>();
@@ -94,11 +96,12 @@ public sealed partial class SeoPageResolver
         Add("/free-audit", copyOrSettings, GroupPages, _copy.Text("audit.seo.title"));
         Add("/get-a-quote", copyOrSettings, GroupPages, _copy.Text("quote.seo.title"));
         Add("/book-a-consultation", copyOrSettings, GroupPages, _copy.Text("booking.seo.title"));
-        Add("/creators", copyOrSettings, GroupPages, _copy.Text("creators.seo.title"));
+        Add("/creators", copyOrSettings, GroupCreators, _copy.Text("creators.seo.title"));
         var faqUpdated = await db.Set<Domain.Content.FaqItem>().AsNoTracking().Where(f => f.IsPublished).Select(f => (DateTime?)f.UpdatedAt).MaxAsync(ct);
-        Add("/faq", Latest(copyOrSettings, faqUpdated), GroupPages, _copy.Text("faq.seo.title"));
+        Add("/creators/faq", Latest(copyOrSettings, faqUpdated), GroupCreators, _copy.Text("faq.seo.title"));
 
         foreach (var p in pages.Where(p => !p.NoIndex && SelfCanonical(p.CanonicalUrl, $"/{p.Slug}") && !CopyPages.ContainsKey($"/{p.Slug}") &&
+                                           !Redirects.RedirectPaths.BuiltInRedirects.ContainsKey($"/{p.Slug}") &&
                                            urls.All(u => u.Path != $"/{p.Slug}")))
         {
             var videos = PageBlockValidator.Parse(p.BlocksJson).Where(b => b.Type == PageBlockTypes.Video)

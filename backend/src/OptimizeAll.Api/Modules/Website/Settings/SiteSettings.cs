@@ -14,7 +14,11 @@ namespace OptimizeAll.Api.Modules.Website.Settings;
 
 public sealed record MenuItem(string Label, string? Url, string? Description, IReadOnlyList<MenuItem>? Children);
 
-public sealed record HeaderSettings(IReadOnlyList<MenuItem> Menu, SiteLink? Cta);
+/// <summary>
+/// The site header: the menu, the highlighted call to action, and an optional quiet text link next to it (the default is
+/// "Free Academy"). Stored documents without <c>secondaryLink</c> read as null.
+/// </summary>
+public sealed record HeaderSettings(IReadOnlyList<MenuItem> Menu, SiteLink? Cta, SiteLink? SecondaryLink = null);
 
 public sealed record FooterColumn(string Title, IReadOnlyList<SiteLink> Links);
 
@@ -262,7 +266,7 @@ public sealed partial class SiteSettingsService(AppDbContext db, IAuditLogger au
         var result = new SiteSettings(
             Req(s.SiteName, "siteName", 80),
             Req(s.Tagline, "tagline", 120),
-            new HeaderSettings(menu, Link(s.Header?.Cta, "header.cta")),
+            new HeaderSettings(menu, Link(s.Header?.Cta, "header.cta"), Link(s.Header?.SecondaryLink, "header.secondaryLink")),
             new FooterSettings(Opt(s.Footer?.Blurb, "footer.blurb", 400), columns, legal),
             new ContactSettings(email, phone, whatsapp, Opt(c0.Address, "contact.address", 300), Opt(c0.Hours, "contact.hours", 120)),
             social,
@@ -281,15 +285,17 @@ public sealed partial class SiteSettingsService(AppDbContext db, IAuditLogger au
     }
 
     /// <summary>
-    /// Defaults used before an administrator saves settings (and by the baseline seed). Two pillars, academy first:
-    /// Optimize All Academy (free courses with certificates) and Optimize All Agency (full-service digital marketing).
+    /// Defaults used before an administrator saves settings (and by the baseline seed). The agency is the main frame: the
+    /// header, footer and SEO texts lead with the marketing agency (strategy, performance, SEO, content, AI). The free
+    /// Academy (/learn) and Creators (/creators) are separate, labelled products reached by a quiet header link and the
+    /// footer's "More from Optimize All" group.
     /// </summary>
     public static readonly SiteSettings Defaults = new(
         "Optimize All",
         "Discover the world of solution",
-        new HeaderSettings(DefaultMenu, new SiteLink("Start learning free", "/learn")),
+        new HeaderSettings(DefaultMenu, new SiteLink("Book a consultation", "/book-a-consultation"), new SiteLink("Free Academy", "/learn")),
         new FooterSettings(
-            "A learning platform and a growth agency: free, certificate-backed courses in AI, marketing, SEO, sales and business — and a full-service digital marketing team that grows revenue and proves it.",
+            "A digital marketing agency: strategy, performance marketing, SEO, content and AI, measured in revenue rather than vanity metrics. We also run a free Academy for learners and a Creators programme.",
             DefaultFooterColumns,
             new SiteLink[]
             {
@@ -300,43 +306,31 @@ public sealed partial class SiteSettingsService(AppDbContext db, IAuditLogger au
         Array.Empty<SocialProfile>(),
         Array.Empty<TrustLogo>(),
         new AnnouncementBar(false, null, null, null),
-        new DefaultSeo(null, "%s | Optimize All", "Optimize All — Free AI & Marketing Courses + Agency",
-            "Free, certificate-backed courses in AI, marketing, SEO, sales and business — and a full-service digital marketing agency that grows revenue.", null, null),
+        new DefaultSeo(null, "%s | Optimize All", "Optimize All — Digital Marketing, SEO & AI Agency",
+            "A digital marketing agency for strategy, performance marketing, SEO, content and AI, with reporting tied to revenue. Free Academy courses too.", null, null),
         new OrganizationSchema("Optimize All", null, null, null, null, null, null, null, Array.Empty<string>()),
         new AnalyticsSettings(null, null, null),
         Array.Empty<HomeStat>());
 
     private static MenuItem[] DefaultMenu => new MenuItem[]
     {
-        new("Academy", "/academy", "Free courses with certificates.", new MenuItem[]
-        {
-            new("All courses", "/learn", "Free, self-paced courses with certificates.", null),
-            new("AI courses", "/learn?category=Ai", "ChatGPT, Claude, prompting, agents and more.", null),
-            new("Learning paths", "/learn/paths", "Beginner to advanced, one course at a time.", null),
-            new("Certificates", "/academy#certificates", "Verifiable, and ready for LinkedIn.", null),
-        }),
         new("Services", "/services", "Everything we do to grow your brand.", Array.Empty<MenuItem>()),
         new("Industries", "/industries", null, null),
         new("Case studies", "/case-studies", null, null),
-        new("Pricing", "/pricing", null, null),
+        new("Insights", "/blog", "Playbooks, research and news.", null),
+        new("Partners", "/partners", null, null),
         new("About", "/about", null, new MenuItem[]
         {
-            new("About us", "/about", "Our mission: the academy and the agency.", null),
+            new("About us", "/about", "Who we are and what we do.", null),
+            new("How we work", "/how-we-work", "Our process, from audit to results.", null),
             new("Team", "/team", "The people behind your results.", null),
             new("Careers", "/careers", "Join the team.", null),
-            new("Blog", "/blog", "Playbooks, research and news.", null),
-            new("Creators", "/creators", "Get paid to share brands you believe in.", null),
+            new("Contact", "/contact", "Talk to us.", null),
         }),
     };
 
     private static FooterColumn[] DefaultFooterColumns => new FooterColumn[]
     {
-        new("Academy", new SiteLink[]
-        {
-            new("All courses", "/learn"), new("AI courses", "/learn?category=Ai"), new("Marketing courses", "/learn?category=Marketing"),
-            new("SEO courses", "/learn?category=Seo"), new("Learning paths", "/learn/paths"), new("Certificates", "/academy#certificates"),
-            new("Academy overview", "/academy"),
-        }),
         new("Services", new SiteLink[]
         {
             new("SEO", "/services/seo"), new("Google Ads / PPC", "/services/google-ads-ppc"),
@@ -347,13 +341,20 @@ public sealed partial class SiteSettingsService(AppDbContext db, IAuditLogger au
         new("Company", new SiteLink[]
         {
             new("About", "/about"), new("How we work", "/how-we-work"), new("Team", "/team"), new("Careers", "/careers"),
-            new("Case studies", "/case-studies"), new("Blog", "/blog"), new("Partners", "/partners"),
+            new("Case studies", "/case-studies"), new("Insights", "/blog"), new("Partners", "/partners"), new("Contact", "/contact"),
         }),
         new("Get started", new SiteLink[]
         {
-            new("Start learning free", "/learn"), new("Free marketing audit", "/free-audit"), new("Get a quote", "/get-a-quote"),
-            new("Book a consultation", "/book-a-consultation"), new("Pricing", "/pricing"), new("Contact", "/contact"),
-            new("Become a creator", "/creators"),
+            new("Book a consultation", "/book-a-consultation"), new("Free marketing audit", "/free-audit"), new("Get a quote", "/get-a-quote"),
+            new("Pricing", "/pricing"),
+        }),
+        new("More from Optimize All", new SiteLink[]
+        {
+            new("Academy: free courses", "/learn"), new("Learning paths", "/learn/paths"), new("Creators programme", "/creators"),
+        }),
+        new("Sign in", new SiteLink[]
+        {
+            new("Sign in", "/login"), new("Create a free account", "/register"),
         }),
     };
 
@@ -412,8 +413,77 @@ public sealed partial class SiteSettingsService(AppDbContext db, IAuditLogger au
     }
 
     /// <summary>
-    /// Moves stored settings that still carry the previous agency-only defaults to the two-pillar defaults, part by part:
-    /// the header menu and call to action, the footer blurb and columns, and the default SEO title and description. Any
+    /// The academy-first defaults shipped with the two-pillar repositioning (2026-09), frozen as they were. Stored settings
+    /// that still equal them are moved to the agency-first <see cref="Defaults"/> (2026-10).
+    /// </summary>
+    internal static class AcademyFirstDefaults
+    {
+        public static readonly IReadOnlyList<MenuItem> Menu = new MenuItem[]
+        {
+            new("Academy", "/academy", "Free courses with certificates.", new MenuItem[]
+            {
+                new("All courses", "/learn", "Free, self-paced courses with certificates.", null),
+                new("AI courses", "/learn?category=Ai", "ChatGPT, Claude, prompting, agents and more.", null),
+                new("Learning paths", "/learn/paths", "Beginner to advanced, one course at a time.", null),
+                new("Certificates", "/academy#certificates", "Verifiable, and ready for LinkedIn.", null),
+            }),
+            new("Services", "/services", "Everything we do to grow your brand.", Array.Empty<MenuItem>()),
+            new("Industries", "/industries", null, null),
+            new("Case studies", "/case-studies", null, null),
+            new("Pricing", "/pricing", null, null),
+            new("About", "/about", null, new MenuItem[]
+            {
+                new("About us", "/about", "Our mission: the academy and the agency.", null),
+                new("Team", "/team", "The people behind your results.", null),
+                new("Careers", "/careers", "Join the team.", null),
+                new("Blog", "/blog", "Playbooks, research and news.", null),
+                new("Creators", "/creators", "Get paid to share brands you believe in.", null),
+            }),
+        };
+
+        public static readonly SiteLink Cta = new("Start learning free", "/learn");
+
+        public const string Blurb =
+            "A learning platform and a growth agency: free, certificate-backed courses in AI, marketing, SEO, sales and business — and a full-service digital marketing team that grows revenue and proves it.";
+
+        public static readonly IReadOnlyList<FooterColumn> Columns = new FooterColumn[]
+        {
+            new("Academy", new SiteLink[]
+            {
+                new("All courses", "/learn"), new("AI courses", "/learn?category=Ai"), new("Marketing courses", "/learn?category=Marketing"),
+                new("SEO courses", "/learn?category=Seo"), new("Learning paths", "/learn/paths"), new("Certificates", "/academy#certificates"),
+                new("Academy overview", "/academy"),
+            }),
+            new("Services", new SiteLink[]
+            {
+                new("SEO", "/services/seo"), new("Google Ads / PPC", "/services/google-ads-ppc"),
+                new("Social media management", "/services/social-media-management"),
+                new("Influencer & UGC marketing", "/services/influencer-ugc-marketing"),
+                new("Web design & development", "/services/web-design-development"), new("All services", "/services"),
+            }),
+            new("Company", new SiteLink[]
+            {
+                new("About", "/about"), new("How we work", "/how-we-work"), new("Team", "/team"), new("Careers", "/careers"),
+                new("Case studies", "/case-studies"), new("Blog", "/blog"), new("Partners", "/partners"),
+            }),
+            new("Get started", new SiteLink[]
+            {
+                new("Start learning free", "/learn"), new("Free marketing audit", "/free-audit"), new("Get a quote", "/get-a-quote"),
+                new("Book a consultation", "/book-a-consultation"), new("Pricing", "/pricing"), new("Contact", "/contact"),
+                new("Become a creator", "/creators"),
+            }),
+        };
+
+        public const string SeoTitle = "Optimize All — Free AI & Marketing Courses + Agency";
+
+        public const string SeoDescription =
+            "Free, certificate-backed courses in AI, marketing, SEO, sales and business — and a full-service digital marketing agency that grows revenue.";
+    }
+
+    /// <summary>
+    /// Moves stored settings that still carry an earlier built-in generation (the agency-only defaults, or the academy-first
+    /// two-pillar defaults including their first <c>/academy#paths</c> variant) to the current agency-first defaults, part by
+    /// part: the header (menu, call to action), the footer blurb and columns, and the default SEO title and description. Any
     /// part an administrator has changed is kept as it is. Returns null when nothing changes.
     /// </summary>
     public static SiteSettings? UpgradeFromPreviousDefaults(SiteSettings s)
@@ -427,25 +497,31 @@ public sealed partial class SiteSettingsService(AppDbContext db, IAuditLogger au
         var changed = false;
         var header = s.Header;
         var menu = J(Norm(header.Menu));
-        if ((menu == J(Norm(PreviousDefaults.Menu)) && J(header.Cta) == J(PreviousDefaults.Cta)) ||
-            (menu == FirstTwoPillar(J(Norm(Defaults.Header.Menu))) && J(header.Cta) == J(Defaults.Header.Cta)))
+        var cta = J(header.Cta);
+        var academyMenu = J(Norm(AcademyFirstDefaults.Menu));
+        var academyCta = J(AcademyFirstDefaults.Cta);
+        if ((menu == J(Norm(PreviousDefaults.Menu)) && cta == J(PreviousDefaults.Cta)) ||
+            (menu == academyMenu && cta == academyCta) ||
+            (menu == FirstTwoPillar(academyMenu) && cta == academyCta))
         {
             header = Defaults.Header;
             changed = true;
         }
         var footer = s.Footer;
-        if (footer.Blurb == PreviousDefaults.Blurb)
+        if (footer.Blurb == PreviousDefaults.Blurb || footer.Blurb == AcademyFirstDefaults.Blurb)
         {
             footer = footer with { Blurb = Defaults.Footer.Blurb };
             changed = true;
         }
-        if (J(footer.Columns) == J(PreviousDefaults.Columns) || J(footer.Columns) == FirstTwoPillar(J(Defaults.Footer.Columns)))
+        var columns = J(footer.Columns);
+        if (columns == J(PreviousDefaults.Columns) || columns == J(AcademyFirstDefaults.Columns) || columns == FirstTwoPillar(J(AcademyFirstDefaults.Columns)))
         {
             footer = footer with { Columns = Defaults.Footer.Columns };
             changed = true;
         }
         var seo = s.Seo;
-        if (seo.DefaultTitle == PreviousDefaults.SeoTitle && seo.DefaultDescription == PreviousDefaults.SeoDescription)
+        if ((seo.DefaultTitle == PreviousDefaults.SeoTitle && seo.DefaultDescription == PreviousDefaults.SeoDescription) ||
+            (seo.DefaultTitle == AcademyFirstDefaults.SeoTitle && seo.DefaultDescription == AcademyFirstDefaults.SeoDescription))
         {
             seo = seo with { DefaultTitle = Defaults.Seo.DefaultTitle, DefaultDescription = Defaults.Seo.DefaultDescription };
             changed = true;

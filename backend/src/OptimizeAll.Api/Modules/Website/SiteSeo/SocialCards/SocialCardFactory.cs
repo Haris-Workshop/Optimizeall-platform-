@@ -51,7 +51,7 @@ public static partial class SocialCardFactory
                 if (lessons > 0) list.Add(SocialCardText.Count(lessons, "lesson", "lessons"));
                 list.AddRange(facts.Skip(1).Where(f => !f.Equals("free", StringComparison.OrdinalIgnoreCase)).Take(2));
                 list.Add("Certificate");
-                return new SocialCard(Join("Academy", page.Section ?? facts.FirstOrDefault()), title, page.Description, list);
+                return new SocialCard(Join($"{siteName} Academy", page.Section ?? facts.FirstOrDefault()), title, page.Description, list);
             }
             case "Lesson":
             {
@@ -63,7 +63,7 @@ public static partial class SocialCardFactory
                 return new SocialCard(Join("Lesson", course), title, page.Description, list);
             }
             case "Academy":
-                return new SocialCard(Join(siteName, "Academy"), title, page.Description, new[] { "Free courses", "Verified certificates", "Self-paced" });
+                return new SocialCard($"{siteName} Academy", title, page.Description, new[] { "Free courses", "Verified certificates", "Self-paced" });
             case "Certificate":
                 return new SocialCard("Verified certificate", title, page.Description);
             case "Blog post":
@@ -84,6 +84,9 @@ public static partial class SocialCardFactory
         }
         if (page.Path == "/")
             return new SocialCard(paragraphs.FirstOrDefault() ?? siteName, title, page.Description);
+        // The labelled products carry their name: "Optimize All Academy" (paths, certificates) and "Optimize All Creators".
+        if (SeoText.SectionOf(page.Path) is { } section)
+            return new SocialCard($"{siteName} {section}", title, page.Description);
         var eyebrow = Parent();
         if (string.IsNullOrWhiteSpace(eyebrow) || eyebrow.Equals(title, StringComparison.OrdinalIgnoreCase)) eyebrow = siteName;
         return new SocialCard(eyebrow, title, page.Description);

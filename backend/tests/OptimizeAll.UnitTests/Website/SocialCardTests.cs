@@ -172,7 +172,7 @@ public sealed class SocialCardTests(ITestOutputHelper output)
             new LinkListNode(new[] { new LinkItem("One", "/learn/seo/one"), new LinkItem("Two", "/learn/seo/two") }));
         course.Section = "SEO";
         var c = SocialCardFactory.From(course, "Optimize All");
-        Assert.Equal("Academy · SEO", c.Eyebrow);
+        Assert.Equal("Optimize All Academy · SEO", c.Eyebrow);
         Assert.Equal("SEO basics", c.Title);
         Assert.Equal(new[] { "Free course", "2 lessons", "Beginner", "90 minutes", "Certificate" }, c.Facts);
 
@@ -187,6 +187,15 @@ public sealed class SocialCardTests(ITestOutputHelper output)
         var b = SocialCardFactory.From(post, "Optimize All");
         Assert.Equal("Blog · SEO", b.Eyebrow);
         Assert.Equal(new[] { "Jane Doe", "3 May 2026", "6 min read" }, b.Facts);
+
+        // The labelled products carry their name; the agency's pages keep the parent page or the site name.
+        var hub = Page("/learn", "Academy", new HeadingNode(1, "Free courses"));
+        Assert.Equal("Optimize All Academy", SocialCardFactory.From(hub, "Optimize All").Eyebrow);
+        var paths = Page("/learn/paths", "Learning paths", new HeadingNode(1, "Learning paths"));
+        Assert.Equal("Optimize All Academy", SocialCardFactory.From(paths, "Optimize All").Eyebrow);
+        var creators = Page("/creators", "Page texts", new HeadingNode(1, "Get paid to share brands"));
+        Assert.Equal("Optimize All Creators", SocialCardFactory.From(creators, "Optimize All").Eyebrow);
+        Assert.Equal("Optimize All Creators", SocialCardFactory.From(Page("/creators/faq", "Page texts (help centre)", new HeadingNode(1, "FAQ")), "Optimize All").Eyebrow);
 
         var generic = Page("/about", "CMS page");
         generic.Breadcrumbs.AddRange(new[] { new Crumb("Home", "/"), new Crumb("About us", "/about") });

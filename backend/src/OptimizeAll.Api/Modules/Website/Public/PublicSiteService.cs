@@ -126,9 +126,9 @@ public sealed class PublicSiteService(
 
         return new HomeDto(Groups(cat), caseStudies, testimonials, industries, posts, teaser, s.HomeStats, s.TrustLogos,
             await SeoAsync(null, s.Seo.DefaultTitle, s.Seo.DefaultDescription, null, "/", ct),
-            ld.LocalBusiness() is { } business
-                ? new[] { ld.Organization(), ld.WebSite(), ld.Academy(), business }
-                : new[] { ld.Organization(), ld.WebSite(), ld.Academy() });
+            // The agency is the home page's subject: Organization, WebSite and ProfessionalService (address only when configured).
+            // The Academy's EducationalOrganization belongs to the /learn hub alone.
+            new[] { ld.Organization(), ld.WebSite(), ld.ProfessionalService() });
     }
 
     // ---------------------------------------------------------------- Services & pricing
@@ -274,7 +274,6 @@ public sealed class PublicSiteService(
         var faqs = blocks.Where(b => b.Type == PageBlockTypes.Faq)
             .SelectMany(b => b.Data.Deserialize<FaqBlock>(SiteSettingsService.Json)?.Items ?? Array.Empty<FaqEntry>()).ToList();
         if (ld.FaqPage(faqs) is { } faqLd) jsonLd.Add(faqLd);
-        if (p.Slug == "academy") jsonLd.Add(ld.Academy()); // the academy's overview page describes the academy itself
 
         return new PublicPageDto(p.Slug, p.Title, p.Summary, p.Kind, blocks, testimonials, caseStudies, groups, s.TrustLogos, p.UpdatedAt,
             await SeoAsync(p.Seo, p.Title, p.Summary, null, $"/{p.Slug}", ct), jsonLd);

@@ -32,8 +32,45 @@ public sealed class RegisterRequest
     [MaxLength(100)]
     public string? DeviceId { get; set; }
 
+    /// <summary>
+    /// Where to send the person after they verify their email: a same-site path only (starts with a single "/", no "//",
+    /// no scheme, no backslash, at most 200 characters). Anything else is ignored silently (<see cref="RegistrationHints.ReturnTo"/>).
+    /// </summary>
+    public string? ReturnTo { get; set; }
+
+    /// <summary>"learner" (free Academy) or "creator" (Creators programme), case-insensitive; anything else is ignored (<see cref="RegistrationHints.Audience"/>).</summary>
+    public string? Audience { get; set; }
+
     public bool AcceptTerms { get; set; }
     public bool MarketingEmailOptIn { get; set; }
+}
+
+/// <summary>Sanitizing of the optional registration hints (pure, unit-tested): never an error, a bad value is simply dropped.</summary>
+public static class RegistrationHints
+{
+    public const int ReturnToMaxLength = 200;
+    public const string Learner = "learner", Creator = "creator";
+
+    /// <summary>The path when it is a safe same-site relative path, else null.</summary>
+    public static string? ReturnTo(string? value)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length > ReturnToMaxLength) return null;
+        if (value[0] != '/' || (value.Length > 1 && value[1] == '/')) return null;
+        foreach (var c in value)
+            if (c == '\\' || char.IsControl(c) || char.IsWhiteSpace(c)) return null;
+        // A percent-encoded form ("/%2f/evil", "/%5Cevil") must not turn into a protocol-relative or backslash address either.
+        var decoded = Uri.UnescapeDataString(value);
+        if (decoded.StartsWith("//", StringComparison.Ordinal) || decoded.Contains('\\') || decoded.Any(char.IsControl)) return null;
+        return value;
+    }
+
+    /// <summary>"learner" or "creator" (lower case), else null.</summary>
+    public static string? Audience(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        Learner => Learner,
+        Creator => Creator,
+        _ => null,
+    };
 }
 
 public sealed class LoginRequest
@@ -89,7 +126,9 @@ public sealed record SessionUserDto(
     bool IsTestAccount = false,
     ImpersonatorDto? ImpersonatedBy = null,
     // Names of the custom roles assigned to the user, sorted (header badges); their permissions are in Permissions.
-    IReadOnlyCollection<string>? CustomRoles = null);
+    IReadOnlyCollection<string>? CustomRoles = null,
+    // "learner" or "creator" when the person said so at registration; null otherwise (first-screen hint only).
+    string? Audience = null);
 
 /// <summary>Present on the session while a staff member is viewing as this user (impersonation).</summary>
 public sealed record ImpersonatorDto(Guid Id, string DisplayName, string Email, DateTime StartedAt, DateTime ExpiresAt);

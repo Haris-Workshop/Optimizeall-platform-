@@ -22,6 +22,7 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         b.Property(x => x.StatusReason).HasMaxLength(500);
         b.Property(x => x.ReferralCode).HasMaxLength(16).IsRequired();
         b.HasIndex(x => x.ReferralCode).IsUnique();
+        b.Property(x => x.Audience).HasMaxLength(16);
         b.Property(x => x.WhatsAppNumber).HasMaxLength(20);
         b.HasIndex(x => x.Status);
         b.HasIndex(x => x.CreatedAt);

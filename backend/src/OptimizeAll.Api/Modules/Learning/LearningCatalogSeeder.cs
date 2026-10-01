@@ -20,7 +20,8 @@ namespace OptimizeAll.Api.Modules.Learning;
 /// log; CI's <c>CoursePackTests</c> applies every rule (<see cref="PackValidationMode.Strict"/>) so this should not happen.</item>
 /// </list>
 /// </summary>
-public sealed class LearningCatalogSeeder(IDatabaseDialect dialect, TimeProvider clock, ILogger<LearningCatalogSeeder> logger) : ISeeder
+public sealed class LearningCatalogSeeder(
+    IDatabaseDialect dialect, TimeProvider clock, ILogger<LearningCatalogSeeder> logger, LearningCatalogHealth? health = null) : ISeeder
 {
     public const string LockName = "learning-catalog";
 
@@ -41,20 +42,26 @@ public sealed class LearningCatalogSeeder(IDatabaseDialect dialect, TimeProvider
         await using var tx = await dialect.BeginWriteTransactionAsync(db, ct);
         var now = clock.GetUtcNow().UtcDateTime;
         int changes = 0, packs = 0, failed = 0;
+        var problems = new List<CatalogPackProblem>();
+        var slugs = new List<string>();
         foreach (var file in files)
         {
             packs++;
             if (file.Pack is not { } pack)
             {
-                logger.LogError("Course pack {File} is not valid JSON: {Error}", file.FileName, file.ParseError);
+                logger.LogError("Course pack {File} (slug unknown) is not valid JSON and was skipped: {Error}", file.FileName, file.ParseError);
+                problems.Add(new CatalogPackProblem(file.FileName, null, "invalid", file.ParseError ?? "Not valid JSON."));
                 continue;
             }
             var issues = CoursePackValidator.Validate(pack, PackValidationMode.Authoring);
             if (issues.Count > 0)
             {
-                logger.LogError("Course pack {File} is invalid and was skipped: {Issues}", file.FileName, string.Join("; ", issues.Take(10)));
+                var reason = string.Join("; ", issues.Take(10));
+                logger.LogError("Course pack {Slug} ({File}) is invalid and was skipped: {Issues}", pack.Slug, file.FileName, reason);
+                problems.Add(new CatalogPackProblem(file.FileName, pack.Slug, "invalid", reason));
                 continue;
             }
+            slugs.Add(pack.Slug);
             await tx.CreateSavepointAsync("course_pack", ct);
             try
             {
@@ -65,7 +72,8 @@ public sealed class LearningCatalogSeeder(IDatabaseDialect dialect, TimeProvider
             {
                 failed++;
                 await tx.RollbackToSavepointAsync("course_pack", ct);
-                logger.LogError(ex, "Course pack {File} could not be applied and was skipped", file.FileName);
+                logger.LogError(ex, "Course pack {Slug} ({File}) could not be applied and was skipped: {Reason}", pack.Slug, file.FileName, ex.Message);
+                problems.Add(new CatalogPackProblem(file.FileName, pack.Slug, "failed", ex.Message));
             }
             finally
             {
@@ -74,6 +82,13 @@ public sealed class LearningCatalogSeeder(IDatabaseDialect dialect, TimeProvider
         }
         await tx.CommitAsync(ct);
         logger.LogInformation("Learning catalog: {Packs} course pack(s) checked, {Count} added or updated, {Failed} failed", packs, changes, failed);
+
+        // The one line to look for after a deploy: how much of the shipped catalog is live. Fewer than all is a warning.
+        var published = slugs.Count == 0 ? 0 : await db.Set<Course>().AsNoTracking().CountAsync(c =>
+            slugs.Contains(c.Slug) && c.Origin == CourseSource.Pack && c.Status == CourseStatus.Published && c.PublishedVersionId != null, ct);
+        if (published == packs) logger.LogInformation("Learning catalog: {Published} of {Total} packs published", published, packs);
+        else logger.LogWarning("Learning catalog: {Published} of {Total} packs published ({Problems} with problems; staff may also have unpublished some)", published, packs, problems.Count);
+        health?.Record(new CatalogSeedRun(packs, published, problems, clock.GetUtcNow().UtcDateTime));
         return changes;
     }
 
@@ -135,4 +150,20 @@ public sealed class LearningCatalogSeeder(IDatabaseDialect dialect, TimeProvider
         await db.SaveChangesAsync(ct);
         return true;
     }
+}
+
+/// <summary>A pack the catalog seed could not apply: <c>invalid</c> (does not parse or fails the structural rules) or <c>failed</c> (the upsert threw).</summary>
+public sealed record CatalogPackProblem(string File, string? Slug, string Kind, string Reason);
+
+/// <summary>The result of the last catalog seed run in this process.</summary>
+public sealed record CatalogSeedRun(int Total, int Published, IReadOnlyList<CatalogPackProblem> Problems, DateTime CheckedAt);
+
+/// <summary>Remembers the last <see cref="LearningCatalogSeeder"/> run so the Learning admin can show catalog health (singleton).</summary>
+public sealed class LearningCatalogHealth
+{
+    private volatile CatalogSeedRun? _last;
+
+    public CatalogSeedRun? Last => _last;
+
+    public void Record(CatalogSeedRun run) => _last = run;
 }

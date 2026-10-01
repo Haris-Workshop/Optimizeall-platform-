@@ -91,8 +91,8 @@ internal static class BaselinePages
             Cta("Let's grow together", "Tell us about your goals and we'll show you where the biggest opportunities are — free."),
         }, 10);
 
-    public static readonly PageSeed[] Pages =
-    {
+    /// <summary>The two-pillar About page shipped 2026-09 (academy first): an untouched copy is upgraded to the agency-first page.</summary>
+    public static readonly PageSeed TwoPillarAbout =
         new("about", "About us", "Optimize All helps people and businesses grow: a free academy that teaches the skills, and an agency that puts them to work.", SitePageKind.Standard, new[]
         {
             Hero("About Optimize All", "We help people and businesses grow", "Optimize All has two pillars. Optimize All Academy teaches the skills behind modern growth in free courses with verifiable certificates. Optimize All Agency puts those skills to work for clients as a full-service digital marketing team.",
@@ -113,30 +113,26 @@ internal static class BaselinePages
             PageBlockValidator.Block(PageBlockTypes.Testimonials, new TestimonialsBlock("What clients say", Array.Empty<Guid>()), "testimonials"),
             PageBlockValidator.Block(PageBlockTypes.Cta, new CtaBlock("Grow with us", "Start a free course today, or tell us about your goals and we will show you where the biggest opportunities are — free.",
                 new SiteLink("Start learning free", "/learn"), new SiteLink("Get a free audit", "/free-audit")), "cta"),
-        }, 10),
-        new("academy", "Optimize All Academy", "Free, self-paced courses in AI, marketing, SEO, sales, design and business, with verifiable certificates.", SitePageKind.Standard, new[]
+        }, 10);
+
+    public static readonly PageSeed[] Pages =
+    {
+        new("about", "About us", "Optimize All is a digital marketing agency built around measurable growth, with a free Academy and a Creators programme alongside.", SitePageKind.Standard, new[]
         {
-            Hero("Optimize All Academy", "Learn the skills that grow businesses — free", "Self-paced courses in AI, marketing, SEO, sales, design and business. Pass the final assessment to earn a certificate with its own public verification page, ready for your LinkedIn profile.",
-                new SiteLink("Browse all courses", "/learn"), new SiteLink("How certificates work", "/academy#certificates")),
-            PageBlockValidator.Block(PageBlockTypes.FeaturesGrid, new FeaturesGridBlock("Why learn with Optimize All", null, new[]
+            Hero("About Optimize All", "Marketing that proves its worth", "We're a digital marketing agency: strategy, performance marketing, SEO, content and AI, run as one accountable team and reported in plain numbers.",
+                new SiteLink("Book a consultation", "/book-a-consultation"), new SiteLink("Get a free audit", "/free-audit")),
+            Text("story", "## Our story\n\nOptimize All started as a platform that pays everyday creators to share brands they believe in — with every post human-reviewed and clearly disclosed. Building that network taught us what brands really need from marketing: transparency, accountability and results you can verify.\n\nToday we bring the same principles to every service we offer. Whether you work with us on SEO, paid media, content or a new website, you will always know what we are doing, why, and what it is delivering.\n\n## More from Optimize All\n\nTwo separate products sit alongside the agency. [Optimize All Academy](/learn) offers free, self-paced courses in AI, marketing, SEO, sales, design and business, each ending in a certificate anyone can verify. [Optimize All Creators](/creators) pays creators with established social accounts for approved, clearly disclosed posts."),
+            PageBlockValidator.Block(PageBlockTypes.FeaturesGrid, new FeaturesGridBlock("What we believe", null, new[]
             {
-                new FeatureItem("Free for everyone", "Every course, lesson and assessment is free. A free account saves your progress and unlocks the final assessment.", "gift"),
-                new FeatureItem("Built for real work", "Practical lessons, worked examples and knowledge checks on the tools and techniques teams use today.", "briefcase"),
-                new FeatureItem("Verifiable certificates", "Each certificate has a unique code, a public verification page and an Open Badges 2.0 badge.", "badge-check"),
-                new FeatureItem("Learn at your pace", "Start and stop whenever you like, on any device. Your progress is saved as you go.", "clock"),
-                new FeatureItem("From beginner to advanced", "Courses are labelled by level, so you can go from first principles to advanced practice.", "trending-up"),
-                new FeatureItem("Taught by an agency", "The academy is run by the team behind Optimize All Agency, so lessons reflect client work.", "users"),
-            }), "why"),
-            PageBlockValidator.Block(PageBlockTypes.Faq, new FaqBlock("Academy questions", new[]
-            {
-                new FaqEntry("Are the courses really free?", "Yes. Every course, lesson, knowledge check, assessment and certificate is free."),
-                new FaqEntry("Do I need an account?", "You can read courses without one. A free account saves your progress and unlocks the final assessment and certificate."),
-                new FaqEntry("How do certificates work?", "Pass a course's final assessment and a certificate is issued in your name, with a unique verification code and a public page that anyone can open to check it."),
-                new FaqEntry("Can I add my certificate to LinkedIn?", "Yes. Each certificate has an add-to-profile link for the Licenses & certifications section of your LinkedIn profile."),
-            }), "faq"),
-            PageBlockValidator.Block(PageBlockTypes.Cta, new CtaBlock("Start learning today", "Pick a course and take the first lesson in minutes.",
-                new SiteLink("Start learning free", "/learn"), new SiteLink("Get a free audit", "/free-audit")), "cta"),
-        }, 15),
+                new FeatureItem("Outcomes over outputs", "We measure success in leads, revenue and profit — not impressions or hours logged.", "target"),
+                new FeatureItem("Radical transparency", "You see our work, our data and our reasoning in your client portal, any time.", "eye"),
+                new FeatureItem("Honest measurement", "Estimates are labelled as estimates. We never dress up vanity metrics as results.", "shield-check"),
+                new FeatureItem("Senior attention", "Strategists and specialists work on your account — not just account managers.", "users"),
+            }), "values"),
+            PageBlockValidator.Block(PageBlockTypes.ServicesGrid, new ServicesGridBlock("What we do", "Nine service lines, one integrated team.", null), "services"),
+            PageBlockValidator.Block(PageBlockTypes.Testimonials, new TestimonialsBlock("What clients say", Array.Empty<Guid>()), "testimonials"),
+            Cta("Let's grow together", "Tell us about your goals and we will show you where the biggest opportunities are — free."),
+        }, 10),
         new("how-we-work", "How we work", "Our process: audit, strategy, execution and transparent reporting.", SitePageKind.Standard, new[]
         {
             Hero("How we work", "A process built for accountability", "Every engagement follows the same four steps, so you always know what's happening and what it's achieving."),

@@ -46,6 +46,14 @@ public sealed class LearningPathTests
     }
 
     [Fact]
+    public void Every_catalog_pack_is_in_at_least_one_learning_path()
+    {
+        var inPaths = LearningPathLibrary.Paths.SelectMany(p => p.Courses!).ToHashSet();
+        var orphans = CoursePackLibrary.All.Where(f => f.Pack is not null).Select(f => f.Pack!.Slug).Where(slug => !inPaths.Contains(slug)).OrderBy(x => x).ToList();
+        Assert.True(orphans.Count == 0, "Packs in no learning path (add them to Catalog/paths/*.json): " + string.Join(", ", orphans));
+    }
+
+    [Fact]
     public void Unknown_properties_are_rejected()
     {
         var json = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "OptimizeAll.Api",

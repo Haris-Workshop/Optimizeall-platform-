@@ -17,8 +17,9 @@ public sealed partial class SeoPageResolver
     // ---------------------------------------------------------------- Home
 
     /// <summary>
-    /// The home page: Academy first, Agency second, in the order and words of the web app's home page
-    /// (frontend/src/features/public/pages/HomePage.tsx), with the same live academy figures.
+    /// The home page, in the order and words of the web app's home page (frontend/src/features/public/pages/HomePage.tsx):
+    /// the agency is the subject; the free Academy and the Creators programme appear once, in a compact "More from
+    /// Optimize All" band near the end.
     /// </summary>
     private async Task<SeoPage> HomeAsync(CancellationToken ct)
     {
@@ -36,24 +37,8 @@ public sealed partial class SeoPageResolver
         c.Add(new ListNode(_copy.List("home.hero.proof")));
         c.Add(new LinkListNode(new[]
         {
-            new LinkItem(_copy.Text("home.hero.learnCta"), "/learn"), new LinkItem(_copy.Text("home.hero.primaryCta"), "/free-audit"),
+            new LinkItem(_copy.Text("home.hero.primaryCta"), "/book-a-consultation"), new LinkItem(_copy.Text("home.hero.secondaryCta"), "/case-studies"),
         }));
-
-        // Pillar 1: the academy.
-        c.AddRange(await HomeAcademyNodesAsync(ct));
-
-        // Pillar 2: the agency, with the free-audit panel.
-        c.Add(new ParagraphNode(_copy.Text("home.agency.eyebrow")));
-        c.Add(new HeadingNode(2, _copy.Text("home.agency.title")));
-        c.Add(new ParagraphNode(_copy.Text("home.agency.intro")));
-        c.Add(new ListNode(_copy.List("home.agency.proof")));
-        c.Add(new LinkListNode(new[]
-        {
-            new LinkItem(_copy.Text("home.hero.primaryCta"), "/free-audit"), new LinkItem(_copy.Text("home.hero.secondaryCta"), "/book-a-consultation"),
-        }));
-        c.Add(new HeadingNode(3, _copy.Text("home.audit.title")));
-        c.Add(new ListNode(_copy.List("home.audit.items")));
-        c.Add(new ActionNode(_copy.Text("home.audit.cta"), "/free-audit"));
 
         c.Add(new HeadingNode(2, _copy.Text("home.services.title")));
         c.Add(new ParagraphNode(_copy.Text("home.services.intro")));
@@ -121,19 +106,15 @@ public sealed partial class SeoPageResolver
             c.Add(new HeadingNode(2, _copy.Text("home.blog.title")));
             c.Add(new LinkListNode(home.LatestPosts.Select(p => new LinkItem(p.Title, $"/blog/{p.Slug}", p.Excerpt)).ToList()));
         }
-        c.Add(new HeadingNode(2, _copy.Text("home.creators.title")));
-        c.Add(new ParagraphNode(_copy.Text("home.creators.intro")));
+        // The other two products, once, as a compact band.
+        c.Add(new HeadingNode(2, _copy.Text("home.more.title")));
         c.Add(new LinkListNode(new[]
         {
-            new LinkItem(_copy.Text("home.creators.primaryCta"), "/register"), new LinkItem(_copy.Text("home.creators.secondaryCta"), "/creators"),
+            new LinkItem(_copy.Text("home.more.academy.title"), "/learn", _copy.Text("home.more.academy.kicker")),
+            new LinkItem(_copy.Text("home.more.creators.title"), "/creators", _copy.Text("home.more.creators.kicker")),
         }));
-        c.Add(new HeadingNode(2, _copy.Text("home.final.title")));
-        c.Add(new ParagraphNode(_copy.Text("home.final.text")));
-        c.Add(new LinkListNode(new[]
-        {
-            new LinkItem(_copy.Text("home.final.learnCta"), "/learn", _copy.Text("home.academy.eyebrow")),
-            new LinkItem(_copy.Text("home.final.agencyCta"), "/free-audit", _copy.Text("home.agency.eyebrow")),
-        }));
+        c.Add(new HeadingNode(2, _copy.Text("home.newsletter.title")));
+        c.Add(new ParagraphNode(_copy.Text("home.newsletter.intro")));
         page.ModifiedAt = Latest(_settingsUpdatedAt, _copyUpdatedAt, home.LatestPosts.Select(p => p.PublishedAt).Max());
         return AddCatalogVideos(page);
     }
@@ -384,7 +365,7 @@ public sealed partial class SeoPageResolver
         c.Add(new HeadingNode(2, _copy.Text("creators.faq.title")));
         var faqs = _copy.Pairs("creators.faq.items").Select(p => new FaqEntry(p.Title, p.Text)).ToList();
         foreach (var f in faqs) c.Add(new QuestionNode(f.Question, f.Answer));
-        c.Add(new ActionNode(_copy.Text("creators.faq.cta"), "/faq"));
+        c.Add(new ActionNode(_copy.Text("creators.faq.cta"), "/creators/faq"));
         c.Add(new HeadingNode(2, _copy.Text("creators.cta.title")));
         c.Add(new ParagraphNode(_copy.Text("creators.cta.text")));
         if (_ld.FaqPage(faqs) is { } faqLd) page.JsonLd.Add(faqLd);
@@ -394,10 +375,10 @@ public sealed partial class SeoPageResolver
 
     private async Task<SeoPage> FaqAsync(CancellationToken ct)
     {
-        var page = NewPage("/faq", _copy.Text("faq.seo.title"), _copy.Text("faq.seo.description"), fullTitle: true);
+        var page = NewPage("/creators/faq", _copy.Text("faq.seo.title"), _copy.Text("faq.seo.description"));
         page.Source = "Page texts (help centre) + Admin → Content → FAQ";
         page.EditPath = "/admin/content";
-        CrumbsLd(page, ("FAQ", "/faq"));
+        CrumbsLd(page, ("Creators", "/creators"), ("FAQ", "/creators/faq"));
         page.Content.Add(new HeadingNode(1, _copy.Text("faq.hero.title")));
         page.Content.Add(new ParagraphNode(_copy.Text("faq.hero.lead")));
         var items = await db.Set<ContentFaq>().AsNoTracking().Where(f => f.IsPublished).OrderBy(f => f.SortOrder).ThenBy(f => f.CreatedAt).ToListAsync(ct);
@@ -646,15 +627,6 @@ public sealed partial class SeoPageResolver
         {
             page.Content.Add(new HeadingNode(1, p.Title));
             if (!string.IsNullOrWhiteSpace(p.Summary)) page.Content.Add(new ParagraphNode(p.Summary));
-        }
-        if (slug == "academy")
-        {
-            // /academy (web app: PillarPages.tsx AcademyOverviewPage): the CMS hero, the live academy sections, then the rest.
-            var hero = p.Blocks.FirstOrDefault()?.Type == PageBlockTypes.Hero ? p.Blocks.Take(1).ToList() : new List<PageBlock>();
-            page.Content.AddRange(BlockNodes(page, hero, p.Title, p.Testimonials, p.CaseStudies, p.ServiceCategories, p.UpdatedAt));
-            page.Content.AddRange(await AcademyPageLiveNodesAsync(ct));
-            page.Content.AddRange(BlockNodes(page, p.Blocks.Skip(hero.Count).ToList(), p.Title, p.Testimonials, p.CaseStudies, p.ServiceCategories, p.UpdatedAt, firstIsTop: false));
-            return AddCatalogVideos(page);
         }
         page.Content.AddRange(BlockNodes(page, p.Blocks, p.Title, p.Testimonials, p.CaseStudies, p.ServiceCategories, p.UpdatedAt));
         return AddCatalogVideos(page);

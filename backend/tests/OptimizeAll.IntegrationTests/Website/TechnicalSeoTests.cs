@@ -29,7 +29,7 @@ public sealed class TechnicalSeoTests(ApiFactory api) : IClassFixture<ApiFactory
     /// <summary>Every built-in public page, with the JSON-LD types it must carry.</summary>
     public static readonly TheoryData<string, string[]> StaticPages = new()
     {
-        { "/", new[] { "Organization", "WebSite", "EducationalOrganization", "WebPage" } },
+        { "/", new[] { "Organization", "WebSite", "ProfessionalService", "WebPage" } },
         { "/services", new[] { "BreadcrumbList", "CollectionPage", "ItemList" } },
         { "/pricing", new[] { "BreadcrumbList", "WebPage", "OfferCatalog" } },
         { "/industries", new[] { "BreadcrumbList", "CollectionPage", "ItemList" } },
@@ -42,9 +42,8 @@ public sealed class TechnicalSeoTests(ApiFactory api) : IClassFixture<ApiFactory
         { "/get-a-quote", new[] { "BreadcrumbList", "WebPage" } },
         { "/book-a-consultation", new[] { "BreadcrumbList", "WebPage" } },
         { "/creators", new[] { "BreadcrumbList", "FAQPage" } },
-        { "/faq", new[] { "BreadcrumbList" } },
+        { "/creators/faq", new[] { "BreadcrumbList" } },
         { "/about", new[] { "BreadcrumbList", "AboutPage" } },
-        { "/academy", new[] { "BreadcrumbList", "WebPage", "EducationalOrganization", "FAQPage" } },
         { "/how-we-work", new[] { "BreadcrumbList", "AboutPage" } },
         { "/privacy-policy", new[] { "BreadcrumbList", "WebPage" } },
         { "/terms-of-service", new[] { "BreadcrumbList", "WebPage" } },
@@ -156,7 +155,8 @@ public sealed class TechnicalSeoTests(ApiFactory api) : IClassFixture<ApiFactory
                 Assert.True(Has("name") && Has("url"));
                 break;
             case "ProfessionalService":
-                Assert.True(Has("name") && Has("address"));
+                // The address is optional (added only when the organization settings carry one); the node itself always has a name and a parent.
+                Assert.True(Has("name") && Has("url") && Has("parentOrganization"));
                 break;
             // Academy (Learning): Google's course rich results need name, description and provider; free courses say so.
             case "Course":

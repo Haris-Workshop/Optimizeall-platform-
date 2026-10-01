@@ -88,12 +88,12 @@ public sealed class JsonLd(string baseUrl, SiteSettings site)
     }
 
     /// <summary>
-    /// <c>ProfessionalService</c> (a LocalBusiness subtype) for the agency's office, only when an address is configured in
-    /// the organization settings. Linked to the Organization node by <c>parentOrganization</c>.
+    /// <c>ProfessionalService</c> (a LocalBusiness subtype): the marketing agency itself, linked to the Organization node
+    /// by <c>parentOrganization</c>. The postal address is added only when the organization settings carry one; without
+    /// it the node is still valid schema.org (<see cref="LocalBusiness"/> is the address-gated variant for the contact page).
     /// </summary>
-    public JsonElement? LocalBusiness()
+    public JsonElement ProfessionalService()
     {
-        if (!HasAddress) return null;
         var o = site.Organization;
         return Element(new()
         {
@@ -106,11 +106,14 @@ public sealed class JsonLd(string baseUrl, SiteSettings site)
             ["description"] = site.Seo.DefaultDescription,
             ["email"] = site.Contact.Email,
             ["telephone"] = site.Contact.Phone,
-            ["address"] = Address(),
+            ["address"] = HasAddress ? Address() : null,
             ["areaServed"] = o.AreaServed.Count > 0 ? o.AreaServed.ToArray() : null,
             ["parentOrganization"] = new Dictionary<string, object?> { ["@id"] = Url("/") + "#organization" },
         });
     }
+
+    /// <summary><see cref="ProfessionalService"/> only when an address is configured (the contact page's LocalBusiness node).</summary>
+    public JsonElement? LocalBusiness() => HasAddress ? ProfessionalService() : null;
 
     public JsonElement WebSite() => Element(new()
     {
@@ -131,8 +134,9 @@ public sealed class JsonLd(string baseUrl, SiteSettings site)
     });
 
     /// <summary>
-    /// Optimize All Academy, the organization's learning pillar, as an <c>EducationalOrganization</c> whose parent is the
-    /// Organization node. Its profiles are the organization's own (settings → social); nothing here is invented.
+    /// Optimize All Academy, the free learning product, as an <c>EducationalOrganization</c> whose parent is the
+    /// Organization node. Emitted on the /learn hub only (never on the home page, which describes the agency). Its profiles
+    /// are the organization's own (settings → social); nothing here is invented.
     /// </summary>
     public JsonElement Academy() => Element(new()
     {
@@ -140,7 +144,7 @@ public sealed class JsonLd(string baseUrl, SiteSettings site)
         ["@type"] = "EducationalOrganization",
         ["@id"] = Url("/") + "#academy",
         ["name"] = $"{site.SiteName} Academy",
-        ["url"] = Url("/academy"),
+        ["url"] = Url("/learn"),
         ["description"] = "Free, self-paced courses in AI, marketing, SEO, sales, design and business, with verifiable certificates.",
         ["parentOrganization"] = new Dictionary<string, object?> { ["@id"] = Url("/") + "#organization" },
         ["knowsAbout"] = new[] { "Artificial intelligence", "Digital marketing", "Search engine optimization", "Sales", "Business", "Design", "Web analytics" },

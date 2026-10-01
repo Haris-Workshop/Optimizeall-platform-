@@ -11,10 +11,8 @@ internal static class BaselineSeo
 {
     private static readonly Dictionary<string, (string Title, string Description)> Pages = new(StringComparer.Ordinal)
     {
-        ["about"] = ("About Us: The Academy and the Agency",
-            "Optimize All helps people and businesses grow: a free academy with certificate-backed courses, and a full-service marketing agency with honest reporting."),
-        ["academy"] = ("Academy: Free AI and Marketing Courses",
-            "Free, self-paced courses in AI, marketing, SEO, sales, design and business. Pass the assessment to earn a verifiable certificate you can add to LinkedIn."),
+        ["about"] = ("About Us: A Digital Marketing Agency",
+            "Optimize All is a digital marketing agency: senior strategists, specialist teams and honest reporting. We also run a free Academy and a Creators programme."),
         ["how-we-work"] = ("How We Work: Audit, Strategy, Execution",
             "Our four-step process: an honest audit, a prioritised 90-day strategy, specialist execution you approve, and clear monthly reporting on results."),
         ["privacy-policy"] = ("Privacy Policy: How We Protect Your Data",
@@ -55,6 +53,12 @@ internal static class BaselineSeo
     }
 
     /// <summary>The SEO fields of a baseline page (the summary as description when no copy is defined).</summary>
+    /// <summary>The About page's search title and description of the two-pillar page (2026-09, academy first).</summary>
+    public const string TwoPillarAboutTitle = "About Us: The Academy and the Agency";
+
+    public const string TwoPillarAboutDescription =
+        "Optimize All helps people and businesses grow: a free academy with certificate-backed courses, and a full-service marketing agency with honest reporting.";
+
     /// <summary>The About page's search title and description before the two-pillar repositioning (2026-09).</summary>
     public const string PreviousAboutTitle = "About Optimize All: Our Story and Values";
 

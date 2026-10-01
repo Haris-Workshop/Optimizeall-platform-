@@ -115,7 +115,13 @@ their data):
 
 * auth: `POST /auth/register|login|refresh|logout|verify-email|resend-verification|forgot-password|reset-password`,
   Google sign-in `GET /auth/providers`, `POST /auth/google/start|callback|complete` (`/auth/me`,
-  `/auth/change-password` and `/auth/external-logins/*` require a session);
+  `/auth/change-password` and `/auth/external-logins/*` require a session). `POST /auth/register` also takes two optional
+  hints that are never an error: `returnTo` (kept only as a same-site relative path: starts with a single `/`, no `//`,
+  no scheme, no backslash or control character or space, not decodable to those, at most 200 characters; carried to the
+  verification link as `/verify-email?token=…&next=<url-encoded>`, and the web app validates it again before navigating)
+  and `audience` (`learner` | `creator`, case-insensitive, else null; stored in `users.Audience`, returned as `audience` in
+  the session user, grants nothing). Links without `next` keep working; `RegistrationHints` (Auth module) is the one place
+  that sanitizes both;
 * public growth pages: `GET /public/invitations/{code}`, `GET /public/campaigns/{slug}`, `POST /public/conversions`
   (HMAC-signed), the tracking redirect `GET /t/{code}`;
 * `GET /files/{id}` (the handler checks access per file, see § 5), `GET /campaign-categories`, `GET /content/faqs`,

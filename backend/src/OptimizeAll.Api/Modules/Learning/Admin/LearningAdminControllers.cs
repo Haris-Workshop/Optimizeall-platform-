@@ -15,6 +15,10 @@ public sealed class LearningAdminController(LearningAdminService admin, Learning
     [HttpGet("courses")]
     public Task<PagedResult<AdminCourseRowDto>> Courses([FromQuery] AdminCourseQuery query, CancellationToken ct) => admin.CoursesAsync(query, ct);
 
+    /// <summary>Published / total course packs and the packs the startup seed found invalid or could not apply (learning.view).</summary>
+    [HttpGet("catalog-health")]
+    public Task<CatalogHealthDto> CatalogHealth([FromServices] LearningCatalogHealth health, CancellationToken ct) => admin.CatalogHealthAsync(health, ct);
+
     [HttpGet("courses/{courseId:guid}")]
     public Task<AdminCourseDetailDto> Course(Guid courseId, CancellationToken ct) => admin.CourseAsync(courseId, ct);
 

@@ -77,8 +77,10 @@ version, including staff-authored ones.
 The contract is code: `CoursePackValidator` (Domain). Two modes:
 
 * **Strict** — every rule above including the editorial word ranges. `UnitTests/Learning/CoursePackTests` validates
-  **every pack in the catalog** in CI (plus file name = slug, unique slugs, prerequisites that exist, lossless
-  round-trip), so content changes are checked on every push.
+  **every pack in the catalog** in CI (70 packs today; plus file name = slug, unique slugs, prerequisites that exist,
+  lossless round-trip), so content changes are checked on every push. `IntegrationTests/Learning/CatalogHealthTests`
+  then checks that the Baseline seed publishes every embedded pack on a fresh database (it compares the number of
+  embedded packs with the number published, so no count is hard-coded). Both run in the normal test projects of CI.
 * **Authoring** — identical structure, count and MCQ rules (so the admin MCQ editor validates exactly like packs), minus
   the word ranges (description, badge description, lesson body, video script). Used by the admin editor and by the
   startup upsert (a pack failing it is skipped with an error log rather than breaking startup).
@@ -87,7 +89,7 @@ Unknown JSON properties are errors (typos never pass silently).
 
 ### Pack v2 (2026-09): deeper lessons, lecture scripts, tools
 
-A pack that declares **`lastReviewed`** (`"YYYY-MM"`) is a **v2 pack**. The 52 original packs are v1 and keep validating
+A pack that declares **`lastReviewed`** (`"YYYY-MM"`) is a **v2 pack**. The original packs are v1 and keep validating
 unchanged; content workstreams upgrade them one by one (bump `version` when you do). v2 adds, all optional unless noted:
 
 ```jsonc
@@ -124,8 +126,9 @@ unchanged; content workstreams upgrade them one by one (bump `version` when you 
   applies in Authoring too.
 * The optional properties are omitted from the stored JSON when null, so v1 documents keep their exact content hash.
 * `course slug` values `paths`, `search` and `catalog` are reserved (`/learn/paths` is the learning paths page).
-* A Python mirror of the validator for content authors: `check_pack_v2.py` (kept in sync with `CoursePackValidator`;
-  `--allow-v1` checks v1 packs with the v1 rules).
+* The validators content authors run are `CoursePackTests` (Strict, every pack; `dotnet test backend/tests/OptimizeAll.UnitTests
+  --filter CoursePackTests`) and `python3 scripts/export-lecture-scripts.py --check`, which verifies that the exported
+  lecture scripts in `docs/lectures/` match the packs. (There is no standalone Python validator.)
 * Production: `scripts/export-lecture-scripts.py` → `docs/lectures/` (see [lectures/README.md](lectures/README.md)).
 
 ### Startup upsert and how pack updates and admin edits interact
@@ -144,6 +147,19 @@ unchanged; content workstreams upgrade them one by one (bump `version` when you 
 Staff edits (course editor, lesson videos) always create a **new version** based on the latest one; the pack file in the
 repository is never modified. To make a staff edit permanent in the repository, export the version (admin API
 `GET /admin/learning/courses/{id}/versions/{versionId}`), copy it into the pack file and bump `version`.
+
+### Catalog health
+
+On every start the seeder logs one summary line, `Learning catalog: N of M packs published` (Information when all are
+live, Warning when fewer are; staff unpublishing a course also lowers N). A pack that is not valid JSON, fails the Authoring
+validation or throws while being applied is logged at **Error** with its **slug, file name and reason** and skipped; the
+other packs are still applied, and a seeder that fails as a whole is logged at Error by the database initializer
+(`Database:SeedFailure=Continue` keeps the API starting; `Fail` stops it).
+
+`GET /api/v1/admin/learning/catalog-health` (permission `learning.view`) returns `totalPacks` (embedded packs),
+`publishedPacks` (pack-origin courses live right now), `invalidPacks`, `failedPacks`, `seedRan` (false until the seed has run in
+this process), `checkedAt` and `problems` (`file`, `slug`, `kind` = `invalid` | `failed`, `reason`). `/health/ready` is
+not affected: readiness reports the database only and never fails because of the catalog.
 
 ## 3. Lessons and progress
 
@@ -310,7 +326,9 @@ data — no table and no migration):
 ```
 
 * Validated by `LearningPathValidator` (unknown properties are errors); `UnitTests/Learning/LearningPathTests` checks
-  every path, file name = slug, and that each path already has ≥ 3 courses that exist (planned slugs are allowed).
+  every path, file name = slug, that each path already has ≥ 3 courses that exist (planned slugs are allowed), and that
+  **every pack in the catalog is in at least one path** (a new pack must be added to the fitting path; `ai-engineer`
+  already holds the maximum of 14 courses).
 * API: `GET /api/v1/public/learning/paths` (cards with course count, lessons, total minutes, categories, badges; SEO +
   JSON-LD), `GET /public/learning/paths/{slug}` (description, outcomes, audience, ordered course cards, SEO + JSON-LD),
   `GET /api/v1/me/learning/paths` and `/me/learning/paths/{slug}` (participant progress: per course enrolled / percent /

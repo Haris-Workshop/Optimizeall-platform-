@@ -16,17 +16,25 @@ public sealed class AccountEmails(IEmailSender email, EmailTemplateService templ
 
     public static readonly int VerificationHours = 48;
 
-    public async Task<EmailSendResult> SendVerificationAsync(User user, string rawToken, CancellationToken ct)
+    /// <summary>
+    /// The verification email. <paramref name="returnTo"/> (already sanitized by <c>RegistrationHints.ReturnTo</c>) is added
+    /// to the link as <c>next</c>; links without it keep working.
+    /// </summary>
+    public async Task<EmailSendResult> SendVerificationAsync(User user, string rawToken, CancellationToken ct, string? returnTo = null)
     {
         if (await OriginAsync(ct) is not { } origin) return OriginUnknown(user);
         var mail = await templates.RenderAsync(EmailTemplateCatalog.AuthVerifyEmail, new Dictionary<string, string>
         {
-            ["verifyUrl"] = $"{origin}{AppLinks.VerifyEmail}?token={WebUtility.UrlEncode(rawToken)}",
+            ["verifyUrl"] = VerifyUrl(origin, rawToken, returnTo),
             ["hours"] = VerificationHours.ToString(System.Globalization.CultureInfo.InvariantCulture),
         }, ct);
         // The display name is attacker-controlled until the address is verified, so it is not used as the recipient name.
         return await email.SendAsync(new EmailMessage(user.Email, user.Email, mail.Subject, mail.Text), ct);
     }
+
+    /// <summary>The verification link: <c>/verify-email?token=…</c>, plus <c>&amp;next=…</c> (URL-encoded) when a return path is given.</summary>
+    public static string VerifyUrl(string origin, string rawToken, string? returnTo) =>
+        $"{origin}{AppLinks.VerifyEmail}?token={WebUtility.UrlEncode(rawToken)}" + (returnTo is null ? string.Empty : $"&next={WebUtility.UrlEncode(returnTo)}");
 
     public async Task<EmailSendResult> SendPasswordResetAsync(User user, string rawToken, CancellationToken ct)
     {

@@ -23,12 +23,26 @@ public sealed partial class SeoPageResolver
     private void ApplyLearningSeo(SeoPage page, LearningSeoDto seo, IEnumerable<System.Text.Json.JsonElement> jsonLd, string? imageAlt) =>
         ApplySeo(page, new PublicSeoDto(seo.Title, seo.Description, seo.ImageUrl, _ld.Url(seo.CanonicalPath), seo.NoIndex), jsonLd, imageAlt);
 
-    private async Task<SeoPage> AcademyAsync(CancellationToken ct)
+    /// <summary>Query parameters that filter or page the /learn catalog (the web app's hub: category tiles, search, level, length).</summary>
+    private static readonly string[] CatalogFilters = { "category", "q", "search", "level", "maxMinutes", "featured", "sort", "page", "pageSize" };
+
+    /// <summary>
+    /// The /learn hub. Filtered views (/learn?category=Ai, ?q=…) are not archives of their own: like the blog's tag and
+    /// search filters they point their canonical at /learn and are noindex,follow, so only the hub is indexed. The
+    /// Academy's EducationalOrganization node (parent: the Organization) is emitted here and nowhere else.
+    /// </summary>
+    private async Task<SeoPage> AcademyAsync(IReadOnlyDictionary<string, string> query, CancellationToken ct)
     {
         var page = NewPage("/learn", AcademyTitle, AcademyDescription);
         page.Source = "Academy";
         page.EditPath = LearningAdminPath;
+        if (CatalogFilters.Any(query.ContainsKey))
+        {
+            page.NoIndex = true;
+            page.Canonical = _ld.Url("/learn");
+        }
         CrumbsLd(page, ("Academy", "/learn"));
+        page.JsonLd.Add(_ld.Academy());
         var courses = await learning.CatalogAsync(new CatalogQuery { Page = 1, PageSize = 200 }, ct);
         page.ModifiedAt = courses.Items.Select(c => c.PublishedAt).Max();
         var c = page.Content;
@@ -49,6 +63,27 @@ public sealed partial class SeoPageResolver
             c.Add(new HeadingNode(2, PublicLearningService.CategoryLabels[group.Key]));
             c.Add(new LinkListNode(group.Select(x => new LinkItem(x.Title, LearningLinks.CoursePath(x.Slug), x.Subtitle)).ToList()));
         }
+        return page;
+    }
+
+    /// <summary>
+    /// /verify: the front door for employers and clients (web app: pages/VerifyIndexPage.tsx). The form needs JavaScript; the
+    /// page says what verification is and where a certificate's own page lives (/verify/certificates/{id}).
+    /// </summary>
+    private SeoPage VerifyIndex()
+    {
+        var page = NewPage("/verify", "Verify a certificate",
+            "Check an Optimize All Academy certificate: enter its credential ID or paste its verification link.");
+        page.Source = "Certificate verification";
+        page.EditPath = LearningAdminPath;
+        CrumbsLd(page, ("Verify a certificate", "/verify"));
+        page.JsonLd.Add(_seoLd.WebPage("WebPage", "Verify a certificate", page.Description, "/verify"));
+        var c = page.Content;
+        c.Add(new ParagraphNode("Certificate verification"));
+        c.Add(new HeadingNode(1, "Verify a certificate"));
+        c.Add(new ParagraphNode("Every Optimize All Academy certificate has a public verification page. Enter its credential ID, or paste the link the holder " +
+                                "shared, to see who earned it, for which course and whether it is still valid."));
+        c.Add(new LinkListNode(new[] { new LinkItem("Browse the free courses", "/learn") }));
         return page;
     }
 

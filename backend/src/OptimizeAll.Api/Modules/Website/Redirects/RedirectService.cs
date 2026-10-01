@@ -144,11 +144,14 @@ public sealed class RedirectService(
 
     /// <summary>
     /// The Location a request target should be redirected to (with its other query parameters carried over), or null.
-    /// Built-in and portal addresses and addresses serving live content are never redirected.
+    /// Built-in and portal addresses and addresses serving live content are never redirected, except the product's own
+    /// moves (<see cref="RedirectPaths.BuiltInRedirects"/>: /academy → /learn, /faq → /creators/faq).
     /// </summary>
     public async Task<string?> ResolveAsync(string? requestTarget, CancellationToken ct)
     {
-        if (RedirectPaths.Parse(requestTarget) is not { } key || RedirectPaths.IsProtected(key.Key)) return null;
+        if (RedirectPaths.Parse(requestTarget) is not { } key) return null;
+        if (RedirectPaths.BuiltInRedirects.TryGetValue(key.Key, out var builtIn)) return RedirectPaths.Location(builtIn, key.Query);
+        if (RedirectPaths.IsProtected(key.Key)) return null;
         var to = await db.Set<SiteRedirect>().AsNoTracking().Where(r => r.FromPath == key.Key).Select(r => r.ToPath).FirstOrDefaultAsync(ct);
         if (to is null || await IsLiveAsync(key.Key, ct)) return null;
         return RedirectPaths.Location(to, key.Query);

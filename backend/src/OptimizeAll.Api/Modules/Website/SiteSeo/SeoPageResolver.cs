@@ -235,9 +235,9 @@ public sealed partial class SeoPageResolver(
                     "careers" => await CareersAsync(ct),
                     "contact" or "free-audit" or "get-a-quote" or "book-a-consultation" => await FormPageAsync(path, ct),
                     "creators" => CreatorsPage(),
-                    "faq" => await FaqAsync(ct),
                     "partners" => await PartnersAsync(ct),
-                    "learn" => await AcademyAsync(ct),
+                    "learn" => await AcademyAsync(query, ct),
+                    "verify" => VerifyIndex(),
                     _ => await CmsPageAsync(segments[0], ct),
                 };
             case 2:
@@ -251,6 +251,7 @@ public sealed partial class SeoPageResolver(
                     "c" => await CampaignAsync(segments[1], ct),
                     "partners" => await PartnerAsync(segments[1], ct),
                     "learn" => await CourseAsync(segments[1], ct),
+                    "creators" when segments[1] == "faq" => await FaqAsync(ct),
                     _ => null,
                 };
             case 3 when segments[0] == "lp":
@@ -272,7 +273,7 @@ public sealed partial class SeoPageResolver(
         var page = new SeoPage
         {
             Path = path,
-            Title = fullTitle ? title : SeoText.ApplyTemplate(title, _settings.Seo.TitleTemplate, _settings.SiteName),
+            Title = fullTitle ? title : SeoText.ApplyTemplate(title, SeoText.TemplateFor(path, _settings.Seo.TitleTemplate, _settings.SiteName), _settings.SiteName),
             Description = SeoText.Clamp(description ?? _settings.Seo.DefaultDescription),
             Canonical = _ld.Url(path),
         };
@@ -288,14 +289,14 @@ public sealed partial class SeoPageResolver(
     {
         var chosen = image ?? _settings.Seo.DefaultOgImageUrl;
         page.OgImage = chosen is null ? _ld.Url(DefaultOgImagePath) : _ld.Url(chosen);
-        page.OgImageAlt = chosen is null ? $"{_settings.SiteName}: free AI, marketing and growth courses with certificates, and a full-service marketing agency" : alt ?? page.Title;
+        page.OgImageAlt = chosen is null ? $"{_settings.SiteName}: digital marketing agency for strategy, performance, SEO, content and AI" : alt ?? page.Title;
         (page.OgImageWidth, page.OgImageHeight) = chosen is null ? (1200, 630) : ((int?)null, (int?)null);
         if (image is not null) page.Images.Add(new SeoImage(_ld.Url(image), alt ?? page.Title));
     }
 
     private void ApplySeo(SeoPage page, PublicSeoDto seo, IEnumerable<JsonElement> jsonLd, string? imageAlt = null)
     {
-        page.Title = SeoText.ApplyTemplate(seo.Title, _settings.Seo.TitleTemplate, _settings.SiteName);
+        page.Title = SeoText.ApplyTemplate(seo.Title, SeoText.TemplateFor(page.Path, _settings.Seo.TitleTemplate, _settings.SiteName), _settings.SiteName);
         page.Description = SeoText.Clamp(seo.Description);
         page.Canonical = seo.CanonicalUrl;
         page.NoIndex = seo.NoIndex;
@@ -413,10 +414,10 @@ public sealed partial class SeoPageResolver(
         page.Content.Add(new HeadingNode(2, "Helpful links"));
         page.Content.Add(new LinkListNode(new[]
         {
-            new LinkItem("Home", "/"), new LinkItem("Academy", "/academy"), new LinkItem("Free courses", "/learn"),
-            new LinkItem("Services", "/services"), new LinkItem("Case studies", "/case-studies"),
-            new LinkItem("Pricing", "/pricing"), new LinkItem("Blog", "/blog"), new LinkItem("Contact us", "/contact"),
-            new LinkItem("Search the site", "/search"),
+            new LinkItem("Home", "/"), new LinkItem("Services", "/services"), new LinkItem("Case studies", "/case-studies"),
+            new LinkItem("Industries", "/industries"), new LinkItem("Pricing", "/pricing"), new LinkItem("Insights", "/blog"),
+            new LinkItem("Book a consultation", "/book-a-consultation"), new LinkItem("Contact us", "/contact"),
+            new LinkItem("Free Academy", "/learn"), new LinkItem("Search the site", "/search"),
         }));
         return page;
     }

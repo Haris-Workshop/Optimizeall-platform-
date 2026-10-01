@@ -65,7 +65,7 @@ public sealed class AcademySeoTests(ApiFactory api) : IClassFixture<ApiFactory>
         Assert.All(postLinks, link => Assert.Contains(link, urls));
 
         var llms = await anon.GetStringAsync("/llms.txt");
-        Assert.Contains("## Academy (free courses)", llms);
+        Assert.Contains("## Optimize All Academy (separate product: free courses)", llms);
         Assert.Contains("/learn.md", llms);
 
         Assert.Equal(HttpStatusCode.NotFound, (await anon.GetAsync("/_document/learn/no-such-course")).StatusCode);

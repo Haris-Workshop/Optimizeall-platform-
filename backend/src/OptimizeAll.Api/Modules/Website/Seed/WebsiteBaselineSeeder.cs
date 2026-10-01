@@ -19,6 +19,9 @@ public sealed class WebsiteBaselineSeeder : ISeeder
     /// <summary>Ledger key of the one-time upgrade of untouched defaults to the academy + agency positioning.</summary>
     public const string TwoPillarsUpgradeKey = "upgrade:two-pillars-2026-09";
 
+    /// <summary>Ledger key of the one-time move of untouched settings to the agency-first defaults (academy and creators as separate products).</summary>
+    public const string AgencyFirstUpgradeKey = "upgrade:agency-first-2026-10";
+
     public string Profile => "Baseline";
     public int Order => 60;
 
@@ -170,10 +173,6 @@ public sealed class WebsiteBaselineSeeder : ISeeder
         if (!ledger.WasSeeded(TwoPillarsUpgradeKey))
         {
             ledger.Record(TwoPillarsUpgradeKey);
-            var settingsDoc = await db.Set<SiteSettingsDocument>().FirstOrDefaultAsync(d => d.Key == SiteSettingsDocument.DefaultKey, ct);
-            if (settingsDoc is not null && SiteSettingsService.UpgradeFromPreviousDefaults(SiteSettingsService.Parse(settingsDoc.Json)) is { } upgraded)
-                settingsDoc.Json = JsonSerializer.Serialize(upgraded, SiteSettingsService.Json);
-
             var previous = BaselinePages.PreviousAbout;
             var about = await db.Set<SitePage>().FirstOrDefaultAsync(p => p.Slug == previous.Slug, ct);
             if (about is not null && about.Version == 0 && about.Title == previous.Title && about.Summary == previous.Summary
@@ -183,6 +182,35 @@ public sealed class WebsiteBaselineSeeder : ISeeder
                 about.Summary = next.Summary;
                 about.BlocksJson = PageBlockValidator.Serialize(next.Blocks);
                 if (about.Seo.Title == BaselineSeo.PreviousAboutTitle && about.Seo.Description == BaselineSeo.PreviousAboutDescription)
+                {
+                    var seo = BaselineSeo.ForPage(next.Slug, next.Summary);
+                    about.Seo.Title = seo.Title;
+                    about.Seo.Description = seo.Description;
+                }
+            }
+        }
+
+        // ---- Agency-first repositioning (2026-10, once): the agency is the main frame; the Academy and the Creators programme
+        // are separate, labelled products. Header, footer and default SEO texts that still equal an earlier built-in
+        // generation (agency-only, or the academy-first two-pillar defaults) move to the new defaults; an administrator's
+        // own edits are never replaced.
+        if (!ledger.WasSeeded(AgencyFirstUpgradeKey))
+        {
+            ledger.Record(AgencyFirstUpgradeKey);
+            var settingsDoc = await db.Set<SiteSettingsDocument>().FirstOrDefaultAsync(d => d.Key == SiteSettingsDocument.DefaultKey, ct);
+            if (settingsDoc is not null && SiteSettingsService.UpgradeFromPreviousDefaults(SiteSettingsService.Parse(settingsDoc.Json)) is { } upgraded)
+                settingsDoc.Json = JsonSerializer.Serialize(upgraded, SiteSettingsService.Json);
+
+            // The About page: an untouched two-pillar page (never edited: version 0, same words) becomes the agency-first page.
+            var twoPillar = BaselinePages.TwoPillarAbout;
+            var about = await db.Set<SitePage>().FirstOrDefaultAsync(p => p.Slug == twoPillar.Slug, ct);
+            if (about is not null && about.Version == 0 && about.Title == twoPillar.Title && about.Summary == twoPillar.Summary
+                && about.BlocksJson == PageBlockValidator.Serialize(twoPillar.Blocks))
+            {
+                var next = BaselinePages.Pages.First(p => p.Slug == twoPillar.Slug);
+                about.Summary = next.Summary;
+                about.BlocksJson = PageBlockValidator.Serialize(next.Blocks);
+                if (about.Seo.Title == BaselineSeo.TwoPillarAboutTitle && about.Seo.Description == BaselineSeo.TwoPillarAboutDescription)
                 {
                     var seo = BaselineSeo.ForPage(next.Slug, next.Summary);
                     about.Seo.Title = seo.Title;

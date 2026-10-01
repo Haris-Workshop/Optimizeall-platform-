@@ -92,10 +92,11 @@ public sealed class LlmsTxtService(SeoPageResolver resolver, IMemoryCache cache)
             sb.Append("# ").Append(s.SiteName).Append("\n\n");
             sb.Append("> ").Append(s.Seo.DefaultDescription ?? s.Tagline).Append("\n\n");
             if (!string.IsNullOrWhiteSpace(s.Footer.Blurb)) sb.Append(s.Footer.Blurb).Append("\n\n");
-            sb.Append(s.SiteName).Append(" has two pillars. Optimize All Academy: free, self-paced courses in AI, marketing, SEO, sales and ")
-                .Append("business, each with a verifiable certificate (a unique code and a public verification page). Optimize All Agency: a ")
-                .Append("full-service digital marketing agency (SEO, paid media, social, content, email, brand and web). It also runs a creator program ")
-                .Append("(people with established social accounts are paid to share company-approved, clearly disclosed posts). ")
+            sb.Append(s.SiteName).Append(" is a digital marketing agency: strategy, performance marketing, SEO, content and AI, from search, social ")
+                .Append("and paid media to email, brand and web. Alongside the agency it offers two separate products: Optimize All Academy ")
+                .Append("(free, self-paced courses in AI, marketing, SEO, sales and business, each with a verifiable certificate: a unique code and ")
+                .Append("a public verification page) and Optimize All Creators (a creator programme in which people with established social accounts ")
+                .Append("are paid to share company-approved, clearly disclosed posts). ")
                 .Append("Prices on this site are starting prices; ad spend is billed at cost. Results in case studies are labelled measured ")
                 .Append("or estimated. Every link below has a Markdown version (the same URL ending in .md).\n\n");
             if (s.Contact.Email is not null) sb.Append("Contact: ").Append(s.Contact.Email).Append("\n\n");
@@ -115,7 +116,7 @@ public sealed class LlmsTxtService(SeoPageResolver resolver, IMemoryCache cache)
                 sb.Append('\n');
             }
 
-            var keyPaths = new[] { "/", "/academy", "/learn", "/services", "/pricing", "/case-studies", "/industries", "/about", "/how-we-work", "/team",
+            var keyPaths = new[] { "/", "/services", "/pricing", "/case-studies", "/industries", "/about", "/how-we-work", "/team",
                 "/contact", "/free-audit", "/get-a-quote", "/book-a-consultation" };
             Section("Key pages", keyPaths.Select(p => entries.FirstOrDefault(e => e.Url.Path == p)).OfType<Entry>());
             Section("Services", entries.Where(e => e.Url.Group == SeoPageResolver.GroupServices));
@@ -124,17 +125,17 @@ public sealed class LlmsTxtService(SeoPageResolver resolver, IMemoryCache cache)
             Section("Blog", entries.Where(e => e.Url.Group == SeoPageResolver.GroupBlog && !e.Url.Path.Contains('?')).Take(50));
             Section("Blog topics", entries.Where(e => e.Url.Group == SeoPageResolver.GroupBlog && e.Url.Path.Contains('?')));
             Section("Careers", entries.Where(e => e.Url.Path == "/careers" || e.Url.Group == SeoPageResolver.GroupCareers));
-            Section("Creator program", entries.Where(e => e.Url.Path is "/creators" or "/faq"));
+            Section("Creators programme (separate product)", entries.Where(e => e.Url.Path is "/creators" or "/creators/faq"));
             Section("Partners", entries.Where(e => e.Url.Group == SeoPageResolver.GroupPartners));
             // The academy home, its courses (and learning paths when published). Each course page lists its lessons.
             var academy = entries.Where(IsAcademyIndexPage).ToList();
             if (academy.Count > 0)
             {
-                Section("Academy (free courses)", academy.Where(e => e.Url.Path != "/learn"),
+                Section("Optimize All Academy (separate product: free courses)", academy,
                     $"Free, self-paced courses with verified certificates. The [academy guide]({resolver.Absolute("/llms/academy.txt")}) lists " +
                     "every course with its modules and a summary of each lesson; every lesson has a Markdown version (video lectures include their transcript).");
             }
-            var listed = new HashSet<string>(keyPaths.Concat(new[] { "/careers", "/creators", "/faq", "/blog" }));
+            var listed = new HashSet<string>(keyPaths.Concat(new[] { "/careers", "/creators", "/creators/faq", "/blog" }));
             Section("Optional", entries.Where(e => e.Url.Group == SeoPageResolver.GroupPages && !listed.Contains(e.Url.Path) &&
                                                    !e.Url.Path.StartsWith("/industries/", StringComparison.Ordinal))
                 .Concat(entries.Where(e => e.Url.Path == "/blog")));

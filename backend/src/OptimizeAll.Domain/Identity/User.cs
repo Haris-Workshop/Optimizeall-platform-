@@ -65,6 +65,12 @@ public class User : AuditedEntity, IConcurrencyStamped
     public bool WhatsAppOptIn { get; set; }
     public bool MarketingEmailOptIn { get; set; }
 
+    /// <summary>
+    /// What the person said they came for when registering: "learner" (the free Academy) or "creator" (the Creators
+    /// programme). Null when not said (older accounts, Google sign-up). A hint for the first screen only; it grants nothing.
+    /// </summary>
+    public string? Audience { get; set; }
+
     public int FailedLoginCount { get; set; }
     public DateTime? LockoutEndsAt { get; set; }
     public DateTime? LastLoginAt { get; set; }

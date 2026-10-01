@@ -738,7 +738,7 @@ public sealed class CatalogAdminService(
     {
         var e = new FieldErrors();
         var slug = WebsiteRules.Slug(r.Slug, "slug", e);
-        if (ReservedSlugs.Contains(slug)) e.Add("slug", "This address is used by a built-in page. Pick another slug.");
+        if (ReservedSlugs.Contains(slug) && x.Slug != slug) e.Add("slug", "This address is used by a built-in page. Pick another slug.");
         if (r.Kind is not { } kind || !Enum.IsDefined(kind)) e.Add("kind", "Pick a page kind.");
         var validated = blocks.Validate(r.Blocks, e);
         if (r.IsPublished && validated.Count == 0) e.Add("blocks", "Add at least one block before publishing.");
@@ -765,6 +765,8 @@ public sealed class CatalogAdminService(
         // public website
         "services", "industries", "case-studies", "team", "careers", "blog", "free-audit", "get-a-quote",
         "book-a-consultation", "newsletter", "search", "faq", "creators", "design-system", "partners", "learn", "verify",
+        // /academy is a permanent redirect to /learn (RedirectPaths.BuiltInRedirects); a page saved there before keeps its slug
+        "academy",
         // sign-in and account emails
         "login", "register", "check-email", "verify-email", "forgot-password", "reset-password", "auth",
         // portals and the API

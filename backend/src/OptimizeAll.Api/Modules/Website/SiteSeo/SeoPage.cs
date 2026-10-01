@@ -109,6 +109,36 @@ public static partial class SeoText
         return full.Length > TitleMax && title.Length <= TitleMax ? title : full;
     }
 
+    /// <summary>The title template of the free Academy section (/learn, /verify/certificates): "%s | Optimize All Academy".</summary>
+    public const string AcademyLabel = "Academy";
+
+    /// <summary>The title template of the Creators section (/creators): "%s | Optimize All Creators".</summary>
+    public const string CreatorsLabel = "Creators";
+
+    /// <summary>
+    /// Which labelled product a public path belongs to: "Academy" (/learn, /verify), "Creators" (/creators, /join, /c), or
+    /// null for the agency site. The web app's chromeVariant (features/public/site/variant.ts) uses the same split.
+    /// </summary>
+    public static string? SectionOf(string path)
+    {
+        static bool Under(string path, string prefix) => path.Equals(prefix, StringComparison.OrdinalIgnoreCase) || path.StartsWith(prefix + "/", StringComparison.OrdinalIgnoreCase);
+        if (Under(path, "/learn") || Under(path, "/verify")) return AcademyLabel;
+        if (Under(path, "/creators") || Under(path, "/join") || Under(path, "/c")) return CreatorsLabel;
+        return null;
+    }
+
+    /// <summary>
+    /// The title template for a path: the site template ("%s | Optimize All") for the agency's pages, and the same template
+    /// with the product's name for the labelled products ("%s | Optimize All Academy", "%s | Optimize All Creators").
+    /// A template that does not end with the site name gets "%s | {site} {product}".
+    /// </summary>
+    public static string TemplateFor(string path, string template, string siteName)
+    {
+        if (SectionOf(path) is not { } section) return template;
+        var t = template.TrimEnd();
+        return t.EndsWith(siteName, StringComparison.Ordinal) ? $"{t} {section}" : $"%s | {siteName} {section}";
+    }
+
     public static string Iso(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc).ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
 
     [GeneratedRegex(@"\s+")]

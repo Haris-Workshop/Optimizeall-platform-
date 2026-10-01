@@ -293,17 +293,22 @@ browser: loads the app bundle; React renders into #root (createRoot replaces the
 | Unknown path, unpublished/scheduled content, unknown slug, blog page beyond the last | `404`, `noindex, follow`, `X-Robots-Tag`, helpful links (home, services, case studies, pricing, blog, contact, search); the app then shows its own 404 page |
 | Job opening that existed but closed | `410 Gone` |
 | Trailing slash, duplicate slashes, upper case (not in personal token links), `/index.html` | `301` to the one lower-case form, query string kept |
-| Moved address (Website → Redirects: automatic on slug changes, or manual) | `301` to the new address in one hop (checked before URL normalization; other query parameters such as UTM tags carried over) via `ISeoRedirectLookup`, implemented by `WebsiteRedirectLookup` over the redirect manager ([WEBSITE.md](WEBSITE.md#marketer-guide)); live content, built-in pages and portals are never redirected. The interface also allows `308`/`410` |
+| Moved address (Website → Redirects: automatic on slug changes, or manual) | `301` to the new address in one hop (checked before URL normalization; other query parameters such as UTM tags carried over) via `ISeoRedirectLookup`, implemented by `WebsiteRedirectLookup` over the redirect manager ([WEBSITE.md](WEBSITE.md#marketer-guide)); live content, built-in pages and portals are never redirected, except the product's own built-in moves (`RedirectPaths.BuiltInRedirects`, answered first, query string kept): `/academy` → `/learn` and `/faq` → `/creators/faq`. The interface also allows `308`/`410` |
 | Other host name | optional `301` to the Site URL's host with `Website:Seo:CanonicalHostRedirect=true` (off by default — enable it once DNS for the Site URL is live; otherwise redirect `example.com ↔ www` at the proxy) |
 
 ### 9.3 Metadata rules
 
 * **Titles** ≤ 60 characters including the suffix of the title template (Site settings → SEO, default
-  `%s | Optimize All`; a title that already names the site is used as is). **Descriptions** 70–155 characters; longer
+  `%s | Optimize All`; a title that already names the site is used as is). The two separate products have their own
+  section templates, derived from the site template by `SeoText.TemplateFor` and used by the web app's `useDocumentHead`
+  too (`frontend/src/features/public/site/variant.ts`): `%s | Optimize All Academy` for `/learn*` and `/verify*`,
+  `%s | Optimize All Creators` for `/creators*`, `/join/*` and `/c/*`; everything else keeps the site template. Social cards
+  carry the same names ("Optimize All Academy", "Optimize All Creators" as the eyebrow). **Descriptions** 70–155 characters; longer
   ones are cut at a word boundary with "…" (server and payloads use the same `SeoText.Clamp`).
 * **Built-in pages** take their title and description from **Page texts** (`{page}.seo.title` /
   `{page}.seo.description`, e.g. `services.seo.title` "Marketing Services: SEO, Ads, Social & Web"); the home page from
-  Site settings → SEO (default title and description); `/faq` from the help-centre portal copy. All are editable, and
+  Site settings → SEO (default title and description, agency-focused: "Optimize All — Digital Marketing, SEO & AI Agency");
+  `/creators/faq` from the help-centre portal copy. All are editable, and
   the shipped copy meets the rules (the integration and E2E tests fail otherwise).
 * **Content** (services, industries, case studies, blog posts, CMS pages, landing pages) uses its SEO fields (title,
   description, social image, canonical URL, noindex) with defaults: name/title, summary/tagline/excerpt, hero or cover
@@ -332,7 +337,8 @@ browser: loads the app bundle; React renders into #root (createRoot replaces the
 
 | Page | JSON-LD |
 |---|---|
-| Home | Organization (`@id #organization`, logo as ImageObject, sameAs from social profiles, contactPoint from the contact email/phone, address), WebSite (`#website`, SearchAction → `/search?q=`), WebPage, ProfessionalService (LocalBusiness) when an address is set in Site settings → Organization |
+| Home | Organization (`@id #organization`, logo as ImageObject, sameAs from social profiles, contactPoint from the contact email/phone, address), WebSite (`#website`, SearchAction → `/search?q=`), WebPage, ProfessionalService (`#business`, parent → Organization; the postal address only when set in Site settings → Organization, otherwise a valid node without it). The home page describes the agency: **no** EducationalOrganization |
+| Academy hub `/learn` | EducationalOrganization (`#academy`, `JsonLd.Academy()`, name "Optimize All Academy", url `/learn`, `parentOrganization` → Organization) — on this page only; BreadcrumbList. Filtered views (`/learn?category=…`, `?q=`, `?level=`, `?page=`…) point their canonical at `/learn` and are `noindex, follow` (as the blog's tag and search filters), so only the hub is indexed and the sitemap lists no `?` URL of the academy |
 | Services list / industries / case studies / careers | BreadcrumbList, CollectionPage, ItemList |
 | Service | Service (+ Offer per priced package, provider → Organization), BreadcrumbList, FAQPage |
 | Pricing | BreadcrumbList, WebPage, OfferCatalog (services → Offers with UnitPriceSpecification for recurring prices) |
@@ -341,7 +347,7 @@ browser: loads the app bundle; React renders into #root (createRoot replaces the
 | Job opening | JobPosting (employmentType, datePosted, validThrough, location or TELECOMMUTE, baseSalary), BreadcrumbList |
 | Team / about / how we work | AboutPage, ItemList of Person (team) |
 | Contact | ContactPage, ProfessionalService (when an address is set) |
-| Creators / FAQ / CMS FAQ blocks | FAQPage |
+| Creators `/creators`, `/creators/faq` / CMS FAQ blocks | FAQPage |
 | Any page with a video | VideoObject (name, description, thumbnailUrl, uploadDate, duration, contentUrl or embedUrl, caption track, transcript) |
 | Every page but home | BreadcrumbList |
 
@@ -367,10 +373,12 @@ nginx): an MP4 (H.264/AAC) and ideally a WebM, a 16:9 poster image (JPEG/WebP, �
 
 ### 9.6 Sitemaps
 
-`/sitemap.xml` is a **sitemap index** of `/sitemaps/{pages,services,case-studies,blog,careers,landing-pages,images,
-videos}.xml` (only non-empty files). Only published, indexable, self-canonical, `200` URLs are listed, on the Site URL:
+`/sitemap.xml` is a **sitemap index** of `/sitemaps/{pages,services,case-studies,blog,careers,landing-pages,partners,learn,
+creators,images,videos}.xml` (only non-empty files). Only published, indexable, self-canonical, `200` URLs are listed, on the Site URL:
 
-* `pages`: home, the built-in pages, CMS pages, industries · `services` · `case-studies` · `blog` (posts and topic
+* `pages`: home, the built-in agency pages, CMS pages, industries (not `/academy` or `/faq`: both are redirects) ·
+  `creators` (`/creators`, `/creators/faq`) · `learn` (the `/learn` hub, `/verify`, learning paths, courses, lessons;
+  never a filtered `/learn?…` view) · `services` · `case-studies` · `blog` (posts and topic
   archives `/blog?category=…`) · `careers`
   (open jobs) · `landing-pages` (live client landing pages without noindex and public campaigns) · `images` (Google
   image extension: hero, cover, gallery, team photos) · `videos` (Google video extension: thumbnail, title,
@@ -409,10 +417,12 @@ areas are protected by sign-in, and noindex is also sent as `X-Robots-Tag` on po
 
 ### 9.8 llms.txt, Markdown pages and well-known files
 
-* **`/llms.txt`** (llmstxt.org): `# Optimize All`, a `>` summary (default description), what the agency, the
-  creator program and the academy are, contact email, then `## Key pages`, `## Services`, `## Industries`,
-  `## Case studies`, `## Blog` (50 newest), `## Blog topics`, `## Careers`, `## Creator program`, `## Partners`,
-  `## Academy (free courses)` (every course, and learning paths when published), `## Optional` and
+* **`/llms.txt`** (llmstxt.org): `# Optimize All`, a `>` summary (default description), what the agency is and the two
+  separate products alongside it (Academy, Creators), contact email, then the agency first: `## Key pages` (no academy
+  entries), `## Services`, `## Industries`, `## Case studies`, `## Blog` (50 newest), `## Blog topics`, `## Careers`,
+  `## Creators programme (separate product)` (`/creators`, `/creators/faq`), `## Partners`,
+  `## Optimize All Academy (separate product: free courses)` (the `/learn` hub, `/verify`, every course, and learning paths
+  when published), `## Optional` and
   `## Machine-readable` (sitemap, RSS, llms-full, the academy guide). Every entry is
   `- [Title](https://<site>/path.md): description`, generated from published, indexable content. Lessons are not
   listed here (hundreds of lines): they are in the academy guide.

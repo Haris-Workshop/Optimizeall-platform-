@@ -41,8 +41,20 @@ public static class RedirectPaths
     private static readonly HashSet<string> BuiltInPages = new(StringComparer.Ordinal)
     {
         "/", "/services", "/industries", "/case-studies", "/pricing", "/team", "/careers", "/blog", "/contact", "/free-audit",
-        "/get-a-quote", "/book-a-consultation", "/newsletter", "/newsletter/confirm", "/newsletter/unsubscribe", "/search", "/faq",
-        "/creators", "/lp", "/robots.txt", "/sitemap.xml", "/favicon.ico", "/partners", "/learn",
+        "/get-a-quote", "/book-a-consultation", "/newsletter", "/newsletter/confirm", "/newsletter/unsubscribe", "/search",
+        "/creators", "/creators/faq", "/lp", "/robots.txt", "/sitemap.xml", "/favicon.ico", "/partners", "/learn",
+    };
+
+    /// <summary>
+    /// Permanent (301) moves that ship with the product, answered before the redirect table and live content: the free
+    /// Academy's overview is the course hub, and the creator programme's FAQ lives under /creators. They are code, not
+    /// table rows, so they work on every database (also ones with an old CMS page at /academy) and cannot be deleted
+    /// by mistake. Fragments (/academy#certificates) are client-side and never reach the server.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, string> BuiltInRedirects = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["/academy"] = "/learn",
+        ["/faq"] = "/creators/faq",
     };
 
     /// <summary>Parses a raw request target ("/path?query#fragment"); null when it is not a safe same-site address.</summary>
@@ -97,7 +109,7 @@ public static class RedirectPaths
     public static bool IsProtected(string key)
     {
         if (key.StartsWith(ServiceLinePrefix, StringComparison.Ordinal)) return false;
-        if (BuiltInPages.Contains(key)) return true;
+        if (BuiltInPages.Contains(key) || BuiltInRedirects.ContainsKey(key)) return true;
         var first = key.TrimStart('/').Split('/')[0];
         return AppSegments.Contains(first);
     }

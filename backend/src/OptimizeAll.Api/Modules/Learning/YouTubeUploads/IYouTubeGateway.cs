@@ -38,8 +38,20 @@ public interface IYouTubeGateway
 
     Task<YouTubeVideoStatus> GetVideoStatusAsync(string videoId, CancellationToken ct);
 
-    /// <summary>Adds the video to the playlist at the zero-based <paramref name="position"/>.</summary>
+    /// <summary>Adds the video to the playlist at the zero-based <paramref name="position"/> (a negative position appends it).</summary>
     Task AddToPlaylistAsync(string playlistId, string videoId, int position, CancellationToken ct);
+
+    /// <summary>The video ids of the playlist's real items in their current order (the first ~200).</summary>
+    Task<IReadOnlyList<string>> GetPlaylistVideoIdsAsync(string playlistId, CancellationToken ct);
+
+    /// <summary>Deletes a playlist this application created (used when two workers created one at the same time).</summary>
+    Task DeletePlaylistAsync(string playlistId, CancellationToken ct);
+
+    /// <summary>
+    /// Looks for a video of the channel's most recent uploads (about 50) whose description contains <paramref name="marker"/>,
+    /// so an upload whose response was lost is adopted instead of being sent twice. Returns its id, or null.
+    /// </summary>
+    Task<string?> FindUploadByMarkerAsync(string marker, CancellationToken ct);
 
     Task SetThumbnailAsync(string videoId, Stream image, string contentType, CancellationToken ct);
 }

@@ -50,7 +50,8 @@ describe('ImpersonationBanner', () => {
       routes: [{ path: '/admin/users', element: <p>admin users page</p> }],
     });
     const banner = await screen.findByRole('region', { name: 'Impersonation' });
-    expect(document.documentElement.style.getPropertyValue(BANNER_OFFSET_VAR)).toMatch(/px$/);
+    // The height is published from an effect after the banner mounts, so wait for it instead of reading it at once.
+    await waitFor(() => expect(document.documentElement.style.getPropertyValue(BANNER_OFFSET_VAR)).toMatch(/px$/));
     // Screen readers hear it when it appears, and the Exit button is described by the notice.
     const status = within(banner).getByRole('status');
     expect(status).toHaveTextContent(/You are viewing as Jane Doe/);

@@ -41,7 +41,8 @@ was granted all three scopes; otherwise use a separate token per tool (both keep
 | `YOUTUBE_REFRESH_TOKEN` | **yes** | channel owner's refresh token (`YOUTUBE_REFRESH_TOKEN_FILE`) |
 | `YOUTUBE_CHANNEL_ID` | no | the channel uploads must land on (public id above) |
 | `YouTube__DefaultPrivacy` | no | optional: `unlisted` (default), `private` or `public` |
-| `YouTube__MaxUploadBytes` | no | optional: largest accepted file in bytes (nginx allows 2 GB on the upload route) |
+| `YouTube__MaxUploadBytes` | no | optional: largest accepted file in bytes (nginx allows 2100 MB on the upload route: 2 GB plus multipart overhead and the thumbnail) |
+| `YouTube__UploadLeaseSeconds` / `YouTube__HeartbeatSeconds` | no | optional tuning: how long a worker owns an upload without renewing it (default 600) and how often a running upload renews it (default 60) |
 
 None set = feature disabled (upload actions hidden, endpoints answer "not configured"). Some set but not all = the API
 **stops at startup** with a message naming the missing variables, so a half-configured production never runs. Samples:
@@ -55,10 +56,47 @@ therefore never publish to another channel; the job fails with a clear message i
 ## 3. Flow, statuses, retries
 
 Admin picks a lesson and uploads the video file -> the API stores it and queues a (`pending`) row in `lesson_youtube_uploads` ->
-a background job (leased, safe with several API instances) starts a **resumable** upload (`videos.insert`, chunked, resumes
-from the last acknowledged byte) -> YouTube **processes** the video (job polls `videos.list`) -> **ready** -> the lesson's
-video `src` is set to the YouTube URL (embedded through `youtube-nocookie.com`, see LEARNING.md) and the course playlist
-(`courses.youtube_playlist_id`, created once on first use) gets the video.
+the **upload job** (`YouTubeUploadJob`, every minute) claims the row with a conditional update and a lease and starts a
+**resumable** upload (`videos.insert`, chunked) -> YouTube **processes** the video, followed by the separate
+**processing job** (`YouTubeProcessingJob`, every minute, its own lease, so a long upload never delays it) -> **ready**
+-> the lesson's video `src` is set to the YouTube URL (embedded through `youtube-nocookie.com`, see LEARNING.md) and the
+course playlist (`learning_courses.YouTubePlaylistId`, created once on first use) gets the video. Both jobs are safe to run
+on several API instances at once.
+
+**Leases.** An upload row is owned by one worker for `UploadLeaseSeconds`; the worker renews the lease every
+`HeartbeatSeconds` (a failed renewal is logged and retried at the next tick). If a renewal finds the row taken over (lease
+expired, another instance reclaimed it) the upload is cancelled and the row is left to its new owner; the old worker never
+fails the row. A worker that died leaves an expired lease: the row is queued again and that attempt counts.
+
+**No second video after a lost response.** The description of every uploaded video ends with the line
+`optimizeall-upload:<uploadId>`. Before any re-attempt of a row that may already have reached YouTube (a previous attempt
+failed, timed out or was reclaimed), the job looks for that marker among the channel's recent uploads (about 50, 3 quota
+units) and **adopts** the video it finds (status `processing`) instead of uploading again. A first attempt never searches.
+If the search itself fails the file is not sent blind: the failure is handled like any upload error (backoff or quota wait).
+Limitation: after a *Retry* of a video YouTube rejected, the old rejected video carries the same marker, so a response lost
+during that second upload could adopt the rejected one, which then fails again and needs one more Retry.
+
+**Processing.** A video still processing is looked at after 1, 2, 5, then every 10 minutes. After **24 hours** in
+`processing` the row becomes `failed` with `errorCode` `processing_timeout`; check the video in YouTube Studio, then press
+**Re-sync**. A permanent refusal (`forbidden`) while following a video fails the row at once; temporary errors back off the
+same way. The public lesson `processing` flag is true only while a row is pending, uploading or processing, so it turns
+false as soon as a row fails. Re-sync takes the same lease as the job: while the job (or an upload) holds the row it answers
+409 `youtube.busy`.
+
+**Playlist.** The playlist id is stored with a conditional update; if two workers create a playlist at the same moment the
+loser uses the winner's playlist and deletes its own extra one. The position of a new video is computed from the playlist's
+real items (before the first item of a later lesson, otherwise at the end); if the playlist cannot be read the video is
+appended and the row shows a notice.
+
+**Files.** The uploaded file stays in private storage until YouTube confirmed the video (then it is deleted). A lecture
+poster is used as the thumbnail only if it is an image of the learning media (`LearningMedia`); any other file id is ignored
+with a notice ("No thumbnail was set..."). The processing job also deletes the file of an upload that has been `failed`
+for **14 days** (the row stays, `errorCode` becomes `file_expired`, with a notice) and stored upload files that no upload
+row refers to any more (older than a day). Staged lecture files can only be read through `/api/v1/files/{id}` by staff with
+`learning.manage`, whatever their public flag says. A lesson that no longer exists in the course fails the row with
+`lesson_missing` (no attempts are used).
+
+Every call that acts on the channel (thumbnail, status polling, playlist, re-sync) first verifies the channel guard.
 
 Statuses (lifecycle order): `pending` -> `uploading` -> `processing` -> `ready`; plus `failed` (needs an admin action
 or has exhausted retries). A quota wait stays in its current status with a later next-attempt time. The row also keeps the YouTube video id,
@@ -91,8 +129,10 @@ Studio by the channel owner and the lesson keeps its manual URL option.
 ## 6. Data model
 
 * New table **`lesson_youtube_uploads`**: one row per upload attempt for a lesson (course and lesson ids, status,
-  YouTube video id, applied privacy, attempts, next attempt time, last error, timestamps).
-* New column **`courses.youtube_playlist_id`**: the YouTube playlist of the course, created on first upload and reused.
+  YouTube video id, applied privacy, attempts, next attempt time, last error, timestamps, lease, `ProcessingSince`,
+  `PollAttempts`, `UploadMayExist`; unique on course + lesson, so enqueueing is idempotent).
+* New column **`learning_courses.YouTubePlaylistId`**: the YouTube playlist of the course, created on first upload and reused.
+* Migrations `AddLessonYouTubeUploads` and `AddYouTubeUploadProcessingState` (both providers, incremental).
 * Lessons are **not rows**: they live inside the versioned course pack JSON (LEARNING.md section 2), so upload state
   cannot be a column on a lesson. The table references the lesson by its stable id within the course instead, and a ready
   upload writes the video `src` through the normal lesson-video edit path (validation, content hash and versioning apply).
@@ -102,7 +142,7 @@ Studio by the channel owner and the lesson keeps its manual URL option.
 Admin portal -> Learning -> a course -> lesson videos: choose the file for a lesson and start the upload; follow the
 status (pending / uploading / processing / ready / failed), see notices (private-only project, quota wait) and use retry
 after fixing a failed row. Requires the existing Learning management permission (`learning.manage`). The browser sends the file
-to the API once (up to 2 GB through the bundled nginx, which uses a dedicated location with a long timeout for this route
+to the API once (up to 2 GB; the bundled nginx allows 2100 MB on this route, which uses a dedicated location with a long timeout for this route
 only); everything after that is server-side, so the admin can close the page.
 
 Endpoints (all under `/api/v1/admin/learning`, as used by the admin UI): `GET /youtube/status` (configured?, missing
@@ -131,8 +171,10 @@ and the course's upload rows), `POST /courses/{course}/lessons/{lesson}/youtube`
 | `quotaExceeded` / row waiting | daily quota used (about 6 uploads); it continues after the midnight Pacific reset |
 | Video is Private on YouTube and not shown in the lesson | unverified API project (section 5) |
 | Channel mismatch / forbidden | token belongs to another account or brand channel; redo consent selecting the Optimize All channel |
-| 413 or timeout from the proxy | another proxy in front of nginx limits body size/time on the upload route: allow `client_max_body_size 2g`, no request buffering, 1 h timeouts there |
-| Stuck in `processing` | YouTube is still transcoding a long video; it is polled until ready |
+| 413 or timeout from the proxy | another proxy in front of nginx limits body size/time on the upload route: allow `client_max_body_size 2100m`, no request buffering, 1 h timeouts there |
+| Stuck in `processing` | YouTube is still transcoding a long video; it is polled with back-off. After 24 h the row fails with `processing_timeout`: check Studio, then press Re-sync |
+| `file_expired` | the failed upload's file was deleted after 14 days; upload the video again |
+| `lesson_missing` | the lesson was removed from the course after the upload was queued |
 
 ## 10. Relationship to `tools/lecture-studio`
 

@@ -349,6 +349,9 @@ public class YouTubeChannelGuardTests
         public Task<YouTubeVideoStatus> GetVideoStatusAsync(string videoId, CancellationToken ct) => throw new NotSupportedException();
         public Task AddToPlaylistAsync(string playlistId, string videoId, int position, CancellationToken ct) => throw new NotSupportedException();
         public Task SetThumbnailAsync(string videoId, Stream image, string contentType, CancellationToken ct) => throw new NotSupportedException();
+        public Task<IReadOnlyList<string>> GetPlaylistVideoIdsAsync(string playlistId, CancellationToken ct) => throw new NotSupportedException();
+        public Task DeletePlaylistAsync(string playlistId, CancellationToken ct) => throw new NotSupportedException();
+        public Task<string?> FindUploadByMarkerAsync(string marker, CancellationToken ct) => throw new NotSupportedException();
     }
 
     [Fact]
@@ -424,5 +427,115 @@ public class YouTubeMetadataBuilderTests
         Assert.Contains("online course", tags);
         Assert.Equal(tags.Count, tags.Select(t => t.ToLowerInvariant()).Distinct().Count());
         Assert.True(tags.Sum(t => t.Length + (t.Contains(' ') ? 2 : 0) + 1) <= YouTubeMetadataBuilder.TagsMaxChars);
+    }
+}
+
+public class YouTubeHeartbeatTests
+{
+    private static readonly Microsoft.Extensions.Logging.ILogger Log = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
+
+    [Fact]
+    public async Task A_failed_renewal_does_not_stop_the_heartbeat()
+    {
+        var calls = 0;
+        var lost = 0;
+        using var stop = new CancellationTokenSource();
+        var beat = YouTubeUploadService.RunHeartbeatAsync(TimeSpan.FromMilliseconds(10), _ =>
+        {
+            if (Interlocked.Increment(ref calls) == 1) throw new InvalidOperationException("database is busy");
+            return Task.FromResult(1);
+        }, () => lost++, Log, stop.Token);
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (Volatile.Read(ref calls) < 4 && DateTime.UtcNow < deadline) await Task.Delay(10);
+        await stop.CancelAsync();
+        await beat;
+        Assert.True(calls >= 4, "the heartbeat must keep renewing after one failure");
+        Assert.Equal(0, lost);
+    }
+
+    [Fact]
+    public async Task A_renewal_that_updates_no_row_reports_the_lost_lease_once_and_ends()
+    {
+        var calls = 0;
+        var lost = 0;
+        await YouTubeUploadService.RunHeartbeatAsync(TimeSpan.FromMilliseconds(10), _ => Task.FromResult(Interlocked.Increment(ref calls) < 3 ? 1 : 0),
+            () => lost++, Log, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal(3, calls);
+        Assert.Equal(1, lost);
+    }
+
+    [Fact]
+    public async Task Stopping_ends_the_heartbeat_without_reporting_a_lost_lease()
+    {
+        var lost = 0;
+        using var stop = new CancellationTokenSource();
+        var beat = YouTubeUploadService.RunHeartbeatAsync(TimeSpan.FromMilliseconds(10), _ => Task.FromResult(1), () => lost++, Log, stop.Token);
+        await Task.Delay(50);
+        await stop.CancelAsync();
+        await beat.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal(0, lost);
+    }
+}
+
+public class YouTubeIntakeBodyLimitTests
+{
+    /// <summary>Delivers <c>failAfter</c> bytes of the inner stream, then fails like Kestrel does when its request-body limit is exceeded.</summary>
+    private sealed class LimitedBody(Stream inner, long failAfter) : Stream
+    {
+        private long _read;
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
+        {
+            if (_read >= failAfter) throw new Microsoft.AspNetCore.Http.BadHttpRequestException("Request body too large.", 413);
+            var n = await inner.ReadAsync(buffer[..(int)Math.Min(buffer.Length, failAfter - _read)], ct);
+            _read += n;
+            return n;
+        }
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken ct) => ReadAsync(buffer.AsMemory(offset, count), ct).AsTask();
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    private sealed class MemoryStorage : IFileStorage
+    {
+        public Dictionary<string, byte[]> Blobs { get; } = new();
+        public string NewKey(DateTime nowUtc, string extension) => $"{nowUtc:yyyy}/{nowUtc:MM}/{Guid.NewGuid():N}{extension}";
+        public Task WriteAsync(string key, ReadOnlyMemory<byte> content, CancellationToken ct = default) { Blobs[key] = content.ToArray(); return Task.CompletedTask; }
+        public async Task WriteAsync(string key, Stream content, CancellationToken ct = default)
+        {
+            using var ms = new MemoryStream();
+            await content.CopyToAsync(ms, ct); // like LocalFileStorage, a failed copy leaves no blob behind
+            Blobs[key] = ms.ToArray();
+        }
+        public Stream? OpenRead(string key) => Blobs.TryGetValue(key, out var b) ? new MemoryStream(b) : null;
+        public void Delete(string key) => Blobs.Remove(key);
+    }
+
+    [Theory]
+    [InlineData(10)]      // while the multipart headers are read
+    [InlineData(5000)]    // while the video is streamed to storage
+    public async Task A_request_body_over_the_servers_limit_is_a_400_file_too_large_not_an_invalid_form(long failAfter)
+    {
+        var video = new byte[50_000];
+        video[3] = 0x18;
+        "ftypisom"u8.CopyTo(video.AsSpan(4));
+        using var form = new MultipartFormDataContent { { new ByteArrayContent(video), "file", "lecture.mp4" } };
+        var body = new MemoryStream();
+        await form.CopyToAsync(body);
+        body.Position = 0;
+        var storage = new MemoryStorage();
+        var intake = new YouTubeUploadIntake(storage, new FakeTimeProvider(new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero)));
+
+        var ex = await Assert.ThrowsAsync<DomainException>(() => intake.ReadAsync(new LimitedBody(body, failAfter), form.Headers.ContentType!.ToString(), 2L << 30, default));
+        Assert.Equal("file.too_large", ex.Code);
+        Assert.Contains("2 GB", ex.Message);
+        Assert.Empty(storage.Blobs);
     }
 }

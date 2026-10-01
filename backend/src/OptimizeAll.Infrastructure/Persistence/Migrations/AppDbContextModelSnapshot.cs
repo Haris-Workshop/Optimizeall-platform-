@@ -8532,10 +8532,17 @@ namespace OptimizeAll.Infrastructure.Persistence.Migrations
                     b.Property<bool>("PlaylistItemAdded")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<int>("PollAttempts")
+                        .HasColumnType("int");
+
                     b.Property<string>("Privacy")
                         .IsRequired()
                         .HasMaxLength(40)
                         .HasColumnType("varchar(40)");
+
+                    b.Property<DateTime?>("ProcessingSince")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
 
                     b.Property<bool>("PublishAfterReady")
                         .HasColumnType("tinyint(1)");
@@ -8560,6 +8567,9 @@ namespace OptimizeAll.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("UploadAttempts")
                         .HasColumnType("int");
+
+                    b.Property<bool>("UploadMayExist")
+                        .HasColumnType("tinyint(1)");
 
                     b.Property<DateTime?>("UploadedAt")
                         .HasPrecision(6)

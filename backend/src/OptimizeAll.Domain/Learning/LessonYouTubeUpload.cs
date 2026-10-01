@@ -58,6 +58,12 @@ public class LessonYouTubeUpload : AuditedEntity, IConcurrencyStamped
     public DateTime? NextAttemptAt { get; set; }
     /// <summary>UTC. While in the future, the worker that set <see cref="YouTubeUploadStatus.Uploading"/> owns the row.</summary>
     public DateTime? LeaseUntil { get; set; }
+    /// <summary>UTC. When the row last entered Processing; a video that stays there for 24 hours is failed (processing_timeout).</summary>
+    public DateTime? ProcessingSince { get; set; }
+    /// <summary>How many polls found the video still processing or could not read its status (drives the polling back-off).</summary>
+    public int PollAttempts { get; set; }
+    /// <summary>True once a request that may create the video on YouTube has been sent: a re-attempt first looks for that video (by the marker in its description) instead of uploading again.</summary>
+    public bool UploadMayExist { get; set; }
     public bool PlaylistItemAdded { get; set; }
     /// <summary>The privacy YouTube reports for the video (it can differ from <see cref="Privacy"/> for unaudited API projects).</summary>
     public YouTubePrivacy? ActualPrivacy { get; set; }

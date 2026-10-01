@@ -34,6 +34,24 @@ public sealed class BaselineUpgradeTests : IDisposable
 {
     private const string CurrentSqliteBaseline = "20260925041851_InitialCreate";
 
+    /// <summary>
+    /// The migration history of a freshly migrated SQLite database: the frozen baseline plus every incremental migration
+    /// of the SQLite set (read from the assembly, so the next incremental migration does not break these tests).
+    /// </summary>
+    private static readonly string[] CurrentSqliteHistory = System.Reflection.Assembly.Load("OptimizeAll.Infrastructure.Sqlite")
+        .GetTypes()
+        .Select(t => (Attribute: (Microsoft.EntityFrameworkCore.Migrations.MigrationAttribute?)Attribute.GetCustomAttribute(
+            t, typeof(Microsoft.EntityFrameworkCore.Migrations.MigrationAttribute)), Type: t))
+        .Where(x => x.Attribute is not null)
+        .Select(x => x.Attribute!.Id)
+        .OrderBy(id => id, StringComparer.Ordinal)
+        .ToArray();
+
+    /// <summary>A database left by an earlier release: its history is that release's baseline alone.</summary>
+    private static string AsEarlierRelease(string foreignBaseline) =>
+        "DELETE FROM __EFMigrationsHistory; INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ('" +
+        foreignBaseline + "', '8.0.10');";
+
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "oa-baseline-" + Guid.NewGuid().ToString("N"));
     private string DbPath => Path.Combine(_directory, "optimizeall.db");
     private string BackupDirectory => Path.Combine(_directory, "backups");
@@ -122,7 +140,7 @@ public sealed class BaselineUpgradeTests : IDisposable
         }
         SqliteConnection.ClearAllPools();
 
-        Assert.Equal(new[] { CurrentSqliteBaseline }, Query(DbPath, "SELECT MigrationId FROM __EFMigrationsHistory"));
+        Assert.Equal(CurrentSqliteHistory, Query(DbPath, "SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId"));
         var after = RowCounts(DbPath);
         var common = before.Keys.Where(after.ContainsKey).ToList();
         Assert.Equal(before.Count, common.Count); // no table of the old schema was dropped
@@ -153,7 +171,7 @@ public sealed class BaselineUpgradeTests : IDisposable
         }
         SqliteConnection.ClearAllPools();
         Assert.Single(Directory.GetFiles(BackupDirectory));
-        Assert.Equal(new[] { CurrentSqliteBaseline }, Query(DbPath, "SELECT MigrationId FROM __EFMigrationsHistory"));
+        Assert.Equal(CurrentSqliteHistory, Query(DbPath, "SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId"));
         var reseeded = RowCounts(DbPath);
         foreach (var table in common)
             Assert.True(reseeded[table] >= before[table], $"{table}: {before[table]} rows before, {reseeded[table]} after seeding");
@@ -178,7 +196,7 @@ public sealed class BaselineUpgradeTests : IDisposable
             Assert.Equal(HttpStatusCode.OK, login.StatusCode);
         }
         SqliteConnection.ClearAllPools();
-        Assert.Equal(new[] { CurrentSqliteBaseline }, Query(DbPath, "SELECT MigrationId FROM __EFMigrationsHistory"));
+        Assert.Equal(CurrentSqliteHistory, Query(DbPath, "SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId"));
         Assert.StartsWith("optimizeall-20260923201802_InitialCreate-", Path.GetFileName(Assert.Single(Directory.GetFiles(BackupDirectory))));
         Assert.Equal(new[] { "ok" }, Query(DbPath, "PRAGMA integrity_check"));
     }
@@ -189,7 +207,7 @@ public sealed class BaselineUpgradeTests : IDisposable
         await CreateCurrentDatabaseWithUserAsync();
         Exec(DbPath,
             "PRAGMA foreign_keys=OFF;" +
-            "UPDATE __EFMigrationsHistory SET MigrationId = '20200101000000_InitialCreate';" +
+            AsEarlierRelease("20200101000000_InitialCreate") +
             "INSERT INTO user_roles (UserId, Role, GrantedAt) VALUES ('00000000-0000-0000-0000-00000000DEAD', 'Admin', '2026-01-01 00:00:00');");
         var hash = Hash(DbPath);
 
@@ -207,7 +225,7 @@ public sealed class BaselineUpgradeTests : IDisposable
         Assert.Equal(hash, Hash(aside));
         Assert.Empty(Directory.GetFiles(_directory, "*.tmp*"));
         // The live database is new: current baseline, seeded, without the old rows.
-        Assert.Equal(new[] { CurrentSqliteBaseline }, Query(DbPath, "SELECT MigrationId FROM __EFMigrationsHistory"));
+        Assert.Equal(CurrentSqliteHistory, Query(DbPath, "SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId"));
         Assert.Equal(new[] { "0" }, Query(DbPath, "SELECT COUNT(*) FROM users WHERE NormalizedEmail = 'UPGRADE@EXAMPLE.TEST'"));
         Assert.NotEqual(new[] { "0" }, Query(DbPath, "SELECT COUNT(*) FROM campaign_categories"));
 
@@ -246,7 +264,7 @@ public sealed class BaselineUpgradeTests : IDisposable
         var aside = Assert.Single(Directory.GetFiles(BackupDirectory));
         Assert.Matches(@"^optimizeall-unreadable-\d{8}T\d{6}Z-unmigrated\.db$", Path.GetFileName(aside));
         Assert.Equal(hash, Hash(aside));
-        Assert.Equal(new[] { CurrentSqliteBaseline }, Query(DbPath, "SELECT MigrationId FROM __EFMigrationsHistory"));
+        Assert.Equal(CurrentSqliteHistory, Query(DbPath, "SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId"));
     }
 
     [Fact]
@@ -259,7 +277,7 @@ public sealed class BaselineUpgradeTests : IDisposable
             await host.StartAsync();
         SqliteConnection.ClearAllPools();
 
-        Assert.Equal(new[] { CurrentSqliteBaseline }, Query(DbPath, "SELECT MigrationId FROM __EFMigrationsHistory"));
+        Assert.Equal(CurrentSqliteHistory, Query(DbPath, "SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId"));
         Assert.Equal(new[] { "1" }, Query(DbPath, $"SELECT COUNT(*) FROM users WHERE Id = '{userId.ToString().ToUpperInvariant()}'"));
         Assert.StartsWith($"optimizeall-{BaselineUpgrade.NoHistoryBaseline}-", Path.GetFileName(Assert.Single(Directory.GetFiles(BackupDirectory))));
     }
@@ -288,7 +306,7 @@ public sealed class BaselineUpgradeTests : IDisposable
         var userId = await CreateCurrentDatabaseWithUserAsync();
         // Simulate an older baseline that did not have these NOT NULL columns yet.
         Exec(DbPath,
-            "UPDATE __EFMigrationsHistory SET MigrationId = '20200101000000_InitialCreate';" +
+            AsEarlierRelease("20200101000000_InitialCreate") +
             "ALTER TABLE users DROP COLUMN FailedLoginCount; ALTER TABLE users DROP COLUMN Interests; ALTER TABLE users DROP COLUMN Tier;");
 
         await using (var host = Start("Auto"))
@@ -313,7 +331,7 @@ public sealed class BaselineUpgradeTests : IDisposable
         await CreateCurrentDatabaseWithUserAsync();
         Exec(DbPath,
             "PRAGMA foreign_keys=OFF;" +
-            "UPDATE __EFMigrationsHistory SET MigrationId = '20200101000000_InitialCreate';" +
+            AsEarlierRelease("20200101000000_InitialCreate") +
             "INSERT INTO user_roles (UserId, Role, GrantedAt) VALUES ('00000000-0000-0000-0000-00000000DEAD', 'Admin', '2026-01-01 00:00:00');");
         var hash = Hash(DbPath);
 

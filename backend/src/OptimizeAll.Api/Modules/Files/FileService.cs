@@ -106,6 +106,9 @@ public sealed class FileService(AppDbContext db, IFileStorage storage, ICurrentU
 
     private async Task<bool> CanReadAsync(StoredFile file, CancellationToken ct)
     {
+        // Lecture videos waiting for YouTube are never public (whatever the row says) and only course authors may read them.
+        if (file.Purpose == FilePurpose.LessonYouTubeSource)
+            return currentUser.IsAuthenticated && currentUser.HasPermission(Permissions.LearningManage);
         if (file.IsPublic && file.Purpose is FilePurpose.CampaignAsset or FilePurpose.ContentImage or FilePurpose.LearningMedia) return true;
         if (!currentUser.IsAuthenticated) return false;
         if (currentUser.Id == file.OwnerUserId) return true;

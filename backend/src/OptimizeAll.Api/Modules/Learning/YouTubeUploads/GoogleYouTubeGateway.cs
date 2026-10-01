@@ -147,12 +147,56 @@ public sealed class GoogleYouTubeGateway(IOptions<YouTubeOptions> options, ILogg
             Snippet = new PlaylistItemSnippet
             {
                 PlaylistId = playlistId,
-                Position = position,
+                Position = position >= 0 ? position : null,
                 ResourceId = new ResourceId { Kind = "youtube#video", VideoId = videoId },
             },
         };
         await Service.PlaylistItems.Insert(item, "snippet").ExecuteAsync(ct);
         return true;
+    });
+
+    public async Task<IReadOnlyList<string>> GetPlaylistVideoIdsAsync(string playlistId, CancellationToken ct)
+    {
+        var ids = new List<string>();
+        string? pageToken = null;
+        for (var page = 0; page < 4; page++)
+        {
+            var response = await Run(async () =>
+            {
+                var request = Service.PlaylistItems.List("contentDetails");
+                request.PlaylistId = playlistId;
+                request.MaxResults = 50;
+                request.PageToken = pageToken;
+                return await request.ExecuteAsync(ct);
+            });
+            ids.AddRange((response.Items ?? new List<PlaylistItem>()).Select(i => i.ContentDetails?.VideoId).Where(v => !string.IsNullOrEmpty(v))!);
+            pageToken = response.NextPageToken;
+            if (string.IsNullOrEmpty(pageToken)) break;
+        }
+        return ids;
+    }
+
+    public Task DeletePlaylistAsync(string playlistId, CancellationToken ct) => Run(async () =>
+    {
+        await Service.Playlists.Delete(playlistId).ExecuteAsync(ct);
+        return true;
+    });
+
+    public Task<string?> FindUploadByMarkerAsync(string marker, CancellationToken ct) => Run(async () =>
+    {
+        var channels = Service.Channels.List("contentDetails");
+        channels.Mine = true;
+        var uploads = (await channels.ExecuteAsync(ct)).Items?.FirstOrDefault()?.ContentDetails?.RelatedPlaylists?.Uploads;
+        if (string.IsNullOrEmpty(uploads)) return null;
+        var items = Service.PlaylistItems.List("contentDetails");
+        items.PlaylistId = uploads;
+        items.MaxResults = 50;
+        var ids = ((await items.ExecuteAsync(ct)).Items ?? new List<PlaylistItem>()).Select(i => i.ContentDetails?.VideoId).Where(v => !string.IsNullOrEmpty(v)).ToList();
+        if (ids.Count == 0) return null;
+        // The playlist item's description can be cut short; the video resource carries the whole description.
+        var videos = Service.Videos.List("snippet");
+        videos.Id = string.Join(',', ids);
+        return (await videos.ExecuteAsync(ct)).Items?.FirstOrDefault(v => v.Snippet?.Description?.Contains(marker, StringComparison.Ordinal) == true)?.Id;
     });
 
     public Task SetThumbnailAsync(string videoId, Stream image, string contentType, CancellationToken ct) => Run(async () =>

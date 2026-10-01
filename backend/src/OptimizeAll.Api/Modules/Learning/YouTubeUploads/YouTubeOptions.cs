@@ -33,6 +33,10 @@ public sealed class YouTubeOptions
     public string? ChannelId { get; set; }
     public YouTubePrivacy DefaultPrivacy { get; set; } = YouTubePrivacy.Unlisted;
     public long MaxUploadBytes { get; set; } = DefaultMaxUploadBytes;
+    /// <summary>How long a worker owns an upload row without renewing it (<c>YouTube:UploadLeaseSeconds</c>, default 600).</summary>
+    public int UploadLeaseSeconds { get; set; } = 600;
+    /// <summary>How often a running upload renews its lease (<c>YouTube:HeartbeatSeconds</c>, default 60).</summary>
+    public int HeartbeatSeconds { get; set; } = 60;
 
     /// <summary>The names (never the values) of the credentials that are not set.</summary>
     public IReadOnlyList<string> MissingVariables
@@ -63,6 +67,8 @@ public sealed class YouTubeOptions
         var section = config.GetSection(Section);
         if (Enum.TryParse<YouTubePrivacy>(section["DefaultPrivacy"], ignoreCase: true, out var privacy)) o.DefaultPrivacy = privacy;
         if (long.TryParse(section["MaxUploadBytes"], out var max) && max > 0) o.MaxUploadBytes = max;
+        if (int.TryParse(section["UploadLeaseSeconds"], out var lease) && lease > 0) o.UploadLeaseSeconds = lease;
+        if (int.TryParse(section["HeartbeatSeconds"], out var beat) && beat > 0) o.HeartbeatSeconds = beat;
     }
 
     private static string? Trimmed(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

@@ -10,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using OptimizeAll.Api.Modules.Files;
 using OptimizeAll.Api.Modules.Learning;
 using OptimizeAll.Api.Modules.Learning.YouTubeUploads;
 using OptimizeAll.Domain.Files;
@@ -32,6 +33,15 @@ public sealed class FakeYouTubeGateway : IYouTubeGateway
     public string ChannelTitle { get; set; } = "Optimize All Academy";
     public int ChannelCalls;
     public int UploadCalls;
+    public int StatusCalls;
+    public int FindCalls;
+    public List<string> DeletedPlaylists { get; } = new();
+    /// <summary>The upload reaches YouTube (the video exists) but the answer is lost: the call throws a transient error.</summary>
+    public bool LoseResponseOnUpload { get; set; }
+    public Exception? PlaylistListError { get; set; }
+    /// <summary>Runs inside EnsurePlaylistAsync, before it answers (to let a concurrent worker win a race).</summary>
+    public Action<string?>? OnEnsurePlaylist { get; set; }
+    public TaskCompletionSource UploadCancelled { get; private set; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public List<UploadRecord> Uploads { get; } = new();
     public Queue<Exception> UploadErrors { get; } = new();
     public Queue<Exception> StatusErrors { get; } = new();
@@ -66,6 +76,13 @@ public sealed class FakeYouTubeGateway : IYouTubeGateway
             ForcedPrivacy = null;
             UploadGate = null;
             UploadEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            UploadCancelled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            LoseResponseOnUpload = false;
+            PlaylistListError = null;
+            OnEnsurePlaylist = null;
+            DeletedPlaylists.Clear();
+            StatusCalls = 0;
+            FindCalls = 0;
             Uploads.Clear();
             AddCalls.Clear();
             PlaylistsCreated.Clear();
@@ -83,6 +100,7 @@ public sealed class FakeYouTubeGateway : IYouTubeGateway
 
     public Task<string> EnsurePlaylistAsync(string? existingPlaylistId, string title, string description, YouTubePrivacy privacy, CancellationToken ct)
     {
+        OnEnsurePlaylist?.Invoke(existingPlaylistId);
         lock (_gate)
         {
             if (PlaylistError is { } error) throw error;
@@ -98,7 +116,11 @@ public sealed class FakeYouTubeGateway : IYouTubeGateway
     {
         Interlocked.Increment(ref UploadCalls);
         UploadEntered.TrySetResult();
-        if (UploadGate is { } gate) await gate.Task;
+        if (UploadGate is { } gate)
+        {
+            try { await gate.Task.WaitAsync(ct); }
+            catch (OperationCanceledException) { UploadCancelled.TrySetResult(); throw; }
+        }
         lock (_gate)
         {
             if (UploadErrors.Count > 0) throw UploadErrors.Dequeue();
@@ -118,14 +140,46 @@ public sealed class FakeYouTubeGateway : IYouTubeGateway
             var id = "vid" + (++_videoCounter).ToString("D8");
             Uploads.Add(new UploadRecord(metadata, total, Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant(), id));
             _requested[id] = metadata.Privacy;
+            if (LoseResponseOnUpload)
+            {
+                LoseResponseOnUpload = false;
+                throw new YouTubeApiException(YouTubeApiErrorKind.Transient, null, "connection lost", "network");
+            }
             return id;
         }
+    }
+
+    public Task<string?> FindUploadByMarkerAsync(string marker, CancellationToken ct)
+    {
+        Interlocked.Increment(ref FindCalls);
+        lock (_gate)
+            return Task.FromResult(Uploads.FirstOrDefault(u => u.Metadata.Description.Contains(marker, StringComparison.Ordinal))?.VideoId);
+    }
+
+    public Task<IReadOnlyList<string>> GetPlaylistVideoIdsAsync(string playlistId, CancellationToken ct)
+    {
+        lock (_gate)
+        {
+            if (PlaylistListError is { } error) throw error;
+            return Task.FromResult<IReadOnlyList<string>>(PlaylistItems[playlistId].ToList());
+        }
+    }
+
+    public Task DeletePlaylistAsync(string playlistId, CancellationToken ct)
+    {
+        lock (_gate)
+        {
+            PlaylistItems.Remove(playlistId);
+            DeletedPlaylists.Add(playlistId);
+        }
+        return Task.CompletedTask;
     }
 
     public Task<YouTubeVideoStatus> GetVideoStatusAsync(string videoId, CancellationToken ct)
     {
         lock (_gate)
         {
+            StatusCalls++;
             if (StatusErrors.Count > 0) throw StatusErrors.Dequeue();
             if (!_requested.TryGetValue(videoId, out var requested))
                 return Task.FromResult(new YouTubeVideoStatus(videoId, YouTubeProcessingState.Missing, null, null));
@@ -144,7 +198,7 @@ public sealed class FakeYouTubeGateway : IYouTubeGateway
         lock (_gate)
         {
             var items = PlaylistItems[playlistId];
-            items.Insert(Math.Min(position, items.Count), videoId);
+            items.Insert(position < 0 ? items.Count : Math.Min(position, items.Count), videoId);
             AddCalls.Add((playlistId, videoId, position));
         }
         return Task.CompletedTask;
@@ -158,6 +212,24 @@ public sealed class FakeYouTubeGateway : IYouTubeGateway
             ThumbnailCalls.Add(videoId + ":" + contentType);
         }
         return Task.CompletedTask;
+    }
+}
+
+/// <summary>The real local storage, with deletes that can be made to fail on demand.</summary>
+public sealed class TogglingStorage(IFileStorage inner) : IFileStorage
+{
+    /// <summary>When set, Delete throws this (a failure that is not an IOException).</summary>
+    public Exception? DeleteFailure { get; set; }
+
+    public string NewKey(DateTime nowUtc, string extension) => inner.NewKey(nowUtc, extension);
+    public Task WriteAsync(string key, ReadOnlyMemory<byte> content, CancellationToken ct = default) => inner.WriteAsync(key, content, ct);
+    public Task WriteAsync(string key, Stream content, CancellationToken ct = default) => inner.WriteAsync(key, content, ct);
+    public Stream? OpenRead(string key) => inner.OpenRead(key);
+
+    public void Delete(string key)
+    {
+        if (DeleteFailure is { } failure) throw failure;
+        inner.Delete(key);
     }
 }
 
@@ -180,7 +252,7 @@ public sealed class CapturingLoggerProvider : ILoggerProvider
 }
 
 /// <summary>A host with the YouTube connection configured (fake credentials) and <see cref="FakeYouTubeGateway"/> instead of Google.</summary>
-public sealed class YouTubeFixture : IAsyncLifetime
+public class YouTubeFixture : IAsyncLifetime
 {
     public const string ChannelId = "UCexpected0000000000000";
     public const string ClientSecret = "test-client-secret-DO-NOT-LEAK-123";
@@ -192,6 +264,8 @@ public sealed class YouTubeFixture : IAsyncLifetime
     public FakeYouTubeGateway Gateway { get; } = new();
     public CapturingLoggerProvider Logs { get; } = new();
     public long MaxUploadBytes { get; init; } = 400_000;
+    public string? HeartbeatSeconds { get; init; }
+    public TogglingStorage? Storage { get; private set; }
 
     public async Task InitializeAsync()
     {
@@ -205,12 +279,15 @@ public sealed class YouTubeFixture : IAsyncLifetime
                 ["YOUTUBE_REFRESH_TOKEN"] = RefreshToken,
                 ["YOUTUBE_CHANNEL_ID"] = ChannelId,
                 ["YouTube:MaxUploadBytes"] = MaxUploadBytes.ToString(),
+                ["YouTube:HeartbeatSeconds"] = HeartbeatSeconds,
             }));
             b.ConfigureTestServices(services =>
             {
                 services.RemoveAll<IYouTubeGateway>();
                 services.AddSingleton<IYouTubeGateway>(Gateway);
                 services.AddSingleton<ILoggerProvider>(Logs);
+                services.RemoveAll<IFileStorage>();
+                services.AddSingleton<IFileStorage>(sp => Storage = new TogglingStorage(ActivatorUtilities.CreateInstance<LocalFileStorage>(sp)));
             });
         });
         await Host.StartAsync();
@@ -242,10 +319,20 @@ public sealed class YouTubeFixture : IAsyncLifetime
     public async Task ResetAsync()
     {
         Gateway.Reset();
+        Host.Services.GetRequiredService<IFileStorage>(); // creates the storage wrapper
+        Storage!.DeleteFailure = null;
         await Api.WithDbAsync(db => db.Set<LessonYouTubeUpload>().ExecuteDeleteAsync());
     }
 
-    public Task RunJobAsync() => Host.Services.GetRequiredService<OptimizeAll.Api.Common.Jobs.JobRunner>().RunAsync<YouTubeUploadJob>();
+    /// <summary>One minute of the platform: the upload job, then the processing job.</summary>
+    public async Task RunJobAsync()
+    {
+        var runner = Host.Services.GetRequiredService<OptimizeAll.Api.Common.Jobs.JobRunner>();
+        await runner.RunAsync<YouTubeUploadJob>();
+        await runner.RunAsync<YouTubeProcessingJob>();
+    }
+
+    public Task RunProcessingJobAsync() => Host.Services.GetRequiredService<OptimizeAll.Api.Common.Jobs.JobRunner>().RunAsync<YouTubeProcessingJob>();
 
     // ------------------------------------------------------------ courses
 
@@ -255,7 +342,7 @@ public sealed class YouTubeFixture : IAsyncLifetime
     private static string Words(int n, string word) => string.Join(' ', Enumerable.Repeat(word, n));
 
     /// <summary>The sample pack as a published v2 course whose lessons all have a lecture script (no produced video yet); v1: the plain sample (lesson 1 is an article, lesson 2 a video lesson).</summary>
-    public async Task<Guid> CreateCourseAsync(bool v2 = true)
+    public async Task<Guid> CreateCourseAsync(bool v2 = true, string? poster = null)
     {
         var pack = SamplePacks.V1();
         pack.Slug = "yt-" + Guid.NewGuid().ToString("N")[..10];
@@ -281,6 +368,7 @@ public sealed class YouTubeFixture : IAsyncLifetime
                 }).ToList(),
             };
         }
+        if (poster is not null && v2) lessons[0].Lecture!.Poster = poster;
         Assert.Empty(CoursePackValidator.Validate(pack));
         using var scope = Api.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

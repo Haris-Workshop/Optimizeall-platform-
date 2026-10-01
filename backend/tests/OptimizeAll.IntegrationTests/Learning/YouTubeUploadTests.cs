@@ -292,13 +292,15 @@ public sealed class YouTubeUploadTests(YouTubeFixture fx) : IClassFixture<YouTub
 
         using var scopeA = _fx.Host.Services.CreateScope();
         using var scopeB = _fx.Host.Services.CreateScope();
-        var a = scopeA.ServiceProvider.GetRequiredService<YouTubeUploadService>().ProcessDueAsync(default);
+        var a = scopeA.ServiceProvider.GetRequiredService<YouTubeUploadService>().ProcessUploadsAsync(default);
         await Gateway.UploadEntered.Task.WaitAsync(TimeSpan.FromSeconds(30));
-        var b = await scopeB.ServiceProvider.GetRequiredService<YouTubeUploadService>().ProcessDueAsync(default); // finds the row claimed
+        var b = await scopeB.ServiceProvider.GetRequiredService<YouTubeUploadService>().ProcessUploadsAsync(default); // finds the row claimed
         Assert.StartsWith("0 upload(s) processed", b);
         Assert.Equal(YouTubeUploadStatus.Uploading, (await _fx.RowAsync(courseId, slug)).Status);
         Gateway.UploadGate.SetResult();
         await a;
+        Assert.Equal(YouTubeUploadStatus.Processing, (await _fx.RowAsync(courseId, slug)).Status); // the upload job only uploads
+        await _fx.RunProcessingJobAsync();
 
         Assert.Equal(1, Gateway.UploadCalls);
         Assert.Single(Gateway.Uploads);
@@ -491,8 +493,10 @@ public sealed class YouTubeUploadTests(YouTubeFixture fx) : IClassFixture<YouTub
         var page = await (await _fx.Host.CreateClient().GetAsync($"/api/v1/public/learning/courses/{await SlugAsync(courseId)}/lessons/{slug}")).ReadJsonAsync();
         Assert.True(page.GetProperty("lecture").GetProperty("processing").GetBoolean());
 
+        _fx.Api.Clock.Advance(TimeSpan.FromMinutes(1.5)); // polls are spaced 1, 2, 5, 10 minutes apart
         await _fx.RunJobAsync();
         Assert.Equal(YouTubeUploadStatus.Processing, (await _fx.RowAsync(courseId, slug)).Status);
+        _fx.Api.Clock.Advance(TimeSpan.FromMinutes(2.5));
         await _fx.RunJobAsync();
         row = await _fx.RowAsync(courseId, slug);
         Assert.Equal(YouTubeUploadStatus.Ready, row.Status);

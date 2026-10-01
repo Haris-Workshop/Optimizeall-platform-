@@ -84,6 +84,13 @@ public sealed class YouTubeUploadIntake(IFileStorage storage, TimeProvider clock
             if (video is null) throw new DomainException("file.required", "Choose a video file to upload.");
             return new StagedUpload(video, thumbnail, string.IsNullOrWhiteSpace(privacy) ? null : privacy, publish);
         }
+        catch (BadHttpRequestException ex) when (ex.StatusCode == StatusCodes.Status413PayloadTooLarge)
+        {
+            // The server's request-body limit was hit while the body was still being read.
+            Discard(video);
+            Discard(thumbnail);
+            throw new DomainException("file.too_large", $"Videos can be at most {FormatSize(maxVideoBytes)}.");
+        }
         catch
         {
             Discard(video);
@@ -99,7 +106,7 @@ public sealed class YouTubeUploadIntake(IFileStorage storage, TimeProvider clock
         {
             return await reader.ReadNextSectionAsync(ct);
         }
-        catch (Exception ex) when (ex is InvalidDataException or IOException && ex is not OperationCanceledException)
+        catch (Exception ex) when (ex is InvalidDataException or IOException && ex is not OperationCanceledException and not BadHttpRequestException)
         {
             throw new DomainException("request.invalid_multipart", "The upload could not be read; send the video as multipart/form-data.");
         }

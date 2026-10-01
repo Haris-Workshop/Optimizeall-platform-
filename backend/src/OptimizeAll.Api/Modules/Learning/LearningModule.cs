@@ -40,6 +40,7 @@ public static class LearningModule
         services.AddScoped<YouTubeUploadIntake>();
         services.AddScoped<YouTubeUploadService>();
         services.AddRecurringJob<YouTubeUploadJob>(TimeSpan.FromMinutes(1));
+        services.AddRecurringJob<YouTubeProcessingJob>(TimeSpan.FromMinutes(1));
         services.AddScoped<ISitemapContributor, LearningSitemapContributor>();
         services.AddScoped<LearningCatalogSeeder>();
         services.AddScoped<ISeeder>(sp => sp.GetRequiredService<LearningCatalogSeeder>());

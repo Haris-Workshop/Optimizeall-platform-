@@ -89,6 +89,7 @@ const soonLecture: LessonLecture = {
   chapters,
   transcriptWords: 1040,
   youTubeId: null,
+  processing: false,
   embedUrl: null,
   publishedAt: null,
 };
@@ -359,6 +360,35 @@ describe('YouTube lecture', () => {
       window.dispatchEvent(new MessageEvent('message', { origin: 'https://www.youtube-nocookie.com', source: frame.contentWindow, data: JSON.stringify({ event: 'infoDelivery', info: { currentTime: 130 } }) }));
     });
     expect(within(section).getByRole('button', { name: /^\d+:\d\d\s*Chapter 3 title$/ })).toHaveAttribute('aria-current', 'step');
+  });
+});
+
+describe('lecture still processing on YouTube', () => {
+  it('shows an accessible Video processing placeholder in the player box, with no player or facade', async () => {
+    const processing: Lesson = { ...lesson, lecture: { ...soonLecture, processing: true } };
+    mockFetch({ ...anonymous, ...publicRoutes, 'GET /public/learning/courses/ai-agents-engineering/lessons/l1': () => json(200, processing) });
+    const { container } = renderWithApp(<AcademyLessonPage />, { route: '/learn/ai-agents-engineering/l1', path: '/learn/:slug/:lessonSlug' });
+    const section = await screen.findByRole('region', { name: 'What an agent is' });
+    const status = within(section).getByRole('status');
+    expect(status).toHaveTextContent('Video processing');
+    expect(status).toHaveClass('lx-lecture__stage');
+    expect(container.querySelector('iframe')).toBeNull();
+    expect(container.querySelector('video')).toBeNull();
+    expect(container.querySelector('.lx-yt__facade')).toBeNull();
+    expect(within(section).queryByText('The narrated lecture is in production')).toBeNull();
+    expect(await axeViolations(container)).toEqual([]);
+  });
+
+  it('prefers a playable video over the placeholder', async () => {
+    const yt: Lesson = {
+      ...lesson,
+      lecture: { ...soonLecture, processing: true, produced: true, src: 'https://youtu.be/dQw4w9WgXcQ', youTubeId: 'dQw4w9WgXcQ', embedUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ' },
+    };
+    mockFetch({ ...anonymous, ...publicRoutes, 'GET /public/learning/courses/ai-agents-engineering/lessons/l1': () => json(200, yt) });
+    renderWithApp(<AcademyLessonPage />, { route: '/learn/ai-agents-engineering/l1', path: '/learn/:slug/:lessonSlug' });
+    const section = await screen.findByRole('region', { name: 'What an agent is' });
+    expect(within(section).queryByText('Video processing')).toBeNull();
+    expect(within(section).getByRole('button', { name: /Play the video lecture/ })).toBeInTheDocument();
   });
 });
 

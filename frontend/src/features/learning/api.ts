@@ -146,6 +146,8 @@ export interface LessonLecture {
   /** YouTube-hosted lecture: its video id and the privacy-enhanced embed URL (youtube-nocookie.com). */
   youTubeId: string | null;
   embedUrl: string | null;
+  /** True while the lesson's video is still uploading or processing on YouTube (no playable video yet). */
+  processing: boolean;
   publishedAt: string | null;
 }
 

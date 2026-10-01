@@ -1902,3 +1902,46 @@
   margin: 0;
   font-weight: var(--weight-semibold);
 }
+
+/* Lecture still uploading/processing on YouTube: the same 16:9 box the player uses, so nothing shifts when it arrives. */
+.lx-lecture__processing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  aspect-ratio: 16 / 9;
+  padding: var(--space-4);
+  text-align: center;
+  color: #e8ecf8;
+}
+
+.lx-lecture__processing-icon {
+  inline-size: 2rem;
+  block-size: 2rem;
+  animation: lx-processing-spin 2.4s linear infinite;
+}
+
+.lx-lecture__processing-title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.125rem;
+}
+
+.lx-lecture__processing-text {
+  margin: 0;
+  max-inline-size: 36rem;
+  color: #b8c0d8;
+}
+
+@keyframes lx-processing-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-lecture__processing-icon {
+    animation: none;
+  }
+}

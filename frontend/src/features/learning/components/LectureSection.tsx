@@ -7,6 +7,7 @@ import {
   FileText,
   Headphones,
   ListVideo,
+  Loader,
   Play,
   PlayCircle,
   Sparkles,
@@ -72,6 +73,8 @@ export function LectureSection({ lecture, headingLevel = 2 }: LectureSectionProp
   const embedUrl = youTubeId ? (lecture.embedUrl ?? `${YOUTUBE_EMBED_ORIGIN}/embed/${youTubeId}`) : null;
   const fileSrc = lecture.produced && !youTubeId ? lecture.src : null;
   const produced = !!(embedUrl || fileSrc);
+  // The video is still uploading/processing on YouTube and nothing is playable yet.
+  const processing = lecture.processing && !produced;
   const chapters = lecture.chapters;
   const planned = Math.max(1, lecture.totalSeconds);
   // Planned scene times → real video times (the produced video rarely matches the plan to the second).
@@ -190,6 +193,10 @@ export function LectureSection({ lecture, headingLevel = 2 }: LectureSectionProp
             <>
               <PlayCircle aria-hidden="true" /> Watch now
             </>
+          ) : processing ? (
+            <>
+              <Loader aria-hidden="true" /> Processing
+            </>
           ) : (
             <>
               <Sparkles aria-hidden="true" /> Coming soon
@@ -272,6 +279,14 @@ export function LectureSection({ lecture, headingLevel = 2 }: LectureSectionProp
             )}
             Your browser can’t play this video. Read the transcript below instead.
           </video>
+        </div>
+      ) : processing ? (
+        <div className="lx-lecture__stage lx-lecture__processing" role="status">
+          <Loader className="lx-lecture__processing-icon" aria-hidden="true" />
+          <p className="lx-lecture__processing-title">Video processing</p>
+          <p className="lx-lecture__processing-text">
+            YouTube is still preparing this lecture. It will appear here shortly; the chapters and transcript are available below.
+          </p>
         </div>
       ) : (
         <div className="lx-lecture__soon">

@@ -1,6 +1,6 @@
 import '@/features/learning/learning.css';
 import { Pencil } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
@@ -32,6 +32,8 @@ import {
   useQuestionStats,
   type AdminCourseDetail,
 } from './api';
+import { LessonYouTubeUpload, YouTubeConnectionPanel } from './YouTubeUpload';
+import { useCourseYouTube } from './youtube';
 
 export function LearningCourseDetailPage() {
   const { courseId = '' } = useParams();
@@ -299,8 +301,11 @@ function Learners({ courseId, enabled }: { courseId: string; enabled: boolean })
 function Videos({ detail, enabled }: { detail: AdminCourseDetail; enabled: boolean }) {
   const latest = detail.versions.find((v) => v.isLatest);
   const doc = useCourseVersion(detail.summary.id, enabled ? latest?.id : undefined);
+  const yt = useCourseYouTube(detail.summary.id, enabled);
   if (doc.isPending) return <Skeleton height={200} />;
   if (doc.isError) return <QueryError error={doc.error} onRetry={() => void doc.refetch()} />;
+  const uploads = yt.query.data?.uploads ?? [];
+  const needsReauth = uploads.some((u) => u.errorCode === 'invalid_grant');
   const videoLessons = doc.data.document.modules.flatMap((m) => m.lessons).filter((l) => l.type === 'video');
   if (videoLessons.length === 0)
     return (
@@ -312,12 +317,37 @@ function Videos({ detail, enabled }: { detail: AdminCourseDetail; enabled: boole
     );
   return (
     <div className="stack">
+      <YouTubeConnectionPanel />
+      {needsReauth && (
+        <Alert tone="danger" title="Re-authorize the YouTube connection">
+          YouTube no longer accepts the saved authorization, so lecture uploads are failing. An administrator must re-authorize the YouTube
+          connection before uploads can continue.
+        </Alert>
+      )}
+      {yt.query.isError && <QueryError error={yt.query.error} onRetry={() => void yt.query.refetch()} compact />}
       <p className="text-muted">
-        Produce each video from its narration script (ElevenLabs voice, HeyGen avatar), then upload the MP4 (up to 50 MB), a poster image and
+        Upload a lecture video to YouTube here and it is published to the lesson automatically. Or produce each video from its narration script (ElevenLabs voice, HeyGen avatar), then upload the MP4 (up to 50 MB), a poster image and
         WebVTT captions, or paste https URLs. Saving creates a new version of the latest content.
       </p>
       {videoLessons.map((l) => (
-        <VideoForm key={l.slug} detail={detail} lessonSlug={l.slug} title={l.title} script={l.video?.script ?? ''} initial={l.video} />
+        <VideoForm
+          key={l.slug}
+          detail={detail}
+          lessonSlug={l.slug}
+          title={l.title}
+          script={l.video?.script ?? ''}
+          initial={l.video}
+          youtube={
+            <LessonYouTubeUpload
+              courseId={detail.summary.id}
+              lessonSlug={l.slug}
+              lessonTitle={l.title}
+              upload={uploads.find((u) => u.lessonSlug === l.slug)}
+              onUpload={yt.applyUpload}
+              onRefresh={() => void yt.query.refetch()}
+            />
+          }
+        />
       ))}
     </div>
   );
@@ -329,7 +359,9 @@ function VideoForm({
   title,
   script,
   initial,
+  youtube,
 }: {
+  youtube?: ReactNode;
   detail: AdminCourseDetail;
   lessonSlug: string;
   title: string;
@@ -366,6 +398,7 @@ function VideoForm({
           <summary>Narration script</summary>
           <p className="text-small">{script}</p>
         </details>
+        {youtube}
         {(
           [
             ['Video (MP4 or https URL)', src, setSrc, 'src'],

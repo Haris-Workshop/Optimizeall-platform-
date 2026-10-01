@@ -19,7 +19,7 @@ This guide explains how to prepare for all three parts: how to study the Standar
 
 ## The three parts at a glance
 
-- **Part 1 — Essentials of Internal Auditing.** Foundations of internal auditing, independence and objectivity, proficiency and due professional care, quality, governance, risk management and control, and fraud risk.
+- **Part 1 — Internal Audit Fundamentals** (titled Essentials of Internal Auditing in older guides; the IIA revised the syllabus in 2025 to align it with its Global Internal Audit Standards). Foundations of internal auditing, ethics and professionalism, governance, risk management and control, and fraud risks.
 - **Part 2 — Practice of Internal Auditing.** Managing the internal audit activity, planning engagements, performing engagements, and communicating results and monitoring progress.
 - **Part 3 — Business Knowledge for Internal Auditing.** Business acumen, information security, information technology and financial management.
 

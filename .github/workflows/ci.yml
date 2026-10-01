@@ -68,6 +68,11 @@ jobs:
           dotnet test backend/tests/OptimizeAll.UnitTests -c Release --no-build
           --logger "trx;LogFileName=unit.trx" --results-directory TestResults
 
+      - name: Raise the MySQL connection limit for parallel test hosts
+        if: matrix.provider == 'MySql'
+        # Every test class boots its own host with its own pool; the stock 151 connections run out under parallel classes.
+        run: mysql -h 127.0.0.1 -u root --password=ci-root-password -e "SET GLOBAL max_connections = 1000;"
+
       - name: Integration tests (${{ matrix.provider }})
         env:
           OPTIMIZEALL_TEST_PROVIDER: ${{ matrix.provider }}

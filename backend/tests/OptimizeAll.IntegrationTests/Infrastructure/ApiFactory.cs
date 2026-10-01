@@ -62,7 +62,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     // Each test host gets a small pool so many parallel test classes stay under MySQL's max_connections.
     public string ConnectionString => IsSqlite
         ? new SqliteConnectionStringBuilder { DataSource = _sqliteFile, Pooling = true }.ConnectionString
-        : $"{_serverConnection.TrimEnd(';')};Database={_databaseName};Maximum Pool Size=20;";
+        : $"{_serverConnection.TrimEnd(';')};Database={_databaseName};Maximum Pool Size=20;Connection Idle Timeout=5;";
 
     /// <summary>For CREATE/DROP DATABASE only: unpooled, so these one-off admin connections never linger idle.</summary>
     /// <summary>A generous command timeout: on a busy shared server DROP DATABASE can exceed the 30 s default (class cleanup failures).</summary>

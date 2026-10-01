@@ -24,10 +24,10 @@ test('public home on a phone: no horizontal scroll, menu drawer, no console erro
   await page.getByRole('button', { name: 'Open menu' }).click();
   const drawer = page.getByRole('navigation', { name: 'Mobile' });
   await expect(drawer).toBeVisible();
-  await drawer.getByRole('link', { name: 'Pricing' }).click();
-  await expect(page).toHaveURL(/\/pricing$/);
+  await drawer.getByRole('link', { name: 'Case studies' }).click();
+  await expect(page).toHaveURL(/\/case-studies$/);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  await expectNoHorizontalScroll(page, 'the pricing page');
+  await expectNoHorizontalScroll(page, 'the case studies page');
 
   await page.goto('/');
   expect(await axeViolations(page), 'axe violations on the phone home page').toEqual([]);

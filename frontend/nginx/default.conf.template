@@ -65,6 +65,20 @@ server {
                       image/svg+xml image/x-icon application/manifest+json font/ttf font/otf;
 
     # ---------------------------------------------------------------- API (same origin)
+    # Lecture video uploads to YouTube (docs/YOUTUBE_UPLOAD.md): large bodies, streamed straight to the API (no nginx
+    # temp file) with long timeouts. Only this route gets the higher limits; the API enforces YouTube__MaxUploadBytes.
+    # A regex location outranks the /api/ prefix below, so it repeats the proxy settings and the 503 mapping.
+    location ~ ^/api/v1/admin/learning/courses/[^/]+/lessons/[^/]+/youtube$ {
+        client_max_body_size 2g;
+        client_body_timeout 600s;
+        proxy_request_buffering off;
+        proxy_pass ${OA_API_PROXY};
+        include /etc/nginx/snippets/proxy-api.conf;
+        proxy_send_timeout 3600s;
+        proxy_read_timeout 3600s;
+        error_page 502 504 =503 @api_unavailable;
+    }
+
     location /api/ {
         proxy_pass ${OA_API_PROXY};
         include /etc/nginx/snippets/proxy-api.conf;

@@ -103,6 +103,14 @@ Both Blueprints declare `Authentication__Google__ClientId` and `Authentication__
    and deploy**.
 3. The sign-in and registration pages now show **Continue with Google**.
 
+### Optional: YouTube lecture upload
+
+Both Blueprints also declare `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN` and
+`YOUTUBE_CHANNEL_ID` on `optimizeall-api` with `sync: false`. Leave all four empty to keep the feature off; set all
+four to enable it (setting only some stops the API at startup). Setup, scopes and limits:
+[YOUTUBE_UPLOAD.md](YOUTUBE_UPLOAD.md). The bundled web nginx already allows 2 GB bodies and long timeouts on the upload
+route; Render's own proxy has its own request limits, so very large files may need to be linked by URL on this demo host.
+
 Switching an existing environment between the two Blueprints does not move data: the demo data is simply seeded
 again into the new database.
 

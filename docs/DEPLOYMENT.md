@@ -179,7 +179,7 @@ publish job with registry credentials when a registry is chosen.
   a HeyGen or CDN host) need that origin in the web container's `MEDIA_SRC_EXTRA` (CSP `media-src`, space-separated).
   The web server also proxies `/verify/certificates/{id}` to the API's server-rendered verification page (LinkedIn
   previews); see [LEARNING.md](LEARNING.md).
-* Redirect HTTP to HTTPS at the proxy. Allow request bodies of at least 12 MB (screenshot uploads).
+* Redirect HTTP to HTTPS at the proxy. Allow request bodies of at least 12 MB (screenshot uploads). The bundled web nginx allows 55 MB generally and, for the YouTube lecture upload route only (`POST /api/v1/admin/learning/courses/{course}/lessons/{lesson}/youtube`), 2 GB with `proxy_request_buffering off` and 1 h timeouts; a proxy in front of it needs the same on that route (`client_max_body_size 2g`, read/send timeouts of an hour, no request buffering), see [YOUTUBE_UPLOAD.md](YOUTUBE_UPLOAD.md).
 * Canonical host: redirect the other host form (`example.com` ↔ `www.example.com`) with a 301 at the proxy, and set
   **Site settings → SEO → Site URL** to the canonical https origin: canonical links, Open Graph URLs, the sitemaps,
   robots.txt and llms.txt all use it. The web server already redirects trailing slashes, duplicate slashes and
@@ -229,6 +229,7 @@ Required settings (see [`/.env.example`](../.env.example) for all of them):
 | `Bootstrap__AdminEmail` / `Bootstrap__AdminPassword` | password | first start only; remove afterwards |
 | `WhatsApp__*` | token | only when WhatsApp is enabled |
 | `Authentication__Google__ClientId` / `Authentication__Google__ClientSecret` | secret | optional "Sign in with Google" (§ 5.11) |
+| `YOUTUBE_CLIENT_ID` / `YOUTUBE_CLIENT_SECRET` / `YOUTUBE_REFRESH_TOKEN` / `YOUTUBE_CHANNEL_ID` | secret (all but the channel id) | optional YouTube lecture upload; all four or none ([YOUTUBE_UPLOAD.md](YOUTUBE_UPLOAD.md)) |
 
 * Generate values with `scripts/generate-secrets.sh --aspnet`. Store them in a secret manager (AWS Secrets
   Manager/SSM, GCP Secret Manager, Azure Key Vault, Vault, Kubernetes Secrets with encryption at rest).
@@ -352,6 +353,7 @@ Then, with a dedicated smoke-test participant and staff account:
 | Payouts | `Payments__Provider=manual` (default): finance pays outside the platform and records payment references | No automated money movement until a provider integration (e.g. Wise, PayPal Payouts) is added |
 | Advertiser conversion postbacks | `Tracking__PostbackSecret` shared with each advertiser | Postbacks are rejected; clicks are still tracked |
 | Sign in with Google | Google OAuth client: `Authentication__Google__ClientId`, `Authentication__Google__ClientSecret` (§ 5.11) | The "Continue with Google" button is hidden; email + password sign-in only |
+| YouTube lecture upload | `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN`, `YOUTUBE_CHANNEL_ID` ([YOUTUBE_UPLOAD.md](YOUTUBE_UPLOAD.md)); a reverse proxy that allows ~2 GB bodies and long timeouts on the upload route | Feature disabled when none is set; setting only some stops the API at startup. Lectures can still be linked by URL |
 
 ### 5.11 Sign in with Google (optional)
 

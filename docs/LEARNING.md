@@ -117,6 +117,9 @@ unchanged; content workstreams upgrade them one by one (bump `version` when you 
 * **YouTube** (owner decision: lectures are hosted on YouTube): `src` must be `https://www.youtube.com/watch?v=ID`,
   `https://youtu.be/ID` or `https://www.youtube-nocookie.com/embed/ID` with an 11-character id (`Domain/Learning/YouTube.cs`);
   any other URL on a YouTube host is refused. The id is derived from `src`.
+* **Automatic upload** (optional): admins can upload the lecture file once and the API publishes it to the Optimize All
+  channel and links it into the lesson as the YouTube `src` above; see [YOUTUBE_UPLOAD.md](YOUTUBE_UPLOAD.md). The
+  offline `tools/lecture-studio` uploader is a separate path to the same channel.
 * Word ranges and pacing are editorial (Strict only); structure (scene counts and lengths, media, lecture required in v2)
   applies in Authoring too.
 * The optional properties are omitted from the stored JSON when null, so v1 documents keep their exact content hash.

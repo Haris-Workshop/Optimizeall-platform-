@@ -61,6 +61,11 @@ x-api-environment: &api-environment
   WhatsApp__TemplateName: ${WHATSAPP_TEMPLATE_NAME:-}
   WhatsApp__TemplateLanguage: ${WHATSAPP_TEMPLATE_LANGUAGE:-en}
   WhatsApp__AccessToken_FILE: /run/secrets/whatsapp_access_token
+  # Optional YouTube lecture upload (docs/YOUTUBE_UPLOAD.md): all four or none. Secrets via *_FILE, e.g.
+  # YOUTUBE_CLIENT_ID: ${YOUTUBE_CLIENT_ID:-}
+  # YOUTUBE_CLIENT_SECRET_FILE: /run/secrets/youtube_client_secret
+  # YOUTUBE_REFRESH_TOKEN_FILE: /run/secrets/youtube_refresh_token
+  # YOUTUBE_CHANNEL_ID: UC2fDn6VljqnoQQhvYCt6o0Q
   Payments__Provider: manual
   Storage__RootPath: /app/storage/files
   Jobs__Enabled: "true"

@@ -96,6 +96,17 @@ services:
         sync: false
       - key: Authentication__Google__ClientSecret
         sync: false
+      # Optional YouTube lecture upload (docs/YOUTUBE_UPLOAD.md): set ALL FOUR to enable, leave all empty to keep it off
+      # (setting only some stops the API at startup). Secrets stay in Render, never in the repository.
+      - key: YOUTUBE_CLIENT_ID
+        sync: false
+      - key: YOUTUBE_CLIENT_SECRET
+        sync: false
+      - key: YOUTUBE_REFRESH_TOKEN
+        sync: false
+      # Public: the Optimize All channel (@optimizeall) is UC2fDn6VljqnoQQhvYCt6o0Q.
+      - key: YOUTUBE_CHANNEL_ID
+        sync: false
       # Demo email: written to files and readable at /api/v1/dev/mailbox?to=<email>. Switch to Smtp for real email.
       - key: Email__Mode
         value: File

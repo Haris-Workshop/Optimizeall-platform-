@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from studio import delivery
 from studio import kokoro_tts as kk
 from studio import narrate
 from studio.config import Config
@@ -33,8 +34,8 @@ class FakeSynth:
             raise kk.KokoroError(f"unknown Kokoro voice {voice!r}")
         self.voice = voice
 
-    def synthesize(self, text, *, voice_ref=None, seed=0):
-        self.calls.append({"text": text, "voice": self.voice})
+    def synthesize(self, text, *, voice_ref=None, seed=0, speed=None, sentence_pause=None, clause_pause=None):
+        self.calls.append({"text": text, "voice": self.voice, "speed": speed})
         n = int(0.4 * len(text.split()) * RATE)
         return [0.3 * math.sin(2 * math.pi * 220 * i / RATE) for i in range(n)]
 
@@ -81,6 +82,66 @@ class KokoroPlanTests(unittest.TestCase):
         self.assertTrue(set(kk.DEFAULT_VOICES.values()) <= set(kk.ENGLISH_VOICES))
 
 
+class DeliveryTests(unittest.TestCase):
+    TEXT = "Have you ever wondered why? Short one. This is a normal statement of average length for narration. Look out!"
+
+    def test_each_sentence_is_shaped_by_what_it_is(self):
+        segs = {s.text: s for s in delivery.plan_segments(self.TEXT, delivery.profile_for("case"), key="k")}
+        question, short, statement, shout = (segs["Have you ever wondered why?"], segs["Short one."],
+                                             segs["This is a normal statement of average length for narration."], segs["Look out!"])
+        self.assertEqual((question.kind, short.kind, statement.kind, shout.kind), ("question", "short", "statement", "exclaim"))
+        self.assertGreater(question.pause_after, statement.pause_after)  # a beat to think after a question
+        self.assertGreater(short.pause_after, statement.pause_after)  # room after a punchy line
+        self.assertLess(short.speed, statement.speed)
+        self.assertEqual(shout.pause_after, 0.0)  # the last sentence has no trailing pause (the scene tail handles it)
+
+    def test_the_plan_is_repeatable_and_varies_with_the_key_and_template(self):
+        a = delivery.plan_segments(self.TEXT, delivery.profile_for("recap"), key="k1")
+        self.assertEqual(a, delivery.plan_segments(self.TEXT, delivery.profile_for("recap"), key="k1"))
+        self.assertNotEqual([s.speed for s in a], [s.speed for s in delivery.plan_segments(self.TEXT, delivery.profile_for("recap"), key="k2")])
+        self.assertNotEqual([s.pause_after for s in a], [s.pause_after for s in delivery.plan_segments(self.TEXT, delivery.profile_for("case"), key="k1")])
+        self.assertEqual(delivery.profile_for("nonsense"), delivery.profile_for(None))
+
+    def test_speeds_stay_inside_the_safe_range_and_long_sentences_split_at_clauses(self):
+        long_sentence = ", ".join(["a clause with several words in it"] * 20) + "."
+        segs = delivery.plan_segments(long_sentence, delivery.profile_for("case", 1.4), key="k", max_chars=120)
+        self.assertGreater(len(segs), 1)
+        self.assertTrue(all(delivery.MIN_SPEED <= s.speed <= delivery.MAX_SPEED for s in segs))
+        self.assertTrue(all(len(s.text) <= 120 for s in segs))
+        self.assertEqual(delivery.plan_segments("   ", delivery.DEFAULT_PROFILE, key="k"), [])
+
+    def test_voice_blends_parse_and_normalise(self):
+        self.assertEqual(kk.parse_voice("af_heart"), [("af_heart", 1.0)])
+        blend = kk.parse_voice("af_heart:0.7+af_bella:0.3")
+        self.assertEqual([n for n, _ in blend], ["af_heart", "af_bella"])
+        self.assertAlmostEqual(sum(w for _, w in blend), 1.0)
+        self.assertAlmostEqual(kk.parse_voice("a:2+b:2")[0][1], 0.5)
+        for bad in ("", "a:0", "a:x", "a:-1"):
+            with self.assertRaises(kk.KokoroError):
+                kk.parse_voice(bad)
+
+    def test_the_mastering_chain_produces_a_valid_wav(self):
+        import io
+        import wave
+
+        raw = io.BytesIO()
+        with wave.open(raw, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(RATE)
+            w.writeframes(b"".join(int(8000 * math.sin(2 * math.pi * 220 * i / RATE)).to_bytes(2, "little", signed=True)
+                                   for i in range(RATE)))
+        try:
+            mastered = delivery.master_wav(raw.getvalue())
+        except RuntimeError as exc:
+            if "ffmpeg not found" in str(exc):
+                self.skipTest("ffmpeg is not available")
+            raise
+        with wave.open(io.BytesIO(mastered)) as w:
+            self.assertEqual((w.getnchannels(), w.getsampwidth(), w.getframerate()), (1, 2, RATE))
+            self.assertAlmostEqual(w.getnframes() / RATE, 1.0, delta=0.05)
+
+
 class KokoroNarrateTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -115,6 +176,37 @@ class KokoroNarrateTests(unittest.TestCase):
         result = narrate.collect(cfg, plan, LectureDir(cfg, plan["key"]))
         self.assertEqual(result["credits"], 0)
         self.assertGreater(result["seconds"], 0)
+
+    def test_expressive_style_varies_pace_per_sentence_and_is_part_of_the_cache_key(self):
+        cfg = self.cfg(kokoro_master=False)
+        plan = self.plan(cfg)
+        self.assertIn("style=expressive", plan["model"])
+        synth = FakeSynth()
+        narrate.synthesize_kokoro(cfg, plan, synth=synth, log=lambda _m: None)
+        self.assertGreater(len({c["speed"] for c in synth.calls}), 3)
+        plain = self.plan(self.cfg(kokoro_style="plain", kokoro_master=False))
+        self.assertIn("style=plain", plain["model"])
+        self.assertNotEqual(plan["scenes"][0]["ttsKey"], plain["scenes"][0]["ttsKey"])
+        self.assertNotEqual(plan["scenes"][0]["ttsKey"], self.plan(self.cfg(kokoro_master=True))["scenes"][0]["ttsKey"])
+        meta = json.loads((cfg.audio_cache / f"{plan['scenes'][0]['ttsKey']}.json").read_text())
+        self.assertTrue(all("speed" in c and "kind" in c for c in meta["chunks"]))
+
+    def test_plain_style_still_narrates_with_one_speed(self):
+        cfg = self.cfg(kokoro_style="plain", kokoro_master=False)
+        synth = FakeSynth()
+        narrate.synthesize_kokoro(cfg, self.plan(cfg), synth=synth, log=lambda _m: None)
+        self.assertTrue(synth.calls)
+        self.assertEqual({c["speed"] for c in synth.calls}, {None})
+
+    def test_mastering_runs_on_every_scene_when_enabled(self):
+        cfg = self.cfg(kokoro_master=True)
+        with mock.patch.object(delivery, "master_wav", side_effect=lambda wav: wav) as master:
+            narrate.synthesize_kokoro(cfg, self.plan(cfg), synth=FakeSynth(), log=lambda _m: None)
+        self.assertEqual(master.call_count, len(self.plan(cfg)["scenes"]))
+
+    def test_an_unknown_style_is_refused(self):
+        with self.assertRaises(kk.KokoroError):
+            self.cfg(kokoro_style="dramatic").kokoro_settings().signature()
 
     def test_one_loaded_model_serves_lectures_with_different_voices(self):
         synth = FakeSynth()

@@ -267,7 +267,11 @@ def synthesize_kokoro(cfg: Config, plan: dict, *, synth=None, dry_run: bool = Fa
     for s in todo:
         started = time.monotonic()
         try:
-            audio, info = kk.synthesize_scene(synth, s["tts"], key=s["ttsKey"], voice_ref=None, settings=settings, log=log)
+            if settings.style == "expressive":
+                audio, info = kk.synthesize_scene_expressive(synth, s["tts"], key=s["ttsKey"], template=s.get("template"),
+                                                             settings=settings, log=log)
+            else:
+                audio, info = kk.synthesize_scene(synth, s["tts"], key=s["ttsKey"], voice_ref=None, settings=settings, log=log)
         except cb.ChatterboxError as exc:
             raise NarrationError(f"{plan['key']} {s['id']}: {exc}") from exc
         meta = {

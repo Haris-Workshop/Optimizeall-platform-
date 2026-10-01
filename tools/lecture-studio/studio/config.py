@@ -94,6 +94,8 @@ class Config:
     kokoro_speed: float = 1.0
     kokoro_chunk_chars: int = 280
     kokoro_pause_seconds: float = 0.2
+    kokoro_style: str = "expressive"  # expressive | plain (see delivery.py)
+    kokoro_master: bool = True  # light mastering of every scene
     kokoro_model_dir: Path | None = None  # default: <work_dir>/models/kokoro (the ~350 MB model files download there)
     # Built-in Kokoro voice per course category ("*" = any other); see kokoro_tts.ENGLISH_VOICES.
     kokoro_voices: dict = field(default_factory=lambda: dict(_kokoro_default_voices()))
@@ -134,7 +136,8 @@ class Config:
         from .kokoro_tts import Settings
 
         return Settings(language=self.kokoro_language, speed=float(self.kokoro_speed),
-                        chunk_chars=int(self.kokoro_chunk_chars), pause_seconds=float(self.kokoro_pause_seconds))
+                        chunk_chars=int(self.kokoro_chunk_chars), pause_seconds=float(self.kokoro_pause_seconds),
+                        style=self.kokoro_style, master=bool(self.kokoro_master))
 
     @property
     def kokoro_models(self) -> Path:

@@ -64,3 +64,13 @@ export function RedirectIfMoved({ when }: { when: boolean }) {
   const { to } = useMovedTo(when);
   return to ? <Navigate to={to} replace /> : null;
 }
+
+/**
+ * A permanent client-side redirect for an address the app itself retired (`/academy` → `/learn`, `/faq` →
+ * `/creators/faq`). The web server answers these with a real 301 first (see docs/WEBSITE.md "Redirects"); this covers
+ * in-app navigation, history and old bookmarks that reach the SPA. The query string and the #anchor are kept.
+ */
+export function StaticRedirect({ to }: { to: string }) {
+  const { search, hash } = useLocation();
+  return <Navigate to={{ pathname: to, search, hash }} replace />;
+}

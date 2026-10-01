@@ -53,7 +53,7 @@ describe('sidebar nav groups', () => {
   });
 
   it.each([
-    ['participant', 'learning', 'Grow'],
+    ['participant', 'learning', 'My learning'],
     ['admin', 'learning', 'Platform'],
   ] as const)('puts %s → %s (academy) in the %s section', (portal, to, label) => {
     const sections = groupNav(portal, getPortal(portal).nav);

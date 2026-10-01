@@ -30,62 +30,6 @@ function baseRoutes(site: PublicSite = fx.site): Routes {
   };
 }
 
-const course = (over: Record<string, unknown>) => ({
-  id: String(over.slug),
-  subtitle: 'A course subtitle.',
-  level: 'Beginner',
-  estimatedMinutes: 60,
-  moduleCount: 2,
-  lessonCount: 5,
-  badgeName: 'Badge',
-  skills: ['Skill A', 'Skill B'],
-  isFeatured: false,
-  isNew: false,
-  badgeImageUrl: '/badge.svg',
-  publishedAt: '2026-09-01T00:00:00Z',
-  ...over,
-});
-
-/** The public learning API (the academy sections): two published courses in two subjects. */
-const learningRoutes: Routes = {
-  'GET /public/learning/courses': () =>
-    json(200, {
-      items: [
-        course({ slug: 'advanced-prompt-engineering', title: 'Advanced Prompt Engineering', category: 'Ai', level: 'Advanced', lessonCount: 7, isFeatured: true }),
-        course({ slug: 'seo-basics', title: 'SEO Basics', category: 'Seo' }),
-      ],
-      total: 2,
-      page: 1,
-      pageSize: 200,
-      totalPages: 1,
-    }),
-  'GET /public/learning/categories': () =>
-    json(200, [
-      { category: 'Ai', label: 'AI', courseCount: 1 },
-      { category: 'Seo', label: 'SEO', courseCount: 1 },
-    ]),
-  // The marketing pages and the header read one small summary instead of the whole catalog.
-  'GET /public/learning/summary': () =>
-    json(200, {
-      courseCount: 2,
-      lessonCount: 12,
-      totalMinutes: 120,
-      pathCount: 0,
-      categories: [
-        { category: 'Ai', label: 'AI', courseCount: 1 },
-        { category: 'Seo', label: 'SEO', courseCount: 1 },
-      ],
-      featuredSlugs: ['advanced-prompt-engineering'],
-      highlights: [
-        course({ slug: 'advanced-prompt-engineering', title: 'Advanced Prompt Engineering', category: 'Ai', level: 'Advanced', lessonCount: 7, isFeatured: true }),
-        course({ slug: 'seo-basics', title: 'SEO Basics', category: 'Seo' }),
-      ],
-      skills: ['Skill A', 'Skill B'],
-      updatedAt: '2026-09-01T00:00:00Z',
-    }),
-  'GET /public/learning/paths': () => json(200, { paths: [], seo: { title: 'Paths', description: 'd', canonicalPath: '/learn/paths', imageUrl: null, noIndex: false }, jsonLd: [] }),
-};
-
 /** Renders a public page inside the real site chrome (header, footer, consent banner). */
 function renderPublic(page: ReactElement, { route = '/', path = '/', routes = {} as Routes, site = fx.site } = {}) {
   const mock = mockFetch({ ...baseRoutes(site), ...routes });
@@ -130,7 +74,7 @@ afterEach(() => {
 describe('HomePage', () => {
   it('renders services, labelled stats, case studies and pricing from the API', async () => {
     renderPublic(<HomePage />);
-    expect(screen.getByRole('heading', { level: 1, name: /Learn AI, marketing and growth/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /Growth marketing, run as one accountable team/ })).toBeInTheDocument();
     const services = (await screen.findByRole('heading', { name: 'Every channel, one accountable team' })).closest('section')!;
     expect(await within(services).findByRole('heading', { name: 'Search' })).toBeInTheDocument();
     expect(within(services).getByRole('link', { name: 'Search engine optimization' })).toHaveAttribute('href', '/services/seo');
@@ -144,26 +88,52 @@ describe('HomePage', () => {
     await waitFor(() => expect(document.head.querySelector('script[type="application/ld+json"]')?.textContent).toContain('"Organization"'));
   });
 
-  it('leads with the academy: live course, lesson and subject counts, subjects and courses from the learning API', async () => {
-    renderPublic(<HomePage />, { routes: learningRoutes });
-    // Learning is the first call to action everywhere: header, hero and closing band all open the catalog.
-    const learn = screen.getAllByRole('link', { name: /Start learning free/ });
-    expect(learn.length).toBeGreaterThanOrEqual(2);
-    for (const link of learn) expect(link).toHaveAttribute('href', '/learn');
-    const academy = (await screen.findByRole('heading', { level: 2, name: 'Practical skills for the AI era, free for everyone' })).closest('section')!;
-    // Figures are the API's, never invented: 2 published courses, 7 + 5 lessons, 2 subjects.
-    const stat = (label: string) => within(academy).getByText(label).closest('div')!;
-    await waitFor(() => expect(within(stat('Free courses')).getByText('2', { selector: '.visually-hidden' })).toBeInTheDocument());
-    expect(within(stat('Lessons')).getByText('12', { selector: '.visually-hidden' })).toBeInTheDocument();
-    expect(within(stat('Subjects')).getByText('2', { selector: '.visually-hidden' })).toBeInTheDocument();
-    expect(within(academy).getByRole('link', { name: 'AI' })).toHaveAttribute('href', '/learn?category=Ai');
-    expect(within(academy).getByRole('link', { name: 'Advanced Prompt Engineering' })).toHaveAttribute('href', '/learn/advanced-prompt-engineering');
+  it('is the agency front page: hero calls to action, then the sections in order, then one compact "More from Optimize All" band', async () => {
+    const posts = [{ slug: 'p1', title: 'A playbook', excerpt: 'x', publishedAt: '2026-09-01T00:00:00Z', categories: [], coverImageUrl: null, coverImageAlt: null, readingMinutes: 3, authorName: null, tags: [] }];
+    const { container } = renderPublic(<HomePage />, { routes: { 'GET /public/home': () => json(200, { ...fx.home, latestPosts: posts }) } });
+    await screen.findByText('Tripling organic leads for Northwind');
+    const home = container.querySelector('.oa-home') as HTMLElement;
+
+    // One h1; the hero asks for a consultation first and shows the work second.
+    expect(within(home).getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    const hero = within(home).getByRole('heading', { level: 1 }).closest('header')!;
+    expect(within(hero).getByRole('link', { name: /Book a consultation/ })).toHaveAttribute('href', '/book-a-consultation');
+    expect(within(hero).getByRole('link', { name: 'See our work' })).toHaveAttribute('href', '/case-studies');
+
+    const titles = within(home)
+      .getAllByRole('heading', { level: 2 })
+      .map((h) => h.textContent);
+    const order = [
+      'Every channel, one accountable team',
+      'Numbers we’re proud of'.replace('’', "'"),
+      'Real work, real results',
+      'A process built for accountability',
+      'Specialists in your market',
+      'What clients say',
+      'Transparent pricing, no surprises',
+      'Built to earn your trust',
+      'Playbooks and insights',
+      'More from Optimize All',
+      'Get marketing insights in your inbox',
+    ];
+    expect(titles).toEqual(order);
+
+    // The academy and creator sections live on /learn and /creators, not here.
+    for (const gone of ['Explore by subject', 'Featured courses', 'Earn it. Verify it. Share it.', 'From first lesson to certificate', 'Two ways to grow. Both start today.', 'Become an Optimize All creator'])
+      expect(within(home).queryByRole('heading', { name: gone })).not.toBeInTheDocument();
+
+    const more = within(home).getByRole('heading', { name: 'More from Optimize All' }).closest('section')!;
+    expect(within(more).getAllByRole('link')).toHaveLength(2);
+    expect(within(more).getByRole('link', { name: /Free AI & marketing courses with certificates/ })).toHaveAttribute('href', '/learn');
+    expect(within(more).getByRole('link', { name: /Earn from campaigns/ })).toHaveAttribute('href', '/creators');
+    // Nothing on the page asks the visitor to "start learning".
+    expect(within(home).queryByRole('link', { name: /Start learning free/ })).not.toBeInTheDocument();
   });
 
   it('has no axe violations', async () => {
-    const { container } = renderPublic(<HomePage />, { routes: learningRoutes });
+    const { container } = renderPublic(<HomePage />);
     await screen.findByText('Tripling organic leads for Northwind');
-    await screen.findByRole('link', { name: 'Advanced Prompt Engineering' });
+    await screen.findByText('Free AI & marketing courses with certificates');
     expect(await axeViolations(container)).toEqual([]);
   });
 });

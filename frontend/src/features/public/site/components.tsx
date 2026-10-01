@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { ArrowRight, Check, ChevronLeft, ChevronRight, Pause, Play, Quote, Star } from 'lucide-react';
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ButtonLink, EmptyState, ErrorState, Skeleton, SkeletonText } from '@/components/ui';
 import { isApiError } from '@/lib/api/errors';
 import { formatDate } from '@/lib/format/dates';
@@ -19,6 +19,7 @@ import type {
 import { useSiteCopy } from './copy';
 import { SiteIcon } from './icons';
 import { MovedOrNotFound } from './redirects';
+import { chromeVariant, SECTION_ROOT, type ChromeVariant } from './variant';
 
 export const PERIOD_SUFFIX: Record<BillingPeriod, string> = {
   OneTime: 'one-time',
@@ -96,7 +97,7 @@ export function PageHero({
   title: ReactNode;
   lead?: ReactNode;
   actions?: ReactNode;
-  breadcrumbs?: { label: string; to?: string }[];
+  breadcrumbs?: Crumb[];
   children?: ReactNode;
 }) {
   return (
@@ -115,13 +116,36 @@ export function PageHero({
   );
 }
 
-export function Breadcrumbs({ items }: { items: { label: string; to?: string }[] }) {
+export interface Crumb {
+  label: string;
+  to?: string;
+}
+
+/**
+ * Breadcrumb trail, shared by the agency pages and the academy / creators pages (one look everywhere).
+ *
+ * Agency pages pass a trail starting at `{ label: 'Home', to: '/' }`. Inside a product section (`section`, derived from
+ * the route when omitted: /learn, /verify → academy; /creators, /join, /c → creators) the trail is rooted at the product
+ * instead: a leading "Home" is dropped and the root crumb (Academy → /learn, Creators → /creators) is added when the
+ * trail does not already start with it. So the academy can pass just its own trail, e.g.
+ * `<Breadcrumbs items={[{ label: 'Learning paths', to: '/learn/paths' }, { label: path.title }]} />`.
+ * `tone="tight"` trims the bottom margin for use inside a compact hero.
+ */
+export function Breadcrumbs({ items, section, tone }: { items: Crumb[]; section?: ChromeVariant; tone?: 'default' | 'tight' }) {
+  const { pathname } = useLocation();
+  const kind = section ?? chromeVariant(pathname);
+  let trail = items;
+  if (kind !== 'agency') {
+    const root = SECTION_ROOT[kind];
+    const rest = items.length > 0 && items[0].label === 'Home' ? items.slice(1) : items;
+    trail = rest[0]?.label === root.label ? rest : [root, ...rest];
+  }
   return (
-    <nav aria-label="Breadcrumb" className="site-breadcrumbs">
+    <nav aria-label="Breadcrumb" className={clsx('site-breadcrumbs', tone === 'tight' && 'site-breadcrumbs--tight')}>
       <ol>
-        {items.map((item, i) => (
+        {trail.map((item, i) => (
           <li key={`${item.label}-${i}`}>
-            {item.to && i < items.length - 1 ? <Link to={item.to}>{item.label}</Link> : <span aria-current={i === items.length - 1 ? 'page' : undefined}>{item.label}</span>}
+            {item.to && i < trail.length - 1 ? <Link to={item.to}>{item.label}</Link> : <span aria-current={i === trail.length - 1 ? 'page' : undefined}>{item.label}</span>}
           </li>
         ))}
       </ol>

@@ -1,9 +1,13 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useSite, type JsonLd, type PublicSeo } from './api';
+import { chromeVariant, DEFAULT_TITLES, TITLE_TEMPLATES } from './variant';
 
 export interface DocumentHead {
-  /** Page title without the site suffix; the site's title template ("%s | Optimize All") is applied. */
+  /**
+   * Page title without the site suffix. The section's template is applied: "%s | Optimize All" (agency, or the CMS
+   * template), "%s | Optimize All Academy" under /learn and "%s | Optimize All Creators" under /creators.
+   */
   title?: string | null;
   description?: string | null;
   /** Absolute canonical URL, or an app path resolved against the site URL. */
@@ -20,7 +24,11 @@ export interface DocumentHead {
 const MARK = 'data-oa-head';
 /** Robots directives of an indexable page (the server renders the same; large image previews and full snippets). */
 export const INDEXABLE_ROBOTS = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
-const DEFAULT_TEMPLATE = '%s | Optimize All';
+/** Meta description when a page sets none: the agency's comes from the site settings; the products have their own. */
+const DEFAULT_DESCRIPTIONS = {
+  academy: 'Free AI and marketing courses with verifiable certificates, from the team at Optimize All.',
+  creators: 'Earn from approved, disclosed posts on campaigns from brands you believe in. The Optimize All creator program.',
+} as const;
 /** Built-in social image (1200×630) used when neither the page nor the site settings choose one. */
 export const DEFAULT_OG_IMAGE = '/og-default.png';
 
@@ -101,10 +109,15 @@ export function absoluteUrl(url: string | null | undefined, siteUrl?: string | n
 export function useDocumentHead(head: DocumentHead) {
   const { data: site } = useSite();
   const { pathname } = useLocation();
-  const template = site?.seo.titleTemplate || DEFAULT_TEMPLATE;
+  const variant = chromeVariant(pathname);
+  const template = variant === 'agency' ? site?.seo.titleTemplate || TITLE_TEMPLATES.agency : TITLE_TEMPLATES[variant];
   const siteName = site?.siteName || 'Optimize All';
-  const title = head.title ? applyTitleTemplate(head.title, template, siteName) : site?.seo.defaultTitle || siteName;
-  const description = head.description ?? site?.seo.defaultDescription ?? null;
+  const title = head.title
+    ? applyTitleTemplate(head.title, template, siteName)
+    : variant === 'agency'
+      ? site?.seo.defaultTitle || siteName
+      : DEFAULT_TITLES[variant];
+  const description = head.description ?? (variant === 'agency' ? (site?.seo.defaultDescription ?? null) : DEFAULT_DESCRIPTIONS[variant]);
   const canonical = absoluteUrl(head.canonical ?? pathname, site?.seo.siteUrl);
   const pageImage = head.image ?? null;
   const image = absoluteUrl(pageImage ?? site?.seo.defaultOgImageUrl ?? DEFAULT_OG_IMAGE, site?.seo.siteUrl);

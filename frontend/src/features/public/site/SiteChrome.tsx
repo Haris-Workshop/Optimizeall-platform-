@@ -9,6 +9,7 @@ import { PartnerLinksProvider } from '../partners/PartnerLinksContext';
 import { CookieConsent } from './CookieConsent';
 import { SiteFooter } from './SiteFooter';
 import { SiteHeader } from './SiteHeader';
+import { chromeVariant } from './variant';
 import './site.css';
 
 function AnnouncementBar() {
@@ -44,8 +45,12 @@ function AnnouncementBar() {
 }
 
 /**
- * The public website frame used by PublicLayout: skip link, announcement bar, header with the services mega-menu,
- * content, CMS footer and the cookie-consent banner. Also records campaign attribution on the first page view.
+ * The public website frame used by PublicLayout: skip link, announcement bar, header, content, footer and the
+ * cookie-consent banner. Also records campaign attribution on the first page view.
+ *
+ * The frame has three variants chosen from the route (see ./variant.ts): the agency's (default: services mega-menu,
+ * CMS footer, announcement bar), the academy's (/learn, /verify, /academy) and the creator programme's (/creators,
+ * /join, /c, /faq), each a mini header and footer with one call to action and a link back to the agency.
  */
 export function SiteChrome({ children }: { children: ReactNode }) {
   const { data: site } = useSite();
@@ -53,6 +58,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
   const [consentOpen, setConsentOpen] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
   const focusedPath = useRef(location.pathname);
+  const variant = chromeVariant(location.pathname);
 
   useEffect(() => {
     captureAttribution({ pathname: location.pathname, search: location.search });
@@ -69,16 +75,16 @@ export function SiteChrome({ children }: { children: ReactNode }) {
 
   return (
     <PartnerLinksProvider>
-      <div className="public-layout site-layout">
+      <div className="public-layout site-layout" data-chrome={variant}>
         <a className="skip-link" href="#main">
           Skip to content
         </a>
-        <AnnouncementBar />
-        <SiteHeader />
+        {variant === 'agency' && <AnnouncementBar />}
+        <SiteHeader variant={variant} />
         <main id="main" ref={mainRef} tabIndex={-1} className="public-main">
           {children}
         </main>
-        <SiteFooter onCookieSettings={() => setConsentOpen(true)} />
+        <SiteFooter variant={variant} onCookieSettings={() => setConsentOpen(true)} />
         <CookieConsent ids={site?.analytics} open={consentOpen} onClose={() => setConsentOpen(false)} />
       </div>
     </PartnerLinksProvider>

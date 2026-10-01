@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { api } from '@/lib/api/client';
 import { normalizeFaqs } from './faqs';
+import { Breadcrumbs } from './site/components';
 import { useSiteCopy } from './site/copy';
 import { useDocumentHead } from './site/head';
 import './FaqPage.css';
@@ -43,6 +44,7 @@ export function FaqPage() {
   return (
     <div className="container faq-page">
       <header className="faq-page__header">
+        <Breadcrumbs items={[{ label: 'FAQ' }]} />
         <p className="eyebrow">{copy.text('faq.hero.eyebrow')}</p>
         <h1>{copy.text('faq.hero.title')}</h1>
         <p className="faq-page__lead">{copy.text('faq.hero.lead')}</p>
@@ -63,8 +65,8 @@ export function FaqPage() {
           description={copy.text('faq.empty.description')}
           action={
             <>
-              <ButtonLink to="/#how-it-works">How it works</ButtonLink>
-              <ButtonLink to="/#rules" variant="secondary">
+              <ButtonLink to="/creators#how-it-works">How it works</ButtonLink>
+              <ButtonLink to="/creators#rules" variant="secondary">
                 Rules & trust
               </ButtonLink>
             </>

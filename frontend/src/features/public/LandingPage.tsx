@@ -29,7 +29,7 @@ export function LandingPage() {
   const copy = useSiteCopy();
   useDocumentHead({ title: copy.text('creators.seo.title'), description: copy.text('creators.seo.description') });
 
-  // Router links to /#section: scroll to the section and move focus there for keyboard users.
+  // Router links to /creators#section: scroll to the section and move focus there for keyboard users.
   useEffect(() => {
     if (!hash) return;
     const target = document.getElementById(hash.slice(1));
@@ -53,10 +53,10 @@ export function LandingPage() {
             </h1>
             <p className="landing-hero__lead">{copy.text('creators.hero.lead')}</p>
             <div className="landing-hero__ctas">
-              <ButtonLink to="/register" variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
+              <ButtonLink to="/register?audience=creator" variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
                 {copy.text('creators.hero.primaryCta')}
               </ButtonLink>
-              <ButtonLink to="/#how-it-works" variant="secondary" size="lg">
+              <ButtonLink to="/creators#how-it-works" variant="secondary" size="lg">
                 {copy.text('creators.hero.secondaryCta')}
               </ButtonLink>
             </div>
@@ -168,7 +168,7 @@ export function LandingPage() {
               {copy.text('creators.faq.title')}
             </h2>
             <p className="landing-section__lead">{copy.text('creators.faq.lead')}</p>
-            <ButtonLink to="/faq" variant="secondary" trailingIcon={<ArrowRight />}>
+            <ButtonLink to="/creators/faq" variant="secondary" trailingIcon={<ArrowRight />}>
               {copy.text('creators.faq.cta')}
             </ButtonLink>
           </div>
@@ -191,7 +191,7 @@ export function LandingPage() {
             </h2>
             <p className="landing-cta__text">{copy.text('creators.cta.text')}</p>
           </div>
-          <ButtonLink to="/register" variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
+          <ButtonLink to="/register?audience=creator" variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
             {copy.text('creators.cta.button')}
           </ButtonLink>
         </div>

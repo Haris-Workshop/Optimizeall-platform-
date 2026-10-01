@@ -560,8 +560,8 @@ export function useMyCatalog(filters: CatalogFilters) {
   });
 }
 
-export function useMyCourse(slug: string) {
-  return useQuery({ queryKey: learningKeys.myCourse(slug), queryFn: () => api.get<MyCourse>(me(slug)) });
+export function useMyCourse(slug: string, enabled = true) {
+  return useQuery({ queryKey: learningKeys.myCourse(slug), queryFn: () => api.get<MyCourse>(me(slug)), enabled });
 }
 
 export function useMyLesson(slug: string, lesson: string) {

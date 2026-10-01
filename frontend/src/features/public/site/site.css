@@ -189,109 +189,84 @@
   }
 }
 
-/* Both pillars in the header: the quieter call to action appears once there is room for it. */
-.site-header__cta.site-header__cta--secondary {
+/*
+ * Product link in the header: "Free Academy" on the agency site, "← Optimize All" on the academy and creators sites.
+ * Deliberately quiet (muted text, no button chrome) with a hairline divider before the account actions.
+ */
+.site-header__product {
   display: none;
+  align-items: center;
+  min-height: 36px;
+  padding-inline: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-small);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
 }
 
-@media (min-width: 1280px) {
-  .site-header__cta.site-header__cta--secondary {
+.site-header__product::after {
+  content: '';
+  align-self: center;
+  width: 1px;
+  height: 18px;
+  margin-inline: var(--space-3) 0;
+  background: var(--color-border);
+}
+
+.site-header__product:hover {
+  color: var(--color-heading);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+@media (min-width: 1100px) {
+  .site-header--academy .site-header__product,
+  .site-header--creators .site-header__product {
     display: inline-flex;
   }
 }
 
-/* Academy dropdown: links, live subjects with course counts, and a "start learning" card. */
-.site-nav__panel--academy {
-  position: fixed;
-  top: calc(var(--topbar-height) + 4px);
-  left: 50%;
-  width: min(900px, calc(100vw - 32px));
-  padding: var(--space-5);
-  transform: translateX(-50%);
+@media (min-width: 1200px) {
+  .site-header--agency .site-header__product {
+    display: inline-flex;
+  }
 }
 
-.site-academy-mega {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr) minmax(0, 1fr);
-  gap: var(--space-6);
-  align-items: start;
-}
-
-.site-academy-mega__subject {
-  display: flex;
+/* Academy / Creators: logo plus the product wordmark. */
+.site-header__product-brand {
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
-.site-academy-mega__count {
-  min-width: 26px;
-  padding: 1px 8px;
-  border-radius: var(--radius-full);
-  background: var(--color-surface-2);
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-.site-academy-mega__cta {
-  position: relative;
-  display: grid;
-  align-content: start;
-  gap: var(--space-1);
-  min-height: 190px;
-  align-self: stretch;
-  padding: var(--space-5);
-  overflow: hidden;
-  border-radius: var(--radius-card);
-  background:
-    radial-gradient(70% 80% at 100% 0%, rgb(252 179 30 / 0.35), transparent 70%),
-    var(--gradient-brand);
-  color: #fff;
-  text-decoration: none;
-  box-shadow: var(--shadow-card);
-}
-
-.site-academy-mega__cta:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 2px;
-}
-
-.site-academy-mega__kicker {
-  color: var(--accent-300);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-}
-
-.site-academy-mega__title {
+.site-header__wordmark {
+  padding-left: var(--space-2);
+  border-left: 1px solid var(--color-border);
+  color: var(--color-heading);
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: 1.0625rem;
   font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-tight);
 }
 
-.site-academy-mega__text {
-  padding-right: var(--space-8);
-  color: rgb(255 255 255 / 0.82);
+/* Mobile sheet: plain links to the other products under the two calls to action. */
+.site-drawer__more {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.site-drawer__more ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-drawer__hint {
+  color: var(--color-text-muted);
   font-size: var(--text-small);
-  line-height: 1.5;
-}
-
-.site-academy-mega__arrow {
-  position: absolute;
-  right: var(--space-5);
-  bottom: var(--space-5);
-  width: 20px;
-  height: 20px;
-  transition: transform var(--duration-base) var(--ease-standard);
-}
-
-.site-academy-mega__cta:hover .site-academy-mega__arrow {
-  transform: translateX(4px);
 }
 
 .site-drawer__group summary {
@@ -399,6 +374,55 @@
 .site-footer__legal ul {
   display: grid;
   gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-small);
+}
+
+/* Academy / Creators mini footer. */
+.site-footer__mini {
+  display: grid;
+  gap: var(--space-6);
+  padding-block: var(--space-8) var(--space-6);
+}
+
+@media (min-width: 900px) {
+  .site-footer__mini {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.site-footer__mini-brand {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.site-footer__note {
+  max-width: 52ch;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-small);
+}
+
+.site-footer__note-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: var(--weight-semibold);
+}
+
+.site-footer__note-link svg {
+  width: 14px;
+  height: 14px;
+}
+
+.site-footer__mini-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -954,6 +978,10 @@
   list-style: none;
   color: var(--color-text-muted);
   font-size: 0.8125rem;
+}
+
+.site-breadcrumbs--tight ol {
+  margin-bottom: var(--space-3);
 }
 
 .site-breadcrumbs li + li::before {

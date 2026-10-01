@@ -1945,3 +1945,26 @@
     animation: none;
   }
 }
+
+/* Soft "work with us" end card (course and certificate pages). */
+.lx-endcard {
+  margin-block: var(--space-8, 2rem) var(--space-4, 1rem);
+  padding: var(--space-4, 1rem) var(--space-5, 1.25rem);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-muted, transparent);
+  color: var(--color-text-muted);
+}
+
+.lx-endcard p {
+  margin: 0;
+}
+
+.lx-endcard strong {
+  color: var(--color-text);
+}
+
+.lx-endcard__link {
+  font-weight: 600;
+  white-space: nowrap;
+}

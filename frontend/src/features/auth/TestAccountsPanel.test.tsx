@@ -65,7 +65,7 @@ describe('Login page — test accounts (non-production)', () => {
       'GET /dev/test-accounts': () => problem(404, 'http_404', 'Not found'),
     });
     renderWithApp(<LoginPage />, { route: '/login', path: '/login' });
-    expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
     await waitFor(() => expect(calls.some((c) => c.path === '/dev/test-accounts')).toBe(true));
     expect(screen.queryByRole('region', { name: /Test accounts/ })).not.toBeInTheDocument();
   });

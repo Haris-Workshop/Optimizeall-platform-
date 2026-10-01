@@ -19,7 +19,7 @@ test.describe('sitemaps, robots.txt, llms.txt and well-known files', () => {
       '/blog',
       '/about',
       '/creators',
-      '/faq',
+      '/creators/faq',
     ])
       expect(urls).toContain(path === '/' ? `${BASE}/` : `${BASE}${path}`);
     for (const url of urls) {

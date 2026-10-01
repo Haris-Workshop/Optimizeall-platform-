@@ -17,7 +17,7 @@ import {
 /**
  * Settings and content, each change checked where it shows and in the audit log:
  *   settings (edit with a reason → boundary values refused → restore the default with a reason → audit before/after),
- *   portal texts (help centre headline → public /faq → reset), email templates (edit, preview, required and unknown
+ *   portal texts (help centre headline → public /creators/faq → reset), email templates (edit, preview, required and unknown
  *   variables refused, reset), CMS pages (version history, restore an older version, scheduled go-live hides the page),
  *   announcements (created once despite a double-click, shown on the participant home, stale edit → 409 prompt),
  *   FAQ reorder (saved order is the public order).
@@ -119,7 +119,7 @@ test('portal texts: the help centre headline changes on the public FAQ page, the
   await expect(toast(admin, 'Texts saved')).toBeVisible();
 
   const visitor = await anonymous();
-  await visitor.goto('/faq');
+  await visitor.goto('/creators/faq');
   await expect(visitor.getByRole('heading', { level: 1, name: headline })).toBeVisible();
 
   // A text that is too long is refused by the API (boundary: 300 characters for a one-line text).

@@ -16,9 +16,8 @@ const RULES: Record<PortalId, [prefix: string, group: string][]> = {
     ['social-accounts', 'Grow'],
     ['referrals', 'Grow'],
     ['achievements', 'Grow'],
-    // The academy (courses, certificates): part of growing as a creator.
-    ['learning', 'Grow'],
-    ['learning', 'Learn'],
+    // The free academy (courses, certificates) is its own section, apart from earning.
+    ['learning', 'My learning'],
     ['notifications', 'Account'],
     ['support', 'Account'],
     ['profile', 'Account'],

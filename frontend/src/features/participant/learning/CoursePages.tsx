@@ -1,6 +1,7 @@
 import { Award, CheckCircle2, GraduationCap, PlayCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { ButtonLink } from '@/components/ui/ButtonLink';
 import { Card, CardBody } from '@/components/ui/Card';
@@ -168,8 +169,13 @@ export function LearningLessonPage() {
     <Card className="lx-cta">
       <CardBody>
         <p>Enrol for free to save your progress, take the final assessment and earn the certificate.</p>
+        {enrol.isError && (
+          <Alert tone="danger" title="We couldn’t enrol you">
+            {errorMessage(enrol.error)}
+          </Alert>
+        )}
         <Button loading={enrol.isPending} onClick={() => enrol.mutate(undefined, { onSuccess: () => void q.refetch() })}>
-          Enrol for free
+          {enrol.isError ? 'Try again' : 'Enrol for free'}
         </Button>
       </CardBody>
     </Card>

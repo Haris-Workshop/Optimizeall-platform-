@@ -177,7 +177,7 @@ describe('public academy', () => {
     await userEvent.click(within(group).getByRole('button', { name: 'Check answer' }));
     expect(await within(group).findByText('Not quite')).toBeInTheDocument();
     expect(calls.some((c) => c.method === 'POST' && c.path.includes('/checks/'))).toBe(false);
-    expect(screen.getByText('Enrol for free to track progress, take the exam and earn your certificate')).toBeInTheDocument();
+    expect(screen.getByText('Enrol for free to save your progress')).toBeInTheDocument();
     expect(await axeViolations(container)).toEqual([]);
   });
 
@@ -236,6 +236,9 @@ describe('participant learning', () => {
     expect(screen.getByRole('link', { name: 'Resume' })).toHaveAttribute('href', '/app/learning/courses/platform-getting-started/lessons/l2');
     expect(screen.getByRole('link', { name: 'SEO basics' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Certified Creator' })).toHaveAttribute('href', '/app/learning/certificates/cert-1');
+    // One calm invitation to the earner side, not onboarding.
+    expect(screen.getByRole('heading', { name: 'Earn with campaigns' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /See how earning works/ })).toHaveAttribute('href', '/app');
     expect(await axeViolations(container)).toEqual([]);
   });
 

@@ -75,7 +75,7 @@ export const portalSets: PortalSet[] = [
       detail('/blog', '/blog/[a-z0-9-]+', 'a blog post'),
       { path: '/contact' },
       { path: '/get-a-quote' },
-      { path: '/faq' },
+      { path: '/creators/faq' },
       { path: '/creators' },
       // Standalone public pages: a client landing page, a public campaign page and a tokenized document link.
       { path: '/lp/karachi-eats/iftar-event' },

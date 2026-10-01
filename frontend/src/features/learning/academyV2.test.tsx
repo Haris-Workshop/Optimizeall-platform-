@@ -437,3 +437,105 @@ describe('learning paths', () => {
     expect(screen.getByText('Up next')).toBeInTheDocument();
   });
 });
+
+describe('enrol prompt on the public lesson page', () => {
+  const lessonRoute = { route: '/learn/ai-agents-engineering/l1', path: '/learn/:slug/:lessonSlug' };
+  const portalLesson = { path: '/app/learning/courses/:slug/lessons/:lessonSlug', element: <p>Portal lesson</p> };
+
+  it('asks a visitor to enrol for free and sends them to register with the course return path', async () => {
+    mockFetch({ ...anonymous, ...publicRoutes });
+    const { router } = renderWithApp(<AcademyLessonPage />, { ...lessonRoute, routes: [{ path: '/register', element: <p>Register page</p> }] });
+    expect(await screen.findByRole('heading', { name: 'Enrol for free to save your progress' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Enrol for free' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/register'));
+    expect(router.state.location.search).toBe('?next=%2Flearn%2Fai-agents-engineering%3Fenrol%3D1');
+    expect(pendingEnrolSlug()).toBe('ai-agents-engineering');
+  });
+
+  it('a signed-in learner who is not enrolled gets an explicit button (never a silent enrol) with a visible retry', async () => {
+    let attempt = 0;
+    const { calls } = mockFetch({
+      ...signedIn,
+      ...publicRoutes,
+      'GET /me/learning/courses/ai-agents-engineering': () => json(200, { course, progress: null }),
+      'POST /me/learning/courses/ai-agents-engineering/enrol': () => {
+        attempt += 1;
+        return attempt === 1
+          ? problem(500, 'server_error', 'Something went wrong on our side.')
+          : json(201, { course, progress: { resumeLessonSlug: 'l1', completedLessons: [], progressPercent: 0 } });
+      },
+    });
+    const { router } = renderWithApp(<AcademyLessonPage />, { ...lessonRoute, routes: [portalLesson] });
+    const enrolButton = await screen.findByRole('button', { name: 'Enrol for free' });
+    expect(calls.some((c) => c.method === 'POST' && c.path.endsWith('/enrol'))).toBe(false);
+    await userEvent.click(enrolButton);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('We couldn’t enrol you');
+    await userEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/app/learning/courses/ai-agents-engineering/lessons/l1'));
+    expect(calls.filter((c) => c.method === 'POST' && c.path.endsWith('/enrol'))).toHaveLength(2);
+  });
+
+  it('an enrolled learner is offered to continue in My learning instead', async () => {
+    mockFetch({
+      ...signedIn,
+      ...publicRoutes,
+      'GET /me/learning/courses/ai-agents-engineering': () =>
+        json(200, { course, progress: { resumeLessonSlug: 'l1', completedLessons: [], progressPercent: 0 } }),
+    });
+    renderWithApp(<AcademyLessonPage />, lessonRoute);
+    expect(await screen.findByRole('link', { name: /Open in my learning/ })).toHaveAttribute(
+      'href',
+      '/app/learning/courses/ai-agents-engineering/lessons/l1',
+    );
+    expect(screen.queryByRole('button', { name: 'Enrol for free' })).not.toBeInTheDocument();
+  });
+
+  it('staff accounts see a note and no enrol control', async () => {
+    const { calls } = mockFetch({
+      'POST /auth/refresh': () => json(200, session(makeUser({ roles: ['Admin'], permissions: ['campaigns.view'] }))),
+      ...publicRoutes,
+    });
+    renderWithApp(<AcademyLessonPage />, lessonRoute);
+    expect(await screen.findByText(/staff account/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Enrol/ })).not.toBeInTheDocument();
+    expect(calls.some((c) => c.path.endsWith('/enrol'))).toBe(false);
+  });
+});
+
+describe('failed enrolment on the course page', () => {
+  it('shows an inline error with a visible retry after a failed ?enrol=1 completion', async () => {
+    let attempt = 0;
+    mockFetch({
+      ...signedIn,
+      ...publicRoutes,
+      'POST /me/learning/courses/ai-agents-engineering/enrol': () => {
+        attempt += 1;
+        return attempt === 1
+          ? problem(500, 'server_error', 'Something went wrong on our side.')
+          : json(201, { course, progress: { resumeLessonSlug: 'l1', completedLessons: [], progressPercent: 0 } });
+      },
+    });
+    const { router } = renderWithApp(<AcademyCoursePage />, {
+      route: '/learn/ai-agents-engineering?enrol=1',
+      path: '/learn/:slug',
+      routes: [{ path: '/app/learning/courses/:slug/lessons/:lessonSlug', element: <p>Portal lesson</p> }],
+    });
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('We couldn’t enrol you');
+    await userEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/app/learning/courses/ai-agents-engineering/lessons/l1'));
+  });
+});
+
+describe('academy page framing', () => {
+  it('uses Academy as the root crumb (no Home) and ends with a soft link to /services', async () => {
+    mockFetch({ ...anonymous, ...publicRoutes });
+    renderWithApp(<AcademyCoursePage />, { route: '/learn/ai-agents-engineering', path: '/learn/:slug' });
+    await screen.findByRole('heading', { level: 1, name: card.title });
+    const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(crumbs).queryByRole('link', { name: 'Home' })).not.toBeInTheDocument();
+    expect(within(crumbs).getByRole('link', { name: 'Academy' })).toHaveAttribute('href', '/learn');
+    expect(screen.getByRole('link', { name: /Work with Optimize All/ })).toHaveAttribute('href', '/services');
+  });
+});

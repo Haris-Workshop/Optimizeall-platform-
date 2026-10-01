@@ -1,10 +1,9 @@
-import { ArrowRight, BadgeCheck, CheckCircle2, Wallet } from 'lucide-react';
+import { ArrowRight, CheckCircle2, GraduationCap, Wallet } from 'lucide-react';
 import { useRef, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { ButtonLink, Skeleton } from '@/components/ui';
 import { useHome } from '../site/api';
-import { useAcademyOverview } from '../site/academy';
-import { HeroVisual } from '../site/art';
+import { AgencyVisual } from '../site/art';
 import { useSiteCopy } from '../site/copy';
 import { LogoCloud, StatsGrid } from '../site/Blocks';
 import { CaseStudyCard, PackageCard, PostCard, Section, TestimonialCarousel } from '../site/components';
@@ -12,40 +11,56 @@ import { headFromSeo, useDocumentHead } from '../site/head';
 import { SiteIcon } from '../site/icons';
 import { trackGlow, useReveal } from '../site/motion';
 import { NewsletterSignup } from '../site/NewsletterSignup';
-import {
-  AcademyStats,
-  CertificateStrip,
-  DualCta,
-  FeaturedCourseGrid,
-  SkillsMarquee,
-  SubjectTiles,
-  SuggestedPaths,
-  Timeline,
-  TrustGrid,
-} from '../site/Showcase';
+import { Timeline, TrustGrid } from '../site/Showcase';
 import { PartnerSlot } from '../partners/PartnerSlot';
 
 /**
- * Home: two pillars, academy first. Hero (learn free with certificates; the agency as the second path) with a CSS/SVG
- * product visual → partners → the academy (live figures, subjects, featured courses, suggested paths, how it works,
- * certificates) → the agency (services bento, free audit, results, process, industries, testimonials, pricing) →
- * trust → blog → creators → closing dual call-to-action → newsletter. Figures come from the APIs, words from page copy.
+ * Home: the agency's front page (Optimize All is a marketing agency; the academy and the creator programme are separate
+ * products with their own sites). Hero (value proposition, "Book a consultation", "See our work") → client logos and
+ * partners → services bento → results → case studies → process → industries → testimonials → pricing → trust → blog →
+ * one compact "More from Optimize All" band (Academy, Creators) → newsletter. Figures come from the API (labelled
+ * measured or estimated), words from the page copy; nothing here is invented.
  */
+/** The compact band linking to the two other products: one card each, nothing more. */
+function MoreFromOptimizeAll() {
+  const copy = useSiteCopy();
+  return (
+    <section className="site-section site-section--tight oa-more" aria-labelledby="more-title">
+      <div className="container">
+        <h2 id="more-title" className="oa-more__title">
+          {copy.text('home.more.title')}
+        </h2>
+        <ul className="oa-more__cards">
+          <li>
+            <Link to="/learn" className="oa-more__card">
+              <GraduationCap aria-hidden="true" />
+              <span className="oa-more__kicker">{copy.text('home.more.academy.kicker')}</span>
+              <span className="oa-more__label">{copy.text('home.more.academy.title')}</span>
+              <ArrowRight aria-hidden="true" className="oa-more__arrow" />
+            </Link>
+          </li>
+          <li>
+            <Link to="/creators" className="oa-more__card">
+              <Wallet aria-hidden="true" />
+              <span className="oa-more__kicker">{copy.text('home.more.creators.kicker')}</span>
+              <span className="oa-more__label">{copy.text('home.more.creators.title')}</span>
+              <ArrowRight aria-hidden="true" className="oa-more__arrow" />
+            </Link>
+          </li>
+        </ul>
+      </div>
+    </section>
+  );
+}
+
 export function HomePage() {
   const { data, isLoading } = useHome();
-  const academy = useAcademyOverview();
   const copy = useSiteCopy();
   const root = useRef<HTMLDivElement>(null);
   useReveal(root);
   useDocumentHead(
     data ? headFromSeo({ ...data.seo, title: '' }, data.jsonLd) : { title: null, description: copy.text('home.seo.description') },
   );
-  // The hero's course card shows a real flagship course: a featured AI course when there is one.
-  const heroCourse =
-    academy.data?.featured.find((c) => c.category === 'Ai') ??
-    academy.data?.featured.find((c) => c.category !== 'Platform') ??
-    academy.data?.courses[0] ??
-    null;
   const categories = data?.serviceCategories ?? [];
 
   return (
@@ -59,11 +74,11 @@ export function HomePage() {
             </h1>
             <p className="site-hero__lead">{copy.text('home.hero.lead')}</p>
             <div className="site-hero__actions">
-              <ButtonLink to="/learn" variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
-                {copy.text('home.hero.learnCta')}
-              </ButtonLink>
-              <ButtonLink to="/free-audit" variant="secondary" size="lg">
+              <ButtonLink to="/book-a-consultation" variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
                 {copy.text('home.hero.primaryCta')}
+              </ButtonLink>
+              <ButtonLink to="/case-studies" variant="secondary" size="lg">
+                {copy.text('home.hero.secondaryCta')}
               </ButtonLink>
             </div>
             <ul className="site-hero__proof">
@@ -75,7 +90,7 @@ export function HomePage() {
             </ul>
           </div>
           <div className="site-hero__aside oa-hero__aside">
-            <HeroVisual course={heroCourse} />
+            <AgencyVisual />
           </div>
         </div>
       </header>
@@ -89,100 +104,6 @@ export function HomePage() {
       )}
 
       <PartnerSlot slot="home.partners" />
-
-      {/* ------------------------------------------------------------------ Pillar 1: the academy */}
-      <section id="academy" className="site-section oa-academy" aria-labelledby="academy-title">
-        <div className="container">
-          <div className="site-section__head">
-            <div>
-              <p className="eyebrow">{copy.text('home.academy.eyebrow')}</p>
-              <h2 id="academy-title" className="site-section__title">
-                {copy.text('home.academy.title')}
-              </h2>
-              <p className="site-section__intro">{copy.text('home.academy.intro')}</p>
-            </div>
-            <div className="site-section__actions">
-              <ButtonLink to="/learn" variant="primary" trailingIcon={<ArrowRight />}>
-                {copy.text('home.academy.cta')}
-              </ButtonLink>
-            </div>
-          </div>
-          <AcademyStats data={academy.data} isLoading={academy.isLoading} />
-          {academy.data && (
-            <>
-              <h3 className="oa-subhead" data-reveal="">
-                {copy.text('home.academy.subjectsTitle')}
-              </h3>
-              <SubjectTiles data={academy.data} headingLevel={4} />
-              <h3 className="oa-subhead" data-reveal="">
-                {copy.text('home.academy.featuredTitle')}
-              </h3>
-              <FeaturedCourseGrid data={academy.data} />
-            </>
-          )}
-        </div>
-        {academy.data && <SkillsMarquee skills={academy.data.skills} />}
-      </section>
-
-      {academy.data && (
-        <Section
-          id="paths"
-          tone="muted"
-          eyebrow={copy.text('home.paths.eyebrow')}
-          title={copy.text('home.paths.title')}
-          intro={copy.text('home.paths.intro')}
-        >
-          <SuggestedPaths />
-        </Section>
-      )}
-
-      <Section eyebrow={copy.text('home.learnSteps.eyebrow')} title={copy.text('home.learnSteps.title')}>
-        <Timeline steps={copy.pairs('home.learnSteps.steps')} />
-      </Section>
-
-      <CertificateStrip />
-
-      {/* ------------------------------------------------------------------ Pillar 2: the agency */}
-      <section id="agency" className="site-section oa-agency" aria-labelledby="agency-title">
-        <div className="container oa-agency__inner">
-          <div className="oa-agency__copy" data-reveal="">
-            <p className="eyebrow">{copy.text('home.agency.eyebrow')}</p>
-            <h2 id="agency-title" className="site-section__title">
-              {copy.text('home.agency.title')}
-            </h2>
-            <p className="site-section__intro">{copy.text('home.agency.intro')}</p>
-            <ul className="site-hero__proof">
-              {copy.list('home.agency.proof').map((item) => (
-                <li key={item}>
-                  <CheckCircle2 aria-hidden="true" /> {item}
-                </li>
-              ))}
-            </ul>
-            <div className="site-hero__actions">
-              <ButtonLink to="/free-audit" variant="primary" size="lg" trailingIcon={<ArrowRight />}>
-                {copy.text('home.hero.primaryCta')}
-              </ButtonLink>
-              <ButtonLink to="/book-a-consultation" variant="secondary" size="lg">
-                {copy.text('home.hero.secondaryCta')}
-              </ButtonLink>
-            </div>
-          </div>
-          <div className="site-hero__panel oa-agency__panel" data-reveal="">
-            <p className="eyebrow">{copy.text('home.audit.title')}</p>
-            <ul className="site-checklist">
-              {copy.list('home.audit.items').map((item) => (
-                <li key={item}>
-                  <BadgeCheck aria-hidden="true" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-            <ButtonLink to="/free-audit" variant="secondary" fullWidth>
-              {copy.text('home.audit.cta')}
-            </ButtonLink>
-          </div>
-        </div>
-      </section>
 
       <Section
         id="services"
@@ -348,18 +269,7 @@ export function HomePage() {
         </Section>
       )}
 
-      <Section eyebrow={copy.text('home.creators.eyebrow')} title={copy.text('home.creators.title')} tone="brand" intro={copy.text('home.creators.intro')}>
-        <div className="site-hero__actions">
-          <ButtonLink to="/register" variant="highlight" size="lg" leadingIcon={<Wallet />}>
-            {copy.text('home.creators.primaryCta')}
-          </ButtonLink>
-          <ButtonLink to="/creators" variant="secondary" size="lg">
-            {copy.text('home.creators.secondaryCta')}
-          </ButtonLink>
-        </div>
-      </Section>
-
-      <DualCta />
+      <MoreFromOptimizeAll />
 
       <Section title={copy.text('home.newsletter.title')} intro={copy.text('home.newsletter.intro')}>
         <div className="site-narrow">

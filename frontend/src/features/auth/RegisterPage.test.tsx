@@ -15,7 +15,7 @@ async function fillValid(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('checkbox', { name: /accept the participant rules/i }));
 }
 
-function renderRegister(route = '/register') {
+function renderRegister(route = '/register?audience=creator') {
   return renderWithApp(<RegisterPage />, {
     route,
     path: '/register',

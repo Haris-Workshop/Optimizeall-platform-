@@ -131,7 +131,7 @@ test.describe('agency website', () => {
     test.skip(isMobile, 'desktop navigation');
     await mockWebsite(page);
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1, name: /Learn AI, marketing and growth/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /Growth marketing, run as one accountable team/ })).toBeVisible();
     await expect(page.getByText('Free marketing audits are open for Q4.')).toBeVisible();
     await expect(page.getByText('Tripling organic leads for Northwind')).toBeVisible();
     await expect(page.getByText('$48M')).toBeVisible();
@@ -144,6 +144,46 @@ test.describe('agency website', () => {
     await expect(page).toHaveTitle('SEO services | Optimize All');
     const ld = await page.locator('script[type="application/ld+json"]').first().textContent();
     expect(JSON.parse(ld ?? '{}')).toMatchObject({ '@type': 'Service' });
+  });
+
+  test('the agency header has one call to action and a quiet Academy link; Academy and Creators are separate sites', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'desktop header');
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await mockWebsite(page);
+    await page.goto('/');
+    const header = page.getByRole('banner');
+    await expect(header.getByRole('link', { name: 'Book a consultation' })).toHaveAttribute('href', '/book-a-consultation');
+    await expect(header.locator('.ui-button--highlight')).toHaveCount(1);
+    await expect(header.getByRole('link', { name: 'Get a free audit' })).toHaveCount(0);
+    await expect(header.getByRole('link', { name: 'Start learning free' })).toHaveCount(0);
+    await expect(header.getByRole('link', { name: 'Free Academy' })).toHaveAttribute('href', '/learn');
+
+    // The home page ends with one compact band pointing at the other two products.
+    const more = page.getByRole('region', { name: 'More from Optimize All' });
+    await expect(more.getByRole('link')).toHaveCount(2);
+    await more.getByRole('link', { name: /Earn from campaigns/ }).click();
+    await expect(page).toHaveURL(/\/creators$/);
+    await expect(page.getByRole('banner').getByRole('link', { name: 'Create a creator account' })).toHaveAttribute('href', '/register?audience=creator');
+    await expect(page.getByRole('banner').getByRole('link', { name: 'Optimize All', exact: true })).toHaveAttribute('href', '/');
+    await expect(page.getByRole('contentinfo').getByText(/Optimize All Creators is run by Optimize All, a marketing agency/)).toBeVisible();
+  });
+
+  test('/academy redirects to /learn and /faq to /creators/faq; the academy has its own header and footer', async ({ page }) => {
+    await mockWebsite(page);
+    await page.goto('/academy#certificates');
+    await expect(page).toHaveURL(/\/learn#certificates$/);
+    const header = page.getByRole('banner');
+    await expect(header.getByRole('link', { name: 'Optimize All Academy home' })).toBeVisible();
+    await expect(header.getByRole('link', { name: 'Start learning free' }).first()).toHaveAttribute('href', '/learn');
+    await expect(page.getByRole('contentinfo').getByText(/Optimize All Academy is run by Optimize All, a marketing agency/)).toBeVisible();
+    await expect(page.getByRole('contentinfo').getByRole('link', { name: /Work with us/ })).toHaveAttribute('href', '/services');
+
+    await page.goto('/faq');
+    await expect(page).toHaveURL(/\/creators\/faq$/);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+    await page.goto('/verify');
+    await expect(page.getByRole('heading', { level: 1, name: 'Verify a certificate' })).toBeVisible();
   });
 
   test('quote wizard validates each step and submits', async ({ page }) => {
@@ -214,7 +254,7 @@ test.describe('agency website', () => {
   test('no horizontal scroll at 360px and the mobile menu works', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 780 });
     await mockWebsite(page);
-    for (const path of ['/', '/services', '/services/seo', '/pricing', '/industries', '/case-studies', '/blog', '/careers', '/contact', '/free-audit', '/get-a-quote', '/book-a-consultation']) {
+    for (const path of ['/', '/services', '/services/seo', '/pricing', '/industries', '/case-studies', '/blog', '/careers', '/contact', '/free-audit', '/get-a-quote', '/book-a-consultation', '/creators', '/creators/faq', '/verify']) {
       await page.goto(path);
       await expect(page.locator('h1').first()).toBeVisible();
       expect(await hasHorizontalScroll(page), `horizontal scroll on ${path}`).toBe(false);
@@ -223,6 +263,11 @@ test.describe('agency website', () => {
     await page.getByRole('button', { name: 'Open menu' }).click();
     const drawer = page.getByRole('navigation', { name: 'Mobile' });
     await expect(drawer).toBeVisible();
+    // Two buttons at most; the academy and creators are plain links.
+    await expect(drawer.locator('.ui-button')).toHaveCount(2);
+    await expect(drawer.getByRole('link', { name: 'Book a consultation' })).toBeVisible();
+    await expect(drawer.getByRole('link', { name: /Optimize All Academy/ })).toHaveAttribute('href', '/learn');
+    await expect(drawer.getByRole('link', { name: /Optimize All Creators/ })).toHaveAttribute('href', '/creators');
     await drawer.getByRole('link', { name: 'Pricing' }).click();
     await expect(page).toHaveURL(/\/pricing$/);
     expect(await hasHorizontalScroll(page)).toBe(false);

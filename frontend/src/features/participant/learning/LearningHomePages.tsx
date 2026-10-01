@@ -1,4 +1,4 @@
-import { Award, BookOpenCheck, Clock, Download, ExternalLink, GraduationCap, Library, PlayCircle, Route, Share2 } from 'lucide-react';
+import { ArrowRight, Award, BookOpenCheck, Megaphone, Clock, Download, ExternalLink, GraduationCap, Library, PlayCircle, Route, Share2 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { ButtonLink } from '@/components/ui/ButtonLink';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
@@ -130,6 +130,36 @@ export function CertificateRow({ cert }: { cert: MyCertificate }) {
   );
 }
 
+/**
+ * A calm, optional pointer to the earner side. Learner accounts land here instead of the earner home, so campaigns
+ * are offered once, at the end of the page, rather than as onboarding steps.
+ */
+function EarnWithCampaignsCard() {
+  return (
+    <Card as="section" aria-labelledby="earn-invite-heading" flat>
+      <CardBody>
+        <div className="lx-cta__row">
+          <Megaphone aria-hidden="true" className="lx-cta__icon" />
+          <div>
+            <h2 id="earn-invite-heading" className="lx-cta__title">
+              Earn with campaigns
+            </h2>
+            <p className="lx-muted">
+              Creators get paid for approved posts. It is separate from your courses and entirely optional — your learning
+              stays free either way.
+            </p>
+          </div>
+        </div>
+        <div className="lx-actions">
+          <ButtonLink to="/app" variant="secondary" trailingIcon={<ArrowRight aria-hidden="true" />}>
+            See how earning works
+          </ButtonLink>
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
 /** "My learning": stats, continue, in-progress courses, recommendations and certificates. */
 export function LearningHomePage() {
   const q = useLearningDashboard();
@@ -250,6 +280,8 @@ export function LearningHomePage() {
               </CardBody>
             </Card>
           )}
+
+          <EarnWithCampaignsCard />
         </>
       )}
     </div>

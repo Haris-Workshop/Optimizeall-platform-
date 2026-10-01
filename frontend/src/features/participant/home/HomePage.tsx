@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { api } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth/useAuth';
+import { clearSignupIntent, readSignupIntent } from '@/lib/auth/signupIntent';
 import { greetingFor } from '@/lib/format/dates';
 import { firstName } from '@/lib/format/text';
 import {
@@ -132,6 +134,11 @@ export function HomePage() {
   const announcements = useAnnouncements();
   const name = user ? firstName(user.displayName) : '';
   const copy = useSiteCopy();
+
+  // Opening the earner home on purpose (e.g. from "Earn with campaigns") ends the learner-only landing.
+  useEffect(() => {
+    if (readSignupIntent() === 'learner') clearSignupIntent();
+  }, []);
 
   return (
     <div className="pp-page pp-home ui-dash">

@@ -38,8 +38,14 @@ function noticeFor(params: URLSearchParams): Notice | null {
     };
   if (params.get('reset') === '1')
     return { tone: 'success', title: 'Password changed', text: 'Sign in with your new password.' };
-  if (params.get('verified') === '1')
-    return { tone: 'success', title: 'Email verified', text: 'Sign in to start sharing campaigns.' };
+  if (params.get('verified') === '1') {
+    const toCourse = /^\/learn(\/|$)/.test(safeNextPath(params.get('next')) ?? '');
+    return {
+      tone: 'success',
+      title: 'Email verified',
+      text: toCourse ? 'Sign in to start your course.' : 'Sign in to get started.',
+    };
+  }
   if (params.get('signedOut') === '1') return { tone: 'info', title: 'You’ve been signed out.' };
   return null;
 }
@@ -94,8 +100,11 @@ export function LoginPage() {
   return (
     <div className="auth-page">
       <div className="auth-page__header">
-        <h1 className="auth-page__title">Welcome back</h1>
-        <p className="auth-page__subtitle">Sign in to your Optimize All account.</p>
+        <h1 className="auth-page__title">Sign in</h1>
+        <p className="auth-page__subtitle">
+          Clients, learners and creators all sign in here. Client accounts are set up by the Optimize All team, so
+          clients sign in with the invitation we sent.
+        </p>
       </div>
 
       {notice && !formError && (
@@ -182,7 +191,7 @@ export function LoginPage() {
         New to Optimize All?{' '}
         <Link
           className="ui-link"
-          to={registerLink(params.get('ref'), safeNextPath(params.get('next')))}
+          to={registerLink(params.get('ref'), safeNextPath(params.get('next')) ?? pendingEnrolPath())}
         >
           Create an account
         </Link>

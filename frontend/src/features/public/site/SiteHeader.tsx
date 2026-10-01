@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { ArrowRight, ChevronDown, GraduationCap, Menu } from 'lucide-react';
+import { ChevronDown, Menu } from 'lucide-react';
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { defaultLandingPath } from '@/app/portals';
@@ -7,44 +7,71 @@ import { Logo } from '@/components/brand/Logo';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ButtonLink, Drawer, IconButton } from '@/components/ui';
 import { useAuth } from '@/lib/auth/useAuth';
-import { useLearningSummary } from '@/features/learning/api';
 import { isInternalHref } from '@/lib/safeHref';
 import { type MenuCategory, type MenuItem, useSite } from './api';
 import { SiteIcon } from './icons';
+import type { ChromeVariant } from './variant';
 
-/** Navigation shown until (or if) the site settings can't be loaded. Mirrors SiteSettingsService.Defaults. */
+/**
+ * Agency navigation shown until (or if) the site settings can't be loaded. Mirrors SiteSettingsService.Defaults.
+ * The academy and the creator programme are separate products reached by one quiet link each (header, drawer, footer),
+ * not menu items: Services (mega) | Industries | Case studies | Insights | Partners | About.
+ */
 export const FALLBACK_MENU: MenuItem[] = [
-  {
-    label: 'Academy',
-    url: '/academy',
-    description: 'Free courses with certificates.',
-    children: [
-      { label: 'All courses', url: '/learn', description: 'Free, self-paced courses with certificates.', children: null },
-      { label: 'AI courses', url: '/learn?category=Ai', description: 'ChatGPT, Claude, prompting, agents and more.', children: null },
-      { label: 'Learning paths', url: '/learn/paths', description: 'Beginner to advanced, one course at a time.', children: null },
-      { label: 'Certificates', url: '/academy#certificates', description: 'Verifiable, and ready for LinkedIn.', children: null },
-    ],
-  },
   { label: 'Services', url: '/services', description: null, children: [] },
   { label: 'Industries', url: '/industries', description: null, children: null },
   { label: 'Case studies', url: '/case-studies', description: null, children: null },
-  { label: 'Pricing', url: '/pricing', description: null, children: null },
+  { label: 'Insights', url: '/blog', description: null, children: null },
+  { label: 'Partners', url: '/partners', description: null, children: null },
   {
     label: 'About',
     url: '/about',
     description: null,
     children: [
-      { label: 'About us', url: '/about', description: 'Our mission: the academy and the agency.', children: null },
+      { label: 'About us', url: '/about', description: 'Who we are and what we stand for.', children: null },
+      { label: 'How we work', url: '/how-we-work', description: 'Audit, strategy, execution, reporting.', children: null },
       { label: 'Team', url: '/team', description: 'The people behind your results.', children: null },
       { label: 'Careers', url: '/careers', description: 'Join the team.', children: null },
-      { label: 'Blog', url: '/blog', description: 'Playbooks, research and news.', children: null },
-      { label: 'Creators', url: '/creators', description: 'Get paid to share brands you believe in.', children: null },
+      { label: 'Contact', url: '/contact', description: 'Talk to us.', children: null },
     ],
   },
 ];
 
-/** The academy menu: its hub link is /academy (marketing overview) or /learn (the catalog), with sub-items. */
-const isAcademyItem = (item: MenuItem) => (item.url === '/academy' || item.url === '/learn') && (item.children?.length ?? 0) > 0;
+/** The agency's one primary call to action. */
+export const AGENCY_CTA = { label: 'Book a consultation', url: '/book-a-consultation' };
+export const ACADEMY_CTA = { label: 'Start learning free', url: '/learn' };
+export const CREATORS_CTA = { label: 'Create a creator account', url: '/register?audience=creator' };
+
+/** Academy navigation: Courses | Learning paths | Certificates | Verify a certificate. */
+export const ACADEMY_NAV: { label: string; url: string }[] = [
+  { label: 'Courses', url: '/learn' },
+  { label: 'Learning paths', url: '/learn/paths' },
+  { label: 'Certificates', url: '/learn#certificates' },
+  { label: 'Verify a certificate', url: '/verify' },
+];
+
+/** Creators navigation (the FAQ is its own page; the anchors are sections of the /creators landing page). */
+export const CREATORS_NAV: { label: string; url: string }[] = [
+  { label: 'How it works', url: '/creators#how-it-works' },
+  { label: 'FAQ', url: '/creators/faq' },
+  { label: 'Campaign rules', url: '/creators#rules' },
+];
+
+/**
+ * The CMS menu as the agency header shows it. Stored menus from before the academy became a separate product may still
+ * list it (an Academy group, /learn, /academy) or the creator programme under About: those never belong in the agency nav.
+ */
+export function agencyMenu(menu: MenuItem[]): MenuItem[] {
+  const separate = (url: string | null) => !!url && /^\/(academy|learn|creators)(\/|\?|#|$)/.test(url);
+  return menu
+    .filter((item) => !separate(item.url))
+    .map((item) => (item.children ? { ...item, children: item.children.filter((c) => !separate(c.url)) } : item));
+}
+
+/** The header call to action from the site settings, unless it is a leftover pointing at another product. */
+export function agencyCta(cta: { label: string; url: string } | null | undefined) {
+  return cta && isInternalHref(cta.url) && !/^\/(learn|academy|creators|free-audit)(\/|\?|#|$)/.test(cta.url) ? cta : AGENCY_CTA;
+}
 
 function focusables(panel: HTMLElement | null): HTMLElement[] {
   return panel ? Array.from(panel.querySelectorAll<HTMLElement>('a[href]')) : [];
@@ -58,14 +85,12 @@ function focusables(panel: HTMLElement | null): HTMLElement[] {
 function Dropdown({
   label,
   wide,
-  academy,
   children,
   open,
   onOpenChange,
 }: {
   label: string;
   wide?: boolean;
-  academy?: boolean;
   children: ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -146,7 +171,7 @@ function Dropdown({
       <div
         ref={panelRef}
         id={panelId}
-        className={clsx('site-nav__panel', wide && 'site-nav__panel--mega', academy && 'site-nav__panel--academy')}
+        className={clsx('site-nav__panel', wide && 'site-nav__panel--mega')}
         hidden={!open}
       >
         {children}
@@ -198,61 +223,6 @@ function ServicesMega({ categories, onNavigate }: { categories: MenuCategory[]; 
   );
 }
 
-/**
- * The academy dropdown: the menu's own links (with descriptions) beside the live list of subjects (course counts from
- * the public learning API, fetched once the panel is first opened) and a "start learning" call to action.
- */
-function AcademyMega({ item, onNavigate }: { item: MenuItem; onNavigate: () => void }) {
-  const summary = useLearningSummary();
-  const subjects = (summary.data?.categories ?? []).filter((c) => c.courseCount > 0);
-  const children = item.children ?? [];
-  return (
-    <div className="site-academy-mega">
-      <div>
-        <p className="site-mega__heading">
-          <GraduationCap aria-hidden="true" className="site-mega__icon" />
-          {item.label}
-        </p>
-        <ul className="site-nav__list">
-          {item.url && item.url !== children[0]?.url && (
-            <li>
-              <MenuLink item={{ ...item, label: `${item.label} overview` }} className="site-nav__sublink" onClick={onNavigate} />
-              <span className="site-nav__desc">How it works, learning paths and certificates.</span>
-            </li>
-          )}
-          {children.map((child) => (
-            <li key={child.label}>
-              <MenuLink item={child} className="site-nav__sublink" onClick={onNavigate} />
-              {child.description && <span className="site-nav__desc">{child.description}</span>}
-            </li>
-          ))}
-        </ul>
-      </div>
-      {subjects.length > 0 && (
-        <div>
-          <p className="site-mega__heading">Subjects</p>
-          <ul className="site-nav__list">
-            {subjects.map((c) => (
-              <li key={c.category}>
-                <Link to={`/learn?category=${encodeURIComponent(c.category)}`} onClick={onNavigate} className="site-mega__link site-academy-mega__subject">
-                  {c.label}
-                  <span className="site-academy-mega__count">{c.courseCount}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      <Link to="/learn" onClick={onNavigate} className="site-academy-mega__cta">
-        <span className="site-academy-mega__kicker">Free for everyone</span>
-        <span className="site-academy-mega__title">Start learning free</span>
-        <span className="site-academy-mega__text">Self-paced courses and a verifiable certificate for LinkedIn.</span>
-        <ArrowRight aria-hidden="true" className="site-academy-mega__arrow" />
-      </Link>
-    </div>
-  );
-}
-
 function MenuLink({ item, className, onClick }: { item: MenuItem; className?: string; onClick?: () => void }) {
   if (!item.url) return <span className={className}>{item.label}</span>;
   if (isInternalHref(item.url))
@@ -268,98 +238,51 @@ function MenuLink({ item, className, onClick }: { item: MenuItem; className?: st
   );
 }
 
-export function SiteHeader() {
-  const { data: site } = useSite();
-  const { status, user } = useAuth();
-  const location = useLocation();
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const menu = site?.header.menu?.length ? site.header.menu : FALLBACK_MENU;
-  const categories = site?.serviceMenu ?? [];
-  const cta = site?.header.cta ?? { label: 'Start learning free', url: '/learn' };
-  // Both pillars stay one click away: the configured call to action, plus the other pillar's as a quieter button.
-  const secondaryCta =
-    cta.url === '/free-audit' ? { label: 'Start learning free', url: '/learn' } : { label: 'Get a free audit', url: '/free-audit' };
-  const signedIn = status === 'authenticated' && user;
-  const dashboard = signedIn ? defaultLandingPath(user.permissions) : '/login';
-  const closeAll = useCallback(() => setOpenMenu(null), []);
 
-  useEffect(() => {
-    setOpenMenu(null);
-    setDrawerOpen(false);
-  }, [location.pathname]);
-
-  const isMega = (item: MenuItem) => item.url === '/services';
-  const hasMenu = (item: MenuItem) => isMega(item) || (item.children?.length ?? 0) > 0;
-
+/** A top-level link; hash links (/learn#certificates) never claim "current page". */
+function NavItem({ url, label, className = 'public-header__link' }: { url: string; label: string; className?: string }) {
+  if (url.includes('#') || url.includes('?'))
+    return (
+      <Link to={url} className={className}>
+        {label}
+      </Link>
+    );
   return (
-    <header className="public-header site-header">
+    <NavLink to={url} end className={className}>
+      {label}
+    </NavLink>
+  );
+}
+
+/**
+ * The shared header frame: brand, a "Main" navigation, actions and the mobile sheet. Each variant fills the slots, so
+ * focus order is always brand, navigation, actions, menu button.
+ */
+function HeaderShell({
+  variant,
+  brand,
+  nav,
+  actions,
+  drawer,
+}: {
+  variant: ChromeVariant;
+  brand: ReactNode;
+  nav: ReactNode;
+  actions: ReactNode;
+  drawer: (close: () => void) => ReactNode;
+}) {
+  const location = useLocation();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  useEffect(() => setDrawerOpen(false), [location.pathname]);
+  return (
+    <header className={clsx('public-header site-header', `site-header--${variant}`)}>
       <div className="container public-header__inner">
-        <Link to="/" className="public-header__brand" aria-label="Optimize All home">
-          <Logo size={30} title="" />
-        </Link>
+        {brand}
         <nav aria-label="Main" className="public-header__nav site-nav">
-          <ul>
-            {menu.map((item) => {
-              return (
-                <li key={item.label}>
-                  {hasMenu(item) ? (
-                    <Dropdown
-                      label={item.label}
-                      wide={isMega(item)}
-                      academy={isAcademyItem(item)}
-                      open={openMenu === item.label}
-                      onOpenChange={(open) => setOpenMenu(open ? item.label : null)}
-                    >
-                      {isMega(item) ? (
-                        <ServicesMega categories={categories} onNavigate={closeAll} />
-                      ) : isAcademyItem(item) ? (
-                        openMenu === item.label && <AcademyMega item={item} onNavigate={closeAll} />
-                      ) : (
-                        <ul className="site-nav__list">
-                          {item.url && (
-                            <li>
-                              <MenuLink item={{ ...item, label: `${item.label} overview` }} className="site-nav__sublink" onClick={closeAll} />
-                            </li>
-                          )}
-                          {item.children!.map((child) => (
-                            <li key={child.label}>
-                              <MenuLink item={child} className="site-nav__sublink" onClick={closeAll} />
-                              {child.description && <span className="site-nav__desc">{child.description}</span>}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </Dropdown>
-                  ) : (
-                    <MenuLink item={item} className="public-header__link" />
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          {nav}
         </nav>
         <div className="public-header__actions">
-          <ThemeToggle />
-          <div className="public-header__auth">
-            {signedIn ? (
-              <ButtonLink to={dashboard} variant="ghost" size="sm">
-                Go to dashboard
-              </ButtonLink>
-            ) : (
-              <ButtonLink to="/login" variant="ghost" size="sm">
-                Sign in
-              </ButtonLink>
-            )}
-          </div>
-          <ButtonLink to={secondaryCta.url} variant="secondary" size="sm" className="site-header__cta site-header__cta--secondary">
-            {secondaryCta.label}
-          </ButtonLink>
-          {isInternalHref(cta.url) && (
-            <ButtonLink to={cta.url} variant="highlight" size="sm" className="site-header__cta">
-              {cta.label}
-            </ButtonLink>
-          )}
+          {actions}
           <IconButton
             className="public-header__menu"
             label="Open menu"
@@ -369,14 +292,131 @@ export function SiteHeader() {
           />
         </div>
       </div>
-
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title="Menu" side="right" headerContent={<Logo size={26} title="" />}>
         <nav aria-label="Mobile" className="public-drawer site-drawer">
+          {drawer(() => setDrawerOpen(false))}
+        </nav>
+      </Drawer>
+    </header>
+  );
+}
+
+function SignInAction({ to, label }: { to: string; label: string }) {
+  return (
+    <div className="public-header__auth">
+      <ButtonLink to={to} variant="ghost" size="sm">
+        {label}
+      </ButtonLink>
+    </div>
+  );
+}
+
+/** Where "Sign in" becomes a dashboard link once signed in. */
+function useAccountLink(preferred?: { path: string; label: string }) {
+  const { status, user } = useAuth();
+  if (status === 'authenticated' && user) {
+    if (preferred) {
+      const path = defaultLandingPath(user.permissions, preferred.path);
+      if (path === preferred.path) return { signedIn: true, to: path, label: preferred.label };
+    }
+    return { signedIn: true, to: defaultLandingPath(user.permissions), label: 'Go to dashboard' };
+  }
+  return { signedIn: false, to: '/login', label: 'Sign in' };
+}
+
+/** Plain secondary links at the end of the mobile sheet (not buttons). */
+function DrawerLinks({ links, title }: { links: { label: string; url: string; hint?: string }[]; title: string }) {
+  return (
+    <div className="site-drawer__more">
+      <p className="site-drawer__label">{title}</p>
+      <ul>
+        {links.map((l) => (
+          <li key={l.label}>
+            <Link to={l.url} className="site-drawer__sublink">
+              {l.label}
+              {l.hint && <span className="site-drawer__hint"> {l.hint}</span>}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------------- agency
+
+function AgencyHeader() {
+  const { data: site } = useSite();
+  const location = useLocation();
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const menu = agencyMenu(site?.header.menu?.length ? site.header.menu : FALLBACK_MENU);
+  const categories = site?.serviceMenu ?? [];
+  const cta = agencyCta(site?.header.cta);
+  const account = useAccountLink();
+  const closeAll = useCallback(() => setOpenMenu(null), []);
+  useEffect(() => setOpenMenu(null), [location.pathname]);
+
+  const isMega = (item: MenuItem) => item.url === '/services';
+  const hasMenu = (item: MenuItem) => isMega(item) || (item.children?.length ?? 0) > 0;
+
+  return (
+    <HeaderShell
+      variant="agency"
+      brand={
+        <Link to="/" className="public-header__brand" aria-label="Optimize All home">
+          <Logo size={30} title="" />
+        </Link>
+      }
+      nav={
+        <ul>
+          {menu.map((item) => (
+            <li key={item.label}>
+              {hasMenu(item) ? (
+                <Dropdown
+                  label={item.label}
+                  wide={isMega(item)}
+                  open={openMenu === item.label}
+                  onOpenChange={(open) => setOpenMenu(open ? item.label : null)}
+                >
+                  {isMega(item) ? (
+                    <ServicesMega categories={categories} onNavigate={closeAll} />
+                  ) : (
+                    <ul className="site-nav__list">
+                      {item.children!.map((child) => (
+                        <li key={child.label}>
+                          <MenuLink item={child} className="site-nav__sublink" onClick={closeAll} />
+                          {child.description && <span className="site-nav__desc">{child.description}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Dropdown>
+              ) : (
+                <MenuLink item={item} className="public-header__link" />
+              )}
+            </li>
+          ))}
+        </ul>
+      }
+      actions={
+        <>
+          <ThemeToggle />
+          <Link to="/learn" className="site-header__product">
+            Free Academy
+          </Link>
+          <SignInAction to={account.to} label={account.label} />
+          <ButtonLink to={cta.url} variant="highlight" size="sm" className="site-header__cta">
+            {cta.label}
+          </ButtonLink>
+        </>
+      }
+      drawer={() => (
+        <>
           <ul>
             {menu.map((item) =>
               hasMenu(item) ? (
                 <li key={item.label}>
-                  <details className="site-drawer__group" open={isAcademyItem(item) || undefined}>
+                  <details className="site-drawer__group">
                     <summary className="public-drawer__link">{item.label}</summary>
                     <ul>
                       {isMega(item) ? (
@@ -402,18 +442,11 @@ export function SiteHeader() {
                           ))}
                         </>
                       ) : (
-                        <>
-                          {isAcademyItem(item) && item.url !== item.children![0]?.url && (
-                            <li>
-                              <MenuLink item={{ ...item, label: `${item.label} overview` }} className="site-drawer__sublink" />
-                            </li>
-                          )}
-                          {item.children!.map((child) => (
-                            <li key={child.label}>
-                              <MenuLink item={child} className="site-drawer__sublink" />
-                            </li>
-                          ))}
-                        </>
+                        item.children!.map((child) => (
+                          <li key={child.label}>
+                            <MenuLink item={child} className="site-drawer__sublink" />
+                          </li>
+                        ))
                       )}
                     </ul>
                   </details>
@@ -426,32 +459,155 @@ export function SiteHeader() {
             )}
           </ul>
           <div className="public-drawer__actions">
-            <ButtonLink to="/learn" variant="highlight" fullWidth>
-              Start learning free
+            <ButtonLink to={cta.url} variant="highlight" fullWidth>
+              {cta.label}
             </ButtonLink>
-            <ButtonLink to="/free-audit" variant="secondary" fullWidth>
-              Get a free audit
+            <ButtonLink to={account.to} variant="secondary" fullWidth>
+              {account.label}
             </ButtonLink>
-            <ButtonLink to="/book-a-consultation" variant="ghost" fullWidth>
-              Book a call
+          </div>
+          <DrawerLinks
+            title="More from Optimize All"
+            links={[
+              { label: 'Optimize All Academy', url: '/learn', hint: 'Free courses' },
+              { label: 'Optimize All Creators', url: '/creators', hint: 'Earn from campaigns' },
+            ]}
+          />
+        </>
+      )}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------------------------------- academy
+
+function AcademyHeader() {
+  const account = useAccountLink({ path: '/app/learning', label: 'My learning' });
+  return (
+    <HeaderShell
+      variant="academy"
+      brand={
+        <Link to="/learn" className="public-header__brand site-header__product-brand" aria-label="Optimize All Academy home">
+          <Logo size={30} title="" />
+          <span className="site-header__wordmark">Academy</span>
+        </Link>
+      }
+      nav={
+        <ul>
+          {ACADEMY_NAV.map((item) => (
+            <li key={item.label}>
+              <NavItem url={item.url} label={item.label} />
+            </li>
+          ))}
+        </ul>
+      }
+      actions={
+        <>
+          <ThemeToggle />
+          <Link to="/" className="site-header__product">
+            <span aria-hidden="true">← </span>Optimize All
+          </Link>
+          <SignInAction to={account.to} label={account.label} />
+          <ButtonLink to={ACADEMY_CTA.url} variant="highlight" size="sm" className="site-header__cta">
+            {ACADEMY_CTA.label}
+          </ButtonLink>
+        </>
+      }
+      drawer={() => (
+        <>
+          <ul>
+            {ACADEMY_NAV.map((item) => (
+              <li key={item.label}>
+                <NavItem url={item.url} label={item.label} className="public-drawer__link" />
+              </li>
+            ))}
+          </ul>
+          <div className="public-drawer__actions">
+            <ButtonLink to={ACADEMY_CTA.url} variant="highlight" fullWidth>
+              {ACADEMY_CTA.label}
             </ButtonLink>
-            {signedIn ? (
-              <ButtonLink to={dashboard} variant="ghost" fullWidth>
-                Go to dashboard
+            <ButtonLink to={account.to} variant="secondary" fullWidth>
+              {account.label}
+            </ButtonLink>
+          </div>
+          <DrawerLinks title="Optimize All" links={[{ label: '← Optimize All', url: '/', hint: 'Marketing agency' }]} />
+        </>
+      )}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------------------------------- creators
+
+function CreatorsHeader() {
+  const account = useAccountLink();
+  return (
+    <HeaderShell
+      variant="creators"
+      brand={
+        <Link to="/creators" className="public-header__brand site-header__product-brand" aria-label="Optimize All Creators home">
+          <Logo size={30} title="" />
+          <span className="site-header__wordmark">Creators</span>
+        </Link>
+      }
+      nav={
+        <ul>
+          {CREATORS_NAV.map((item) => (
+            <li key={item.label}>
+              <NavItem url={item.url} label={item.label} />
+            </li>
+          ))}
+        </ul>
+      }
+      actions={
+        <>
+          <ThemeToggle />
+          <Link to="/" className="site-header__product">
+            <span aria-hidden="true">← </span>Optimize All
+          </Link>
+          <SignInAction to={account.to} label={account.signedIn ? account.label : 'Creator sign in'} />
+          {!account.signedIn && (
+            <ButtonLink to={CREATORS_CTA.url} variant="highlight" size="sm" className="site-header__cta">
+              {CREATORS_CTA.label}
+            </ButtonLink>
+          )}
+        </>
+      }
+      drawer={() => (
+        <>
+          <ul>
+            {CREATORS_NAV.map((item) => (
+              <li key={item.label}>
+                <NavItem url={item.url} label={item.label} className="public-drawer__link" />
+              </li>
+            ))}
+          </ul>
+          <div className="public-drawer__actions">
+            {account.signedIn ? (
+              <ButtonLink to={account.to} variant="highlight" fullWidth>
+                {account.label}
               </ButtonLink>
             ) : (
               <>
-                <ButtonLink to="/login" variant="ghost" fullWidth>
-                  Sign in
+                <ButtonLink to={CREATORS_CTA.url} variant="highlight" fullWidth>
+                  {CREATORS_CTA.label}
                 </ButtonLink>
-                <ButtonLink to="/login" variant="ghost" fullWidth>
-                  Client login
+                <ButtonLink to={account.to} variant="secondary" fullWidth>
+                  Creator sign in
                 </ButtonLink>
               </>
             )}
           </div>
-        </nav>
-      </Drawer>
-    </header>
+          <DrawerLinks title="Optimize All" links={[{ label: '← Optimize All', url: '/', hint: 'Marketing agency' }]} />
+        </>
+      )}
+    />
   );
+}
+
+/** The site header for a route's variant (see ./variant.ts). */
+export function SiteHeader({ variant = 'agency' }: { variant?: ChromeVariant }) {
+  if (variant === 'academy') return <AcademyHeader />;
+  if (variant === 'creators') return <CreatorsHeader />;
+  return <AgencyHeader />;
 }

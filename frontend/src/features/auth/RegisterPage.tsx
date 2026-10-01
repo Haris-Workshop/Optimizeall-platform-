@@ -1,4 +1,4 @@
-import { Gift, Mail, UserRound } from 'lucide-react';
+import { Check, Gift, Mail, UserRound } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert } from '@/components/ui/Alert';
@@ -10,6 +10,8 @@ import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Select } from '@/components/ui/Select';
 import { safeNextPath } from '@/app/redirects';
 import { useAuth } from '@/lib/auth/useAuth';
+import { rememberSignupIntent } from '@/lib/auth/signupIntent';
+import { AUDIENCE_COPY, resolveAudience } from './audience';
 import { mapServerErrors, type MappedErrors } from './formErrors';
 import { ContinueWithGoogle } from './google/GoogleButton';
 import { rememberSignupCodes } from './google/googleApi';
@@ -52,7 +54,7 @@ interface FormState {
   marketingEmailOptIn: boolean;
 }
 
-function validate(values: FormState): Partial<Record<Field, string>> {
+function validate(values: FormState, termsError: string): Partial<Record<Field, string>> {
   const errors: Partial<Record<Field, string>> = {};
   if (!EMAIL_RE.test(values.email.trim()))
     errors.email = 'Enter a valid email address, like name@example.com.';
@@ -64,7 +66,7 @@ function validate(values: FormState): Partial<Record<Field, string>> {
   if (!values.countryCode) errors.countryCode = 'Choose the country you live in.';
   if (!values.timeZone) errors.timeZone = 'Choose your time zone.';
   if (!values.acceptTerms)
-    errors.acceptTerms = 'You need to accept the participant rules to create an account.';
+    errors.acceptTerms = termsError;
   return errors;
 }
 
@@ -82,6 +84,8 @@ export function RegisterPage() {
   const inviteCode = cleanCode(params.get('invite'));
   // Where to continue after verifying and signing in (e.g. back to a course to enrol), validated same-origin.
   const next = safeNextPath(params.get('next'));
+  const audience = resolveAudience(params);
+  const copy = AUDIENCE_COPY[audience];
 
   const [values, setValues] = useState<FormState>(() => ({
     email: '',
@@ -104,14 +108,14 @@ export function RegisterPage() {
   const zones = useMemo(() => timeZoneOptions(values.timeZone), [values.timeZone]);
 
   useEffect(() => {
-    document.title = 'Create your account · Optimize All';
-  }, []);
+    document.title = copy.documentTitle;
+  }, [copy.documentTitle]);
 
   useEffect(() => {
     if (server?.form) alertRef.current?.focus();
   }, [server]);
 
-  const clientErrors = validate(values);
+  const clientErrors = validate(values, copy.termsError);
   const errorFor = (field: Field): string | string[] | undefined => {
     const serverMessages = server?.fields[field];
     if (serverMessages?.length) return serverMessages;
@@ -153,7 +157,10 @@ export function RegisterPage() {
         inviteCode,
         acceptTerms: values.acceptTerms,
         marketingEmailOptIn: values.marketingEmailOptIn,
+        returnTo: next ?? undefined,
+        audience: audience === 'generic' ? undefined : audience,
       });
+      if (audience !== 'generic') rememberSignupIntent(audience);
       navigate('/check-email', { state: { email: values.email.trim(), next } });
     } catch (error) {
       const mapped = mapServerErrors(error, FIELDS, {
@@ -172,10 +179,15 @@ export function RegisterPage() {
   return (
     <div className="auth-page">
       <div className="auth-page__header">
-        <h1 className="auth-page__title">Create your account</h1>
-        <p className="auth-page__subtitle">
-          Join campaigns, share from your own accounts and get paid for approved posts.
-        </p>
+        <h1 className="auth-page__title">{copy.title}</h1>
+        <p className="auth-page__subtitle">{copy.subtitle}</p>
+        <ul className="auth-benefits" aria-label="What you get">
+          {copy.benefits.map((b) => (
+            <li key={b}>
+              <Check aria-hidden="true" /> {b}
+            </li>
+          ))}
+        </ul>
       </div>
 
       {(referralCode || inviteCode) && (
@@ -211,7 +223,10 @@ export function RegisterPage() {
         </div>
       )}
 
-      <ContinueWithGoogle returnTo={next} onBeforeRedirect={() => rememberSignupCodes({ referralCode, inviteCode })} />
+      <ContinueWithGoogle returnTo={next} onBeforeRedirect={() => {
+          rememberSignupCodes({ referralCode, inviteCode });
+          if (audience !== 'generic') rememberSignupIntent(audience);
+        }} />
 
       <form className="auth-form" onSubmit={onSubmit} noValidate aria-label="Create account">
         <FormField id="register-email" label="Email" required error={errorFor('email')}>
@@ -309,15 +324,29 @@ export function RegisterPage() {
               invalid={!!errorFor('acceptTerms')}
               aria-describedby={errorFor('acceptTerms') ? 'register-acceptTerms-error' : undefined}
               onChange={(e) => set('acceptTerms', e.target.checked)}
-              label="I accept the participant rules"
+              label={copy.termsLabel}
               description={
-                <>
-                  I’ll only share from established accounts I own, always disclose paid posts, and accept that
-                  every submission is reviewed.{' '}
-                  <Link className="ui-link" to="/#rules">
-                    Read the rules
-                  </Link>
-                </>
+                audience === 'creator' ? (
+                  <>
+                    I’ll only share from established accounts I own, always disclose paid posts, and accept that
+                    every submission is reviewed.{' '}
+                    <Link className="ui-link" to="/#rules">
+                      Read the rules
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    Read the{' '}
+                    <Link className="ui-link" to="/terms-of-service">
+                      terms of service
+                    </Link>{' '}
+                    and{' '}
+                    <Link className="ui-link" to="/privacy-policy">
+                      privacy policy
+                    </Link>
+                    .
+                  </>
+                )
               }
             />
             {errorFor('acceptTerms') && (
@@ -334,7 +363,7 @@ export function RegisterPage() {
             id="register-marketing"
             checked={values.marketingEmailOptIn}
             onChange={(e) => set('marketingEmailOptIn', e.target.checked)}
-            label="Email me about new campaigns and tips"
+            label={audience === 'learner' ? 'Email me about new courses and tips' : 'Email me about new campaigns and tips'}
             description="Optional. You can unsubscribe at any time."
           />
         </div>

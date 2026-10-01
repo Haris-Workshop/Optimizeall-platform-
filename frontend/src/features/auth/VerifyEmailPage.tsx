@@ -3,6 +3,7 @@ import { CircleCheck, MailX } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { defaultLandingPath } from '@/app/portals';
+import { safeNextPath } from '@/app/redirects';
 import { Button } from '@/components/ui/Button';
 import { ButtonLink } from '@/components/ui/ButtonLink';
 import { Spinner } from '@/components/ui/Spinner';
@@ -18,6 +19,7 @@ import '@/app/layouts/AuthLayout.css';
 export function VerifyEmailPage() {
   const [params] = useSearchParams();
   const token = params.get('token')?.trim() ?? '';
+  const nextFromLink = safeNextPath(params.get('next'));
   const { status, user, refreshUser } = useAuth();
   const sentFor = useRef<string | null>(null);
 
@@ -69,12 +71,14 @@ export function VerifyEmailPage() {
   }
 
   if (verify.isSuccess) {
-    // A learner who registered from a course's "Enrol" button goes back to that course (enrolled automatically).
-    const course = pendingEnrolPath();
+    // The email link carries `next` (the API puts the registration's returnTo there), so the course survives opening
+    // the link in another browser; the remembered enrol intent is the fallback for older links.
+    const target = nextFromLink ?? pendingEnrolPath();
+    const course = target !== null && /^\/learn(\/|\?|$)/.test(target);
     const continueTo =
       status === 'authenticated' && user
-        ? defaultLandingPath(user.permissions, course)
-        : `/login?verified=1${course ? `&next=${encodeURIComponent(course)}` : ''}`;
+        ? defaultLandingPath(user.permissions, target)
+        : `/login?verified=1${target ? `&next=${encodeURIComponent(target)}` : ''}`;
     return (
       <div className="auth-page">
         <span className="auth-page__icon auth-page__icon--success" aria-hidden="true">
@@ -83,8 +87,8 @@ export function VerifyEmailPage() {
         <div className="auth-page__header" role="status">
           <h1 className="auth-page__title">Your email is verified</h1>
           <p className="auth-page__subtitle">
-            {verify.data?.message ?? 'Your email address is verified.'} You can now join campaigns and submit
-            posts.
+            {verify.data?.message ?? 'Your email address is verified.'}{' '}
+            {course ? 'You can now start your course.' : 'You’re all set.'}
           </p>
         </div>
         <ButtonLink to={continueTo} size="lg" fullWidth>

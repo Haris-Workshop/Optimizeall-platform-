@@ -18,7 +18,7 @@ test.describe('public site', () => {
   test('no horizontal scroll at 360px', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 780 });
     await mockApi(page);
-    for (const path of ['/', '/creators', '/login', '/register', '/faq']) {
+    for (const path of ['/', '/creators', '/login', '/register', '/creators/faq']) {
       await page.goto(path);
       await expect(page.locator('h1').first()).toBeVisible();
       expect(await hasHorizontalScroll(page), `horizontal scroll on ${path}`).toBe(false);
@@ -27,7 +27,7 @@ test.describe('public site', () => {
 
   test('FAQ falls back gracefully while the content API is unavailable', async ({ page }) => {
     await mockApi(page);
-    await page.goto('/faq');
+    await page.goto('/creators/faq');
     await expect(page.getByRole('heading', { name: 'Answers are on their way' })).toBeVisible();
   });
 });

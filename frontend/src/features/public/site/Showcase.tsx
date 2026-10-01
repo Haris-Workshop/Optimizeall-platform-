@@ -240,34 +240,3 @@ export function TrustGrid() {
     </section>
   );
 }
-
-/** Closing band with both pillars side by side: start learning, or get a free audit. */
-export function DualCta() {
-  const copy = useSiteCopy();
-  return (
-    <section className="site-cta oa-dual" aria-labelledby="dual-cta-title">
-      <div className="container">
-        <div className="site-cta__inner oa-dual__inner">
-          <div className="oa-dual__copy">
-            <h2 id="dual-cta-title">{copy.text('home.final.title')}</h2>
-            <p>{copy.text('home.final.text')}</p>
-          </div>
-          <div className="oa-dual__cards">
-            <Link to="/learn" className="oa-dual__card">
-              <GraduationCap aria-hidden="true" />
-              <span className="oa-dual__kicker">{copy.text('home.academy.eyebrow')}</span>
-              <span className="oa-dual__label">{copy.text('home.final.learnCta')}</span>
-              <ArrowRight aria-hidden="true" className="oa-dual__arrow" />
-            </Link>
-            <Link to="/free-audit" className="oa-dual__card oa-dual__card--agency">
-              <Sparkles aria-hidden="true" />
-              <span className="oa-dual__kicker">{copy.text('home.agency.eyebrow')}</span>
-              <span className="oa-dual__label">{copy.text('home.final.agencyCta')}</span>
-              <ArrowRight aria-hidden="true" className="oa-dual__arrow" />
-            </Link>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}

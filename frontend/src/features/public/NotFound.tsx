@@ -38,9 +38,15 @@ function NotFoundPage({ siteLinks }: { siteLinks: boolean }) {
       actions={
         <>
           <ButtonLink to="/">Back to the home page</ButtonLink>
-          <ButtonLink to="/faq" variant="secondary">
-            Read the FAQ
-          </ButtonLink>
+          {siteLinks ? (
+            <ButtonLink to="/services" variant="secondary">
+              Explore our services
+            </ButtonLink>
+          ) : (
+            <ButtonLink to="/creators/faq" variant="secondary">
+              Read the FAQ
+            </ButtonLink>
+          )}
           {siteLinks && (
             <nav aria-label="Helpful links" className="status-page__links">
               <ul>

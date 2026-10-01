@@ -44,6 +44,7 @@ describe('head manager', () => {
     // The suffix is dropped when it would push a title that fits on its own past 60 characters.
     const long = 'Tripling organic revenue for an outdoor retailer';
     expect(applyTitleTemplate(long, '%s | Optimize All', 'Optimize All')).toBe(long);
+    expect(applyTitleTemplate('Courses', '%s | Optimize All Academy', 'Optimize All')).toBe('Courses | Optimize All Academy');
   });
 
   it('writes one set of tags with the default social image and indexable robots', async () => {
@@ -55,6 +56,36 @@ describe('head manager', () => {
     expect(content('meta[name="robots"]')).toBe(INDEXABLE_ROBOTS);
     expect(document.head.querySelector('link[rel="canonical"]')!.getAttribute('href')).toBe('https://www.optimizeall.com/pricing');
     expect(all('meta[name="description"]')).toHaveLength(1);
+  });
+
+  it.each([
+    ['/pricing', 'Pricing | Optimize All'],
+    ['/services/seo', 'Pricing | Optimize All'],
+    ['/learn', 'Pricing | Optimize All Academy'],
+    ['/learn/seo-basics/intro', 'Pricing | Optimize All Academy'],
+    ['/verify/certificates/abc', 'Pricing | Optimize All Academy'],
+    ['/creators', 'Pricing | Optimize All Creators'],
+    ['/creators/faq', 'Pricing | Optimize All Creators'],
+    ['/c/spring-launch', 'Pricing | Optimize All Creators'],
+  ])('uses the section title template on %s', async (route, expected) => {
+    mockFetch({ 'GET /public/site': () => json(200, site) });
+    renderWithApp(<Head title="Pricing" />, { route, withAuth: false });
+    await waitFor(() => expect(document.title).toBe(expected));
+  });
+
+  it('falls back to a per-section default title and description', async () => {
+    mockFetch({ 'GET /public/site': () => json(200, site) });
+    const academy = renderWithApp(<Head />, { route: '/learn', withAuth: false });
+    await waitFor(() => expect(document.title).toBe('Optimize All Academy'));
+    expect(content('meta[name="description"]')).toMatch(/Free AI and marketing courses/);
+    academy.unmount();
+    const creators = renderWithApp(<Head />, { route: '/creators', withAuth: false });
+    await waitFor(() => expect(document.title).toBe('Optimize All Creators'));
+    creators.unmount();
+    // The agency keeps the site settings' default title and description.
+    renderWithApp(<Head />, { route: '/', withAuth: false });
+    await waitFor(() => expect(document.title).toBe(site.seo.defaultTitle));
+    expect(content('meta[name="description"]')).toBe(site.seo.defaultDescription);
   });
 
   it('noindex pages can let crawlers follow their links', async () => {

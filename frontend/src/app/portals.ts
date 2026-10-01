@@ -7,6 +7,7 @@ import * as financePortal from '@/features/finance/routes';
 import * as participantPortal from '@/features/participant/routes';
 import * as reviewerPortal from '@/features/reviewer/routes';
 import { matchRoutes } from 'react-router-dom';
+import { readSignupIntent, type SignupAudience } from '@/lib/auth/signupIntent';
 import { meetsRequirement, type PermissionRequirement, Permissions } from '@/lib/auth/permissions';
 import type { PortalDefinition, PortalId, PortalRouteHandle } from './portalTypes';
 
@@ -133,13 +134,19 @@ export function canOpenPath(permissions: readonly string[], path: string): boole
 
 /**
  * Where to go after sign-in: the `next` path when the user may open it, otherwise the first portal (in priority
- * order) whose landing requirement they meet, then any accessible portal, then the public home page.
+ * order) whose landing requirement they meet, then any accessible portal, then the public home page. A learner-only
+ * account (signed up from the academy and no staff portal) lands in "My learning" instead of the earner home.
  */
-export function defaultLandingPath(permissions: readonly string[], next?: string | null): string {
+export function defaultLandingPath(
+  permissions: readonly string[],
+  next?: string | null,
+  intent: SignupAudience | null = readSignupIntent(),
+): string {
   const isAuthPage = !!next && /^\/(login|register|check-email|forgot-password)(\/|\?|$)/.test(next);
   if (next && next !== '/' && !isAuthPage && canOpenPath(permissions, next)) return next;
   const landing =
     portals.find((p) => meetsRequirement(permissions, p.landingRequires)) ??
     accessiblePortals(permissions)[0];
+  if (landing?.id === 'participant' && intent === 'learner') return `${landing.basePath}/learning`;
   return landing?.basePath ?? '/';
 }

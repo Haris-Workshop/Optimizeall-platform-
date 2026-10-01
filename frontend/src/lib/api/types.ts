@@ -93,6 +93,10 @@ export interface RegisterRequest {
   deviceId?: string;
   acceptTerms: boolean;
   marketingEmailOptIn: boolean;
+  /** Safe relative path to continue to after verifying and signing in (e.g. `/learn/<slug>?enrol=1`). */
+  returnTo?: string;
+  /** What the person signed up for; omitted when the page did not say. */
+  audience?: 'learner' | 'creator';
 }
 
 export interface LoginRequest {

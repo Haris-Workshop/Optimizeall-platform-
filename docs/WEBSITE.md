@@ -21,8 +21,8 @@ The public marketing site of Optimize All (the agency) and the CMS that runs it.
 `/partners` and `/partners/{slug}` · `/contact` · `/free-audit` · `/get-a-quote` (3 steps) · `/book-a-consultation` · `/newsletter/confirm` and
 `/newsletter/unsubscribe` · `/search` · every published CMS page at `/{slug}`: the seeded `/about`, `/how-we-work`,
 and the legal pages `/privacy-policy`, `/terms-of-service`, `/cookie-policy`, `/accessibility`, `/refund-policy`. The creator (participant) landing
-page that used to be the home page now lives at `/creators`; `/faq` is unchanged. A CMS page cannot take the address
-of a built-in route (`/services`, `/blog`, `/login`, `/verify-email`, `/reset-password`, `/lp`, `/f`, the portals…:
+page that used to be the home page now lives at `/creators`, and its FAQ at `/creators/faq` (`/faq` redirects there). A CMS page cannot take the address
+of a built-in route (`/services`, `/blog`, `/login`, `/verify-email`, `/reset-password`, `/verify`, `/academy` (a redirect to `/learn`), `/lp`, `/f`, the portals…:
 `CatalogAdminService.ReservedSlugs`, 400 `website.invalid`), since the built-in route would always win while the
 sitemap listed the page; `pricing` and `contact` are allowed on purpose — `/pricing` and `/contact` embed that CMS page.
 
@@ -30,6 +30,43 @@ Every page has a unique title and description, a canonical URL, Open Graph/Twitt
 (Organization, WebSite, Service + Offer, FAQPage, BreadcrumbList, Article/BlogPosting, JobPosting). The header has a
 keyboard-accessible services mega-menu built from the published catalog; phones get a drawer. The footer, contact
 details (including a WhatsApp link), social links and the announcement bar come from site settings.
+
+### Site structure: one agency, two separate products
+
+Optimize All is a marketing agency; the free academy and the creator programme are separate products. `SiteChrome`
+picks one of three header/footer variants from the route (`frontend/src/features/public/site/variant.ts`):
+
+| Variant | Routes | Header | Footer |
+|---|---|---|---|
+| **Agency** (default) | everything else | Services (mega) · Industries · Case studies · Insights (`/blog`) · Partners · About (About us, How we work, Team, Careers, Contact). One **Book a consultation** call to action, one Sign in, a quiet "Free Academy" text link. Announcement bar. | CMS columns, **More from Optimize All** (Academy, Creators), one **Sign in** group (Client login, Creator sign in, Academy sign in → `/login`, `?audience=creator\|learner`), newsletter, legal |
+| **Academy** | `/learn`, `/learn/*`, `/verify`, `/verify/*`, `/academy` | "Academy" wordmark · Courses · Learning paths · Certificates · Verify a certificate; one **Start learning free** call to action; "← Optimize All"; Sign in / My learning | Four links, legal, "Optimize All Academy is run by Optimize All, a marketing agency. Work with us →" |
+| **Creators** | `/creators`, `/creators/*`, `/join/*`, `/c/*`, `/faq` | "Creators" wordmark · How it works · FAQ · Campaign rules; one **Create a creator account** call to action; "← Optimize All" | Product links, legal, one line back to the agency |
+
+The header menu and footer columns stay CMS-driven (site settings); the frontend `FALLBACK_MENU` / `FALLBACK_COLUMNS`
+mirror the server defaults. Stored menus that still list the Academy or Creators are filtered out of the agency
+navigation, and a stored header call to action pointing at `/learn`, `/academy`, `/creators` or `/free-audit` is
+replaced by **Book a consultation**. Page titles use a per-section template: `%s | Optimize All` (agency, or the site
+settings template), `%s | Optimize All Academy`, `%s | Optimize All Creators` (`useDocumentHead`). Breadcrumbs
+(`Breadcrumbs` in `site/components.tsx`) are rooted at **Academy → /learn** or **Creators → /creators** inside a product
+(no "Home" crumb), at "Home" on the agency site.
+
+**Server defaults (site settings).** A new database (and one whose header, footer or SEO defaults still equal an earlier
+built-in generation) gets: header menu **Services** (mega) · **Industries** · **Case studies** · **Insights** (`/blog`) ·
+**Partners** · **About** (About us, How we work, Team, Careers, Contact); call to action **Book a consultation**
+(`/book-a-consultation`); a quiet secondary text link **Free Academy** (`/learn`, `header.secondaryLink`); footer groups
+Services · Company · Get started · **More from Optimize All** (Academy, Learning paths, Creators programme) · **Sign in**;
+an agency-first footer blurb, default title "Optimize All — Digital Marketing, SEO & AI Agency" and an agency description.
+`SiteSettingsService.PreviousDefaults` (agency-only, 2026-09) and `AcademyFirstDefaults` (academy-first, 2026-09) are the
+frozen earlier generations: at the first start with this release (ledger key `upgrade:agency-first-2026-10`, once) each
+untouched part (header, footer blurb, footer columns, SEO title + description, and the seeded About page) moves to the
+current defaults, while anything an administrator edited is never overwritten. The `academy` CMS page is no longer seeded
+(a page saved earlier stays in the database, off the sitemap, behind the redirect).
+
+Retired addresses: `/academy` → `/learn` and `/faq` → `/creators/faq` (301 from the web server; `StaticRedirect` in the
+SPA keeps the query string and `#anchor`). The API side is `RedirectPaths.BuiltInRedirects`, checked first by `RedirectService.ResolveAsync`
+(so `/_document/academy?utm_source=x` answers `301 /learn?utm_source=x` even when an old CMS page still exists at `/academy`) and
+by `GET /api/v1/public/redirects`; these two sources cannot be redirected manually or by a CMS page (`academy` is a reserved slug). The old academy overview's figures, "how it works" and CMS blocks sit at the
+bottom of the `/learn` hub (`AcademyHubExtras`).
 
 ## Marketer guide
 

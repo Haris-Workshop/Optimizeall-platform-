@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { ButtonLink } from '@/components/ui/ButtonLink';
 import { Card, CardBody } from '@/components/ui/Card';
@@ -30,6 +31,7 @@ import {
   CATEGORY_LABELS,
   useCategories,
   useEnrol,
+  useMyCourse,
   useMyPath,
   useMyPaths,
   usePath,
@@ -44,6 +46,7 @@ import {
 import { PublicCatalog } from '@/features/learning/components/CatalogBrowser';
 import { CategoryArt } from '@/features/learning/components/CategoryArt';
 import { BadgeImage, categoryClass, CourseCard, LinkedInIcon } from '@/features/learning/components/CourseCard';
+import { WorkWithUsCard } from '@/features/learning/components/WorkWithUsCard';
 import { CourseView } from '@/features/learning/components/CourseView';
 import { LessonView } from '@/features/learning/components/LessonView';
 import { stagger, useCountUp, useReveal } from '@/features/learning/components/Motion';
@@ -53,6 +56,7 @@ import '@/features/learning/learning.css';
 import '@/features/learning/academy.css';
 import { useDocumentHead } from '../site/head';
 import { NotFound } from '../NotFound';
+import { AcademyHubExtras } from '../site/AcademyOverview';
 
 /**
  * The free public academy (/learn, /learn/paths, /learn/paths/:pathSlug, /learn/:slug, /learn/:slug/:lessonSlug): every
@@ -139,7 +143,16 @@ function useEnrolAndStart(course: CourseDetail | undefined) {
     navigate(authPathForEnrol(slug, mode));
   };
 
-  return { start, goSignUp, pending: enrol.isPending || (auto && canLearn && !enrol.isError), signedIn, canLearn, auto };
+  return {
+    start,
+    goSignUp,
+    pending: enrol.isPending || (auto && canLearn && !enrol.isError),
+    failed: enrol.isError,
+    error: enrol.error,
+    signedIn,
+    canLearn,
+    auto,
+  };
 }
 
 function EnrolActions({ course, flow, compact }: { course: CourseDetail; flow: ReturnType<typeof useEnrolAndStart>; compact?: boolean }) {
@@ -206,6 +219,91 @@ function SignUpCta({ next, slug }: { next: string; slug: string }) {
               </Button>
               <Button variant="secondary" onClick={() => go('login')}>
                 Sign in
+              </Button>
+            </>
+          )}
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+/**
+ * The enrol prompt under a public lesson. Visitors are sent to register / sign in and come back to the course, which
+ * enrols them (the same intent mechanism as the course page). A signed-in learner who is not enrolled yet gets an explicit
+ * "Enrol for free" button — enrolment is never silent — and a visible "Try again" when it fails. Staff accounts read
+ * every lesson but have no enrol control.
+ */
+function LessonEnrolPrompt({ slug, lessonSlug }: { slug: string; lessonSlug: string }) {
+  const { signedIn, canLearn } = useCanLearn();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const mine = useMyCourse(slug, canLearn);
+  const enrol = useEnrol(slug);
+  const lessonInPortal = academyPaths.portalLesson(slug, lessonSlug);
+
+  if (signedIn && !canLearn)
+    return (
+      <p className="lx-enrolling lx-enrolling--info" role="note">
+        <Info aria-hidden="true" /> You’re signed in with a staff account. Enrolment is for learner accounts — you can read every
+        lesson here.
+      </p>
+    );
+  if (canLearn && mine.isPending) return null;
+  if (canLearn && mine.data?.progress) return <SignUpCta next={lessonInPortal} slug={slug} />;
+
+  const enrolNow = () =>
+    enrol.mutate(undefined, {
+      onSuccess: () => {
+        clearEnrolIntent();
+        navigate(lessonInPortal);
+      },
+      onError: (e) => toast.error('Enrolment failed', errorMessage(e)),
+    });
+  const go = (mode: 'login' | 'register') => {
+    rememberEnrolIntent(slug);
+    navigate(authPathForEnrol(slug, mode));
+  };
+
+  return (
+    <Card className="lx-cta" as="section" aria-labelledby="lesson-enrol-heading">
+      <CardBody>
+        <div className="lx-cta__row">
+          <GraduationCap aria-hidden="true" className="lx-cta__icon" />
+          <div>
+            <h2 id="lesson-enrol-heading" className="lx-cta__title">
+              Enrol for free to save your progress
+            </h2>
+            <p className="lx-muted">
+              Reading is always free. Enrol to keep your place, take the final assessment and earn a verifiable certificate.
+            </p>
+          </div>
+        </div>
+        {enrol.isError && (
+          <Alert
+            tone="danger"
+            title="We couldn’t enrol you"
+            actions={
+              <Button size="sm" variant="secondary" loading={enrol.isPending} onClick={enrolNow}>
+                Try again
+              </Button>
+            }
+          >
+            {errorMessage(enrol.error)}
+          </Alert>
+        )}
+        <div className="lx-actions">
+          {canLearn ? (
+            <Button leadingIcon={<GraduationCap aria-hidden="true" />} loading={enrol.isPending && !enrol.isError} onClick={enrolNow}>
+              Enrol for free
+            </Button>
+          ) : (
+            <>
+              <Button leadingIcon={<UserPlus aria-hidden="true" />} onClick={() => go('register')}>
+                Enrol for free
+              </Button>
+              <Button variant="secondary" onClick={() => go('login')}>
+                I have an account
               </Button>
             </>
           )}
@@ -404,7 +502,7 @@ export function AcademyPage() {
         </section>
       )}
 
-      <section className="site-section lx-hub-section" aria-labelledby="hub-cert">
+      <section className="site-section lx-hub-section" aria-labelledby="hub-cert" id="certificates">
         <div className="container">
           <div className="lx-cert-band">
             <div className="lx-cert-band__text">
@@ -454,6 +552,7 @@ export function AcademyPage() {
           <PublicCatalog key={catalogKey} linkFor={academyPaths.course} headingLevel={3} />
         </div>
       </section>
+      <AcademyHubExtras />
     </>
   );
 }
@@ -484,15 +583,25 @@ export function AcademyCoursePage() {
     <div className="container lx-public">
       <nav aria-label="Breadcrumb" className="ui-breadcrumbs lx-crumbs">
         <ol>
-          <li>
-            <Link to="/">Home</Link>
-          </li>
-          <li aria-hidden="true">/</li>
+          {/* Root crumb is "Academy" (the Home crumb is dropped); swap for the shared Breadcrumbs once unified. */}
           <li>
             <Link to={academyPaths.home}>Academy</Link>
           </li>
         </ol>
       </nav>
+      {flow.failed && flow.canLearn && (
+        <Alert
+          tone="danger"
+          title="We couldn’t enrol you"
+          actions={
+            <Button size="sm" variant="secondary" loading={flow.pending} onClick={flow.start}>
+              Try again
+            </Button>
+          }
+        >
+          {errorMessage(flow.error)}
+        </Alert>
+      )}
       {flow.auto && flow.canLearn && (
         <p className="lx-enrolling" role="status">
           <GraduationCap aria-hidden="true" /> Enrolling you in {course.card.title} and opening the first lesson…
@@ -512,6 +621,7 @@ export function AcademyCoursePage() {
         stickyActions={<EnrolActions course={course} flow={flow} compact />}
         aside={<SignUpCta next={academyPaths.portalCourse(course.card.slug)} slug={course.card.slug} />}
       />
+      <WorkWithUsCard />
     </div>
   );
 }
@@ -542,7 +652,7 @@ export function AcademyLessonPage() {
         lesson={q.data}
         courseLink={academyPaths.course(slug)}
         lessonLink={(l) => academyPaths.lesson(slug, l)}
-        footer={<SignUpCta next={academyPaths.portalLesson(slug, lessonSlug)} slug={slug} />}
+        footer={<LessonEnrolPrompt slug={slug} lessonSlug={lessonSlug} />}
       />
     </div>
   );

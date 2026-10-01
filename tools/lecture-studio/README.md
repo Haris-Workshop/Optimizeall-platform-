@@ -209,7 +209,7 @@ folder (the exact path is in the error message).
 
 ## YouTube upload
 
-Environment only: `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN` (OAuth refresh token of the
+Environment only: `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN` and `YOUTUBE_CHANNEL_ID` (the channel every upload must go to; the uploader calls `channels.list(mine=true)` first and refuses to upload anything if the authenticated channel is a different one or the variable is missing; copy the id from that call's output, because O/0 look-alikes are easy to mistype) (OAuth refresh token of the
 channel owner with scopes `youtube.upload` and `youtube.force-ssl`). Steps per lecture, each recorded in the ledger
 (`youtube-ledger.json`, keyed by `course/lesson`) so reruns resume and never upload twice:
 resumable `videos.insert` (8 MiB chunks, 308/Range resume, exponential backoff on 5xx/rate limits, never retries

@@ -25,7 +25,7 @@ UPLOAD_API = "https://www.googleapis.com/upload/youtube/v3"
 CHUNK = 8 * 1024 * 1024  # must be a multiple of 256 KiB
 RETRY_STATUS = {500, 502, 503, 504}
 # Quota units per call (general bucket). videos.insert is billed separately (see README for the current rules).
-QUOTA = {"captions.insert": 400, "thumbnails.set": 50, "playlistItems.insert": 50, "playlists.insert": 50,
+QUOTA = {"channels.list": 1, "captions.insert": 400, "thumbnails.set": 50, "playlistItems.insert": 50, "playlists.insert": 50,
          "playlists.list": 1, "videos.list": 1}
 
 
@@ -78,8 +78,10 @@ def _error(resp: Resp, what: str) -> YouTubeError:
 
 class YouTube:
     def __init__(self, http: Http | None = None, *, client_id=None, client_secret=None, refresh_token=None,
-                 sleep=time.sleep, max_retries: int = 6):
+                 channel_id=None, sleep=time.sleep, max_retries: int = 6):
         self.http = http or Http()
+        self.channel_id = channel_id or os.environ.get("YOUTUBE_CHANNEL_ID")
+        self._channel_verified = False
         self.client_id = client_id or os.environ.get("YOUTUBE_CLIENT_ID")
         self.client_secret = client_secret or os.environ.get("YOUTUBE_CLIENT_SECRET")
         self.refresh_token = refresh_token or os.environ.get("YOUTUBE_REFRESH_TOKEN")
@@ -107,6 +109,25 @@ class YouTube:
         self._token = body["access_token"]
         self._token_exp = time.time() + float(body.get("expires_in", 3600))
         return self._token
+
+    def verify_channel(self) -> None:
+        """Channel guard: refuse to publish unless the authenticated channel is the configured YOUTUBE_CHANNEL_ID.
+        A success is remembered for this process; a mismatch is never cached. Nothing is uploaded on a mismatch."""
+        if self._channel_verified:
+            return
+        expected = (self.channel_id or "").strip()
+        if not expected:
+            raise YouTubeError("missing environment variables: YOUTUBE_CHANNEL_ID (the channel every upload must go to)")
+        items = self.call("GET", f"{API}/channels", what="channels.list", params={"part": "id,snippet", "mine": "true"}).json().get("items", [])
+        if len(items) != 1:
+            raise YouTubeError(f"the credentials manage {len(items)} channels; expected exactly one ({expected}). Nothing was uploaded")
+        found = items[0].get("id", "")
+        if found != expected:
+            title = (items[0].get("snippet") or {}).get("title", "?")
+            raise YouTubeError(
+                f"channel mismatch: the credentials belong to '{title}' ({found}) but YOUTUBE_CHANNEL_ID is {expected}. "
+                "Nothing was uploaded. YouTube channel ids mix the letter O and the digit 0: copy the id from the channels.list output")
+        self._channel_verified = True
 
     def _auth(self, extra=None) -> dict:
         h = {"authorization": f"Bearer {self.token()}"}
@@ -274,6 +295,8 @@ def upload_lecture_dir(cfg: Config, d: Path, *, dry_run: bool = False, ledger: P
         return {"key": key, "dryRun": True, "todo": todo, "title": meta["snippet"]["title"],
                 "estimatedGeneralQuota": (400 if "captions" in todo else 0) + (50 if "thumbnail" in todo else 0) + (50 if "playlist" in todo else 0)}
     yt = yt or YouTube()
+    if todo:
+        yt.verify_channel()  # before any byte is sent (a finished lecture needs no call at all)
 
     def save():
         write_json(ledger, book)

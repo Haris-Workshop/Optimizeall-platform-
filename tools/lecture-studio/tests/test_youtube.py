@@ -32,8 +32,16 @@ def j(status, body, headers=None):
     return Resp(status, headers or {}, json.dumps(body).encode())
 
 
-def client(script):
-    return YouTube(FakeHttp(script), client_id="cid", client_secret="csecret", refresh_token="rtok", sleep=lambda s: None)
+CHANNEL = "UCtestChannelId000000000O"
+
+
+def channels_ok(channel=CHANNEL, title="Optimizeall"):
+    return ("GET https://www.googleapis.com/youtube/v3/channels", j(200, {"items": [{"id": channel, "snippet": {"title": title}}]}))
+
+
+def client(script, channel_id=CHANNEL):
+    return YouTube(FakeHttp(script), client_id="cid", client_secret="csecret", refresh_token="rtok", channel_id=channel_id,
+                   sleep=lambda s: None)
 
 
 META = {
@@ -118,6 +126,48 @@ class RequestBuildingTests(unittest.TestCase):
         self.assertNotIn("s3cr3t", str(e))
 
 
+class ChannelGuardTests(unittest.TestCase):
+    def test_a_matching_channel_passes_and_is_checked_once(self):
+        yt = client([channels_ok()])
+        yt.verify_channel()
+        yt.verify_channel()  # remembered: no second request
+        self.assertEqual([c["url"] for c in yt.http.calls if "channels" in c["url"]], ["https://www.googleapis.com/youtube/v3/channels"])
+        self.assertEqual(yt.http.calls[-1]["params"], {"part": "id,snippet", "mine": "true"})
+
+    def test_a_mismatch_names_both_ids_and_is_never_cached_as_success(self):
+        yt = client([channels_ok(channel="UCsomeoneElse"), channels_ok(channel="UCsomeoneElse")])
+        for _ in range(2):  # the second call must ask again, not trust the first
+            with self.assertRaises(YouTubeError) as ctx:
+                yt.verify_channel()
+        msg = str(ctx.exception)
+        self.assertIn("UCsomeoneElse", msg)
+        self.assertIn(CHANNEL, msg)
+        self.assertIn("Nothing was uploaded", msg)
+        self.assertEqual(len([c for c in yt.http.calls if "channels" in c["url"]]), 2)
+
+    def test_a_missing_channel_setting_is_refused_without_any_request(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            yt = YouTube(FakeHttp([]), client_id="cid", client_secret="x", refresh_token="r")
+            with self.assertRaises(YouTubeError) as ctx:
+                yt.verify_channel()
+        self.assertIn("YOUTUBE_CHANNEL_ID", str(ctx.exception))
+        self.assertEqual(yt.http.calls, [])
+
+    def test_an_upload_to_the_wrong_channel_sends_no_video_bytes(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            out = d / "out"
+            out.mkdir()
+            (out / "video.mp4").write_bytes(b"v" * 100)
+            (out / "youtube.json").write_text(json.dumps(META))
+            yt = client([channels_ok(channel="UCwrong")])
+            with self.assertRaises(YouTubeError):
+                upload_lecture_dir(Config(work_dir=d / "work"), out, yt=yt)
+            urls = [c["url"] for c in yt.http.calls]
+            self.assertFalse(any("upload/youtube" in u for u in urls), urls)
+            self.assertFalse((d / "work" / "youtube-ledger.json").exists() and "VID" in (d / "work" / "youtube-ledger.json").read_text())
+
+
 class LedgerTests(unittest.TestCase):
     def test_publish_is_idempotent_and_writes_patch(self):
         with tempfile.TemporaryDirectory() as d:
@@ -130,6 +180,7 @@ class LedgerTests(unittest.TestCase):
             (out / "youtube.json").write_text(json.dumps(META))
             cfg = Config(work_dir=d / "work")
             yt = client([
+                channels_ok(),
                 ("POST https://www.googleapis.com/upload/youtube/v3/videos", Resp(200, {"location": "https://up/s"}, b"")),
                 ("PUT https://up/s", j(201, {"id": "VID9"})),
                 ("POST https://www.googleapis.com/upload/youtube/v3/thumbnails/set", j(200, {})),
@@ -140,7 +191,7 @@ class LedgerTests(unittest.TestCase):
             ])
             res = upload_lecture_dir(cfg, out, yt=yt)
             self.assertEqual(res["url"], "https://www.youtube.com/watch?v=VID9")
-            self.assertEqual(res["quotaUsed"], 400 + 50 + 1 + 50 + 50)
+            self.assertEqual(res["quotaUsed"], 1 + 400 + 50 + 1 + 50 + 50)
             thumb = next(c for c in yt.http.calls if "thumbnails" in c["url"])
             self.assertEqual(thumb["params"], {"videoId": "VID9", "uploadType": "media"})
             self.assertEqual(thumb["headers"]["content-type"], "image/png")

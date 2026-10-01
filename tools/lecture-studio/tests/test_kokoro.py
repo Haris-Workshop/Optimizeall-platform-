@@ -142,6 +142,34 @@ class DeliveryTests(unittest.TestCase):
             self.assertAlmostEqual(w.getnframes() / RATE, 1.0, delta=0.05)
 
 
+    def test_mastering_never_pushes_peaks_to_full_scale(self):
+        import array
+        import io
+        import wave
+
+        raw = io.BytesIO()
+        with wave.open(raw, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(RATE)
+            # Speech-like: a quiet voiced tone with loud transients every half second. (A steady sine does not trigger the
+            # limiter's auto-level, which lifted real speech to full scale before level=0 was set.)
+            samples = array.array("h", (
+                int((3500 + (24500 if i % (RATE // 2) < 600 else 0)) * math.sin(2 * math.pi * (140 + 60 * math.sin(i / RATE * 3)) * i / RATE))
+                for i in range(RATE * 3)))
+            w.writeframes(samples.tobytes())
+        try:
+            mastered = delivery.master_wav(raw.getvalue())
+        except RuntimeError as exc:
+            if "ffmpeg not found" in str(exc):
+                self.skipTest("ffmpeg is not available")
+            raise
+        with wave.open(io.BytesIO(mastered)) as w:
+            out = array.array("h")
+            out.frombytes(w.readframes(w.getnframes()))
+        self.assertLess(max(abs(x) for x in out), int(0.95 * 32767))
+
+
 class KokoroNarrateTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

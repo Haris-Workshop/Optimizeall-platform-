@@ -114,7 +114,7 @@ MASTER_FILTER = (
     "equalizer=f=3200:t=q:w=1.2:g=1.5,"  # presence
     "equalizer=f=7500:t=q:w=2.0:g=-2.0,"  # sibilance
     "acompressor=threshold=-21dB:ratio=2.2:attack=12:release=160:makeup=2,"
-    "alimiter=limit=0.89"
+    "alimiter=limit=0.89:level=0"  # level=0: cap peaks only; its auto-level would lift them back to full scale
 )
 
 

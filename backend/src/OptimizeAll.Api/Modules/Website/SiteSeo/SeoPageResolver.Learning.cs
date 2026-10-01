@@ -13,8 +13,11 @@ namespace OptimizeAll.Api.Modules.Website.SiteSeo;
 /// </summary>
 public sealed partial class SeoPageResolver
 {
-    /// <summary>The academy home's title and description (identical to frontend/src/features/public/learn/AcademyPages.tsx).</summary>
-    public const string AcademyTitle = "Free courses with certificates — sales, marketing, SEO, AI";
+    /// <summary>
+    /// The academy home's title and description (identical to frontend/src/features/public/learn/AcademyPages.tsx). The title
+    /// is short enough that the section template keeps the brand: "Free courses with certificates | Optimize All Academy".
+    /// </summary>
+    public const string AcademyTitle = "Free courses with certificates";
     public const string AcademyDescription =
         "Optimize All Academy: free, practical courses in sales, marketing, SEO and AI. Learn at your own pace and add a verified certificate to LinkedIn.";
 

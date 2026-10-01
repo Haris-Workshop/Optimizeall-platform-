@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { usePage } from './api';
+import { useOptionalPage } from './api';
 import { useAcademyOverview } from './academy';
 import { Blocks } from './Blocks';
 import { Section } from './components';
@@ -15,7 +15,7 @@ import { AcademyStats, Timeline } from './Showcase';
  * Renders nothing for a CMS page that doesn't exist.
  */
 export function AcademyHubExtras() {
-  const { data: page } = usePage('academy');
+  const { data: page } = useOptionalPage('academy');
   const academy = useAcademyOverview();
   const copy = useSiteCopy();
   const root = useRef<HTMLDivElement>(null);

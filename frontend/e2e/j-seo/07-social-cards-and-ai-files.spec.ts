@@ -45,7 +45,7 @@ test.describe('social cards, hreflang and the llms.txt academy guide', () => {
 
   test('llms.txt links the academy guide, which lists every lesson', async ({ request }) => {
     const llms = await (await request.get(`${BASE}/llms.txt`)).text();
-    expect(llms).toContain('## Academy (free courses)');
+    expect(llms).toContain('## Optimize All Academy (separate product: free courses)');
     expect(llms).toContain('/llms/academy.txt');
     const guide = await request.get(`${BASE}/llms/academy.txt`);
     expect(guide.status()).toBe(200);

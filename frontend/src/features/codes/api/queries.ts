@@ -34,17 +34,21 @@ export const ck = {
 
 export const invalidateCodes = (client: QueryClient) => client.invalidateQueries({ queryKey: ck.all });
 
-export function useCodePrograms(params: {
-  search?: string;
-  status?: string;
-  page: number;
-  pageSize: number;
-}) {
+export function useCodePrograms(
+  params: {
+    search?: string;
+    status?: string;
+    page: number;
+    pageSize: number;
+  },
+  enabled = true,
+) {
   return useQuery({
     queryKey: ck.programs(params),
     queryFn: ({ signal }) =>
       api.get<PagedResult<CodeProgramListItem>>('/admin/code-programs', { query: { ...params }, signal }),
     placeholderData: keepPreviousData,
+    enabled,
   });
 }
 

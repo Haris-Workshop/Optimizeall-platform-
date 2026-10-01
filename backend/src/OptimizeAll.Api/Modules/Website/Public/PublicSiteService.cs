@@ -254,11 +254,15 @@ public sealed class PublicSiteService(
         (await db.Set<TeamMember>().AsNoTracking().Where(m => m.IsPublished).OrderBy(m => m.SortOrder).ThenBy(m => m.Name).ToListAsync(ct))
             .Select(m => new PublicTeamMemberDto(m.Slug, m.Name, m.Role, m.Bio, m.PhotoUrl, m.Expertise, m.SocialLinks)).ToList();
 
-    public async Task<PublicPageDto> PageAsync(string slug, CancellationToken ct)
+    public async Task<PublicPageDto> PageAsync(string slug, CancellationToken ct) =>
+        await FindPageAsync(slug, ct) ?? throw CmsStore.NotFound<SitePage>();
+
+    /// <summary>The published page with this slug, or null.</summary>
+    public async Task<PublicPageDto?> FindPageAsync(string slug, CancellationToken ct)
     {
         var at = clock.GetUtcNow().UtcDateTime;
-        var p = await db.Set<SitePage>().AsNoTracking().FirstOrDefaultAsync(x => x.Slug == slug && x.IsPublished && (x.PublishAt == null || x.PublishAt <= at), ct)
-            ?? throw CmsStore.NotFound<SitePage>();
+        var p = await db.Set<SitePage>().AsNoTracking().FirstOrDefaultAsync(x => x.Slug == slug && x.IsPublished && (x.PublishAt == null || x.PublishAt <= at), ct);
+        if (p is null) return null;
         var blocks = PageBlockValidator.Parse(p.BlocksJson);
         var s = await SettingsAsync(ct);
         var cat = await CatalogAsync(ct);

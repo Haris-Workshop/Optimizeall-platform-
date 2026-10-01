@@ -57,7 +57,9 @@ export function CodeSalesTable({
   const [pageSize, setPageSize] = useState(25);
   const [selected, setSelected] = useState<string[]>([]);
   const [bulkResult, setBulkResult] = useState<BulkDecisionResult | null>(null);
-  const programs = useCodePrograms({ page: 1, pageSize: 100 });
+  // The program list needs codes.view; a reviewer with sales.review only works the queue without the program filter.
+  const showProgramFilter = !programId && canExport;
+  const programs = useCodePrograms({ page: 1, pageSize: 100 }, showProgramFilter);
   const params = {
     programId: programId ?? filters.program,
     status: filters.status,
@@ -191,7 +193,7 @@ export function CodeSalesTable({
               label: SOURCE_LABEL[k],
             })),
           },
-          ...(programId
+          ...(!showProgramFilter
             ? []
             : [
                 {

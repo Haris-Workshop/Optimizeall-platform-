@@ -55,6 +55,18 @@ public sealed class AgencyFirstWebsiteTests(ApiFactory api) : IClassFixture<ApiF
     }
 
     [Fact]
+    public async Task The_learn_hub_asks_for_the_legacy_academy_page_without_a_404_when_there_is_none()
+    {
+        // Fresh installs have no `academy` CMS page: the hub's optional lookup is a 204, the plain lookup still a 404.
+        var anon = api.Anonymous();
+        Assert.Equal(HttpStatusCode.NoContent, (await anon.GetAsync("/api/v1/public/pages/academy?optional=true")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await anon.GetAsync("/api/v1/public/pages/academy")).StatusCode);
+        // An existing page is returned either way.
+        var about = await (await anon.GetAsync("/api/v1/public/pages/about?optional=true")).ReadJsonAsync();
+        Assert.Equal("about", about.GetProperty("slug").GetString());
+    }
+
+    [Fact]
     public async Task Creators_faq_is_a_real_page_with_its_own_canonical_and_the_creators_title_template()
     {
         var (status, _, html) = await DocumentAsync("/creators/faq");

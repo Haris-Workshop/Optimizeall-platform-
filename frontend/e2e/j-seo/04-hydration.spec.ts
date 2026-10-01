@@ -55,12 +55,12 @@ test.describe('the app boots over the server-rendered HTML', () => {
     await expect.poll(async () => (await headCounts(page)).jsonLdTypes).toContain('Service');
     await page
       .getByRole('navigation', { name: 'Main' })
-      .getByRole('link', { name: 'Pricing', exact: true })
+      .getByRole('link', { name: 'Case studies', exact: true })
       .first()
       .click();
-    await expect(page).toHaveURL(/\/pricing$/);
-    await expect.poll(() => page.title()).toBe('Pricing: Marketing Packages & Retainers | Optimize All');
-    await expect.poll(async () => (await headCounts(page)).canonicalHref).toMatch(/\/pricing$/);
+    await expect(page).toHaveURL(/\/case-studies$/);
+    await expect.poll(() => page.title()).toBe('Case Studies: Measured Marketing Results | Optimize All');
+    await expect.poll(async () => (await headCounts(page)).canonicalHref).toMatch(/\/case-studies$/);
     const counts = await headCounts(page);
     expect(counts.jsonLdTypes).not.toContain('Service');
     expect(counts).toMatchObject({ description: 1, canonical: 1, robots: 1 });

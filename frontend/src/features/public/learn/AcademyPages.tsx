@@ -315,7 +315,7 @@ function LessonEnrolPrompt({ slug, lessonSlug }: { slug: string; lessonSlug: str
 
 // ---------------------------------------------------------------- /learn (the academy hub)
 
-export const ACADEMY_TITLE = 'Free courses with certificates — sales, marketing, SEO, AI';
+export const ACADEMY_TITLE = 'Free courses with certificates';
 export const ACADEMY_DESCRIPTION =
   'Optimize All Academy: free, practical courses in sales, marketing, SEO and AI. Learn at your own pace and add a verified certificate to LinkedIn.';
 

@@ -49,7 +49,7 @@ Contents: [Public site](#public-site) · [Public forms](#public-forms) · [SEO f
 | `GET /api/v1/public/case-studies?service=&industry=` · `/case-studies/{slug}` | Cards filtered by service and/or industry slug / detail with challenge, strategy, execution, metrics (each `measurement: Measured \| Estimated`), testimonial, gallery, JSON-LD. |
 | `GET /api/v1/public/testimonials` | Up to 50 published testimonials. |
 | `GET /api/v1/public/team` | Published team members. |
-| `GET /api/v1/public/pages/{slug}` | CMS page: `blocks` (see [Pages](#pages-sitemanage)), `kind` (`Standard \| Legal`), `updatedAt`, `seo`. |
+| `GET /api/v1/public/pages/{slug}` | CMS page: `blocks` (see [Pages](#pages-sitemanage)), `kind` (`Standard \| Legal`), `updatedAt`, `seo`. 404 when there is no published page; `?optional=true` answers 204 instead (the `/learn` hub's legacy `academy` blocks). |
 | `GET /api/v1/public/search?q=` | `{ query, services, posts, caseStudies }` (each hit `{ kind, slug, title, summary, url }`); fewer than 2 characters returns empty lists. |
 | `GET /api/v1/public/blog?page=&pageSize=&category=&tag=&search=` | `{ items: PostCard[], total, page, pageSize, categories (with postCount), tags }`. `pageSize` 1–50 (default 9). |
 | `GET /api/v1/public/blog/{slug}` | Post with sanitized `bodyMarkdown`, author, related posts, `seo`, `jsonLd` (BlogPosting + BreadcrumbList). |

@@ -39,12 +39,13 @@ test.describe.serial('direct enrol from the public course page', () => {
     await page.getByRole('button', { name: 'Enrol for free — start learning' }).first().click();
     await expect(page).toHaveURL(/\/register\?next=/);
     expect(new URL(page.url()).searchParams.get('next')).toBe(`/learn/${COURSE}?enrol=1`);
+    await expect(page.getByRole('heading', { name: 'Create your free learner account' })).toBeVisible();
 
     await page.getByLabel('Email', { exact: true }).fill(visitor.email);
     await page.getByLabel('Password', { exact: true }).fill(visitor.password);
     await page.getByLabel('Display name').fill(visitor.displayName);
     await page.getByLabel('Country').selectOption('GB');
-    await page.getByRole('checkbox', { name: /accept the participant rules/i }).check();
+    await page.getByRole('checkbox', { name: /accept the terms and privacy policy/i }).check();
     await page.getByRole('button', { name: 'Create account' }).click();
 
     await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible();

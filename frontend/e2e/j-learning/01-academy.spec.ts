@@ -26,7 +26,7 @@ test('anonymous visitors browse the academy, read a lesson and try its knowledge
   // The syllabus lists every lesson; open the first one.
   await page.getByRole('link', { name: lessons[0]!.title }).click();
   await expect(page.getByRole('heading', { level: 1, name: lessons[0]!.title })).toBeVisible();
-  await expect(page.getByText('Enrol for free to track progress, take the exam and earn your certificate')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Enrol for free to save your progress' })).toBeVisible();
 
   // Knowledge check: feedback in the browser, no account needed.
   const check = lessons[0]!.knowledgeCheck[0]!;
@@ -47,7 +47,10 @@ test('anonymous visitors browse the academy, read a lesson and try its knowledge
   expect(await axeViolations(page)).toEqual([]);
 
   // Exams need an account.
-  await page.getByRole('button', { name: 'Create a free account' }).first().click();
+  await page
+    .getByRole('region', { name: 'Enrol for free to save your progress' })
+    .getByRole('button', { name: 'Enrol for free' })
+    .click();
   await expect(page).toHaveURL(/\/register\?next=/);
   expect(pack.badge.name).toBeTruthy();
   errors.expectClean('academy');

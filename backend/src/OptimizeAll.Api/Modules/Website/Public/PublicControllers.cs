@@ -56,8 +56,16 @@ public sealed class PublicWebsiteController(PublicSiteService site, AppDbContext
     [HttpGet("team")]
     public Task<IReadOnlyList<PublicTeamMemberDto>> Team(CancellationToken ct) => site.TeamAsync(ct);
 
+    /// <summary>
+    /// A published CMS page (404 when there is none). <c>optional=true</c> answers 204 instead, for a page the web app shows
+    /// only when it exists (the blocks of a legacy <c>academy</c> page at the bottom of the /learn hub).
+    /// </summary>
     [HttpGet("pages/{slug}")]
-    public Task<PublicPageDto> Page(string slug, CancellationToken ct) => site.PageAsync(slug, ct);
+    public async Task<ActionResult<PublicPageDto>> Page(string slug, [FromQuery] bool optional, CancellationToken ct)
+    {
+        if (!optional) return await site.PageAsync(slug, ct);
+        return await site.FindPageAsync(slug, ct) is { } page ? page : NoContent();
+    }
 
     /// <summary>Search across published services, blog posts and case studies (min. 2 characters).</summary>
     [HttpGet("search")]

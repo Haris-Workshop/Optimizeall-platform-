@@ -138,11 +138,15 @@ export async function withToken<T>(token: string, method: string, path: string, 
   return json as T;
 }
 
-/** Locations listed in the public sitemap (paths only). */
+/** Locations listed in the public sitemap (path and query, without the origin). */
 export async function sitemapPaths(): Promise<string[]> {
   const res = await anonGet('/api/v1/public/sitemap.xml');
   expect(res.status).toBe(200);
-  return [...res.text.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname);
+  return [...res.text.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => {
+    // Path and query: blog topics (/blog?category=…) are self-canonical archive pages of their own.
+    const url = new URL(m[1]!);
+    return url.pathname + url.search;
+  });
 }
 
 /** An uploadable PNG (400×400 by default) as a multipart form with a `file` part. */

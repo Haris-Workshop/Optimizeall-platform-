@@ -453,6 +453,17 @@ export const usePage = (slug: string, enabled = true) =>
     enabled,
   });
 
+/**
+ * A CMS page shown only when it exists: null (a 204 from `?optional=true`) instead of a 404 for a page that was never
+ * created — e.g. the legacy `academy` page whose blocks close the /learn hub, which fresh installs don't have.
+ */
+export const useOptionalPage = (slug: string) =>
+  useQuery({
+    queryKey: [...publicKeys.page(slug), 'optional'] as const,
+    queryFn: async () =>
+      (await api.get<PublicPage | undefined>(`/public/pages/${encodeURIComponent(slug)}`, { query: { optional: true } })) ?? null,
+  });
+
 export const useBlog = (params: { page: number; category?: string; tag?: string; search?: string }) =>
   useQuery({
     queryKey: publicKeys.blog(params),

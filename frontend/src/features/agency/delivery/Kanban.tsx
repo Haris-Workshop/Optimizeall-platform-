@@ -140,6 +140,8 @@ export function Kanban({ projectId, tasks, onOpen, canEdit }: Props) {
     const column = columnOf(all, status).filter((t) => t.id !== task.id);
     const at = index === undefined ? column.length : Math.max(0, Math.min(index, column.length));
     saving.current = true;
+    // A board refetch still in flight was read before this move: it must not land afterwards with the old stamp.
+    void qc.cancelQueries({ queryKey: dk.tasks(projectId) });
     move.mutate({ task, status, afterTaskId: at === 0 ? null : column[at - 1]!.id });
   };
 
@@ -163,7 +165,11 @@ export function Kanban({ projectId, tasks, onOpen, canEdit }: Props) {
       queued.current.push({ taskId: task.id, key: e.key });
       return;
     }
-    if (applyKey(e.key, task, tasks)) e.preventDefault();
+    // The saved task, not this render's copy: a key pressed right after a save (before the re-render) needs the new
+    // concurrency stamp and column.
+    const latest = qc.getQueryData<TaskSummary[]>(dk.tasks(projectId))?.find((t) => t.id === task.id) ?? task;
+    const all = tasks.map((t) => (t.id === latest.id ? latest : t));
+    if (applyKey(e.key, latest, all)) e.preventDefault();
   };
 
   const onDrop = (e: DragEvent, status: TaskStatus) => {

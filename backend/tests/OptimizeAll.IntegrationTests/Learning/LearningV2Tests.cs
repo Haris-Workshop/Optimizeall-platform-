@@ -25,7 +25,7 @@ public sealed class LearningV2Tests(ApiFactory api) : IClassFixture<ApiFactory>
     /// <summary>The sample pack as a v2 pack under a new slug; the first lesson's lecture is produced (has a video).</summary>
     private static CoursePack V2Pack(string slug)
     {
-        var p = LearningHelpers.Pack.Clone();
+        var p = SamplePacks.V1();
         p.Slug = slug;
         p.LastReviewed = "2026-09";
         p.Tools = new() { "Claude", "n8n" };

@@ -5,7 +5,7 @@ namespace OptimizeAll.UnitTests.Learning;
 
 public sealed class ExamEngineTests
 {
-    private static CoursePack Pack => CoursePackLibrary.All.Single(f => f.FileName == "platform-getting-started.json").Pack!;
+    private static CoursePack Pack => SamplePacks.V1();
 
     [Fact]
     public void Draw_takes_distinct_questions_covers_every_module_and_shuffles_options()

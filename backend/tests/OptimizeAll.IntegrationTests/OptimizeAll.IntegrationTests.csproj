@@ -35,4 +35,10 @@
     <ProjectReference Include="..\..\src\OptimizeAll.Api\OptimizeAll.Api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- A frozen v1 course pack (the original "platform-getting-started"): validator, exam engine and v1 authoring tests
+         use it, so they do not depend on the live catalog's content. -->
+    <None Include="..\Fixtures\Learning\sample-pack-v1.json" Link="Fixtures\Learning\sample-pack-v1.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

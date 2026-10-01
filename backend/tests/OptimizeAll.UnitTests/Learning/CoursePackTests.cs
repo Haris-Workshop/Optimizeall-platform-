@@ -55,7 +55,7 @@ public sealed class CoursePackTests
 
     // ---------------------------------------------------------------- the validator itself
 
-    private static CoursePack Sample() => File("platform-getting-started.json").Pack!.Clone();
+    private static CoursePack Sample() => SamplePacks.V1();
 
     private static void AssertIssue(CoursePack pack, string path, PackValidationMode mode = PackValidationMode.Strict) =>
         Assert.Contains(CoursePackValidator.Validate(pack, mode), i => i.Path == path);

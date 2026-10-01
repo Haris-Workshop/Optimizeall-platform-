@@ -91,7 +91,7 @@ public sealed class LearningTests(ApiFactory api) : IClassFixture<ApiFactory>
     [Fact]
     public async Task A_higher_pack_version_is_published_unless_staff_published_an_edit()
     {
-        var pack = LearningHelpers.Pack.Clone();
+        var pack = SamplePacks.V1();
         pack.Slug = "upsert-" + Guid.NewGuid().ToString("N")[..8];
         async Task<int> Upsert(CoursePack p)
         {
@@ -146,11 +146,14 @@ public sealed class LearningTests(ApiFactory api) : IClassFixture<ApiFactory>
             Assert.DoesNotContain(q.Explanation, courseText);
 
         var lessons = await LearningHelpers.LessonSlugsAsync(anon);
-        var lesson = await (await anon.GetAsync($"/api/v1/public/learning/courses/{Slug}/lessons/{lessons[1]}")).ReadJsonAsync();
+        var videoSlug = LearningHelpers.Pack.AllLessons.First(x => x.Lesson.TypeValue == LessonType.Video).Lesson.Slug;
+        var videoIndex = lessons.IndexOf(videoSlug);
+        Assert.True(videoIndex > 0, "the sample course has a video lesson after its first lesson");
+        var lesson = await (await anon.GetAsync($"/api/v1/public/learning/courses/{Slug}/lessons/{videoSlug}")).ReadJsonAsync();
         Assert.Equal("Video", lesson.GetProperty("type").GetString());
         Assert.True(lesson.GetProperty("video").GetProperty("src").ValueKind == JsonValueKind.Null);
         Assert.NotEmpty(lesson.GetProperty("knowledgeCheck").EnumerateArray());
-        Assert.Equal(lessons[0], lesson.GetProperty("previous").GetProperty("slug").GetString());
+        Assert.Equal(lessons[videoIndex - 1], lesson.GetProperty("previous").GetProperty("slug").GetString());
 
         var badge = await anon.GetAsync($"/api/v1/public/learning/courses/{Slug}/badge.svg");
         Assert.Equal(HttpStatusCode.OK, badge.StatusCode);
@@ -220,9 +223,10 @@ public sealed class LearningTests(ApiFactory api) : IClassFixture<ApiFactory>
         // Answers never leave the server before submission.
         Assert.All(attempt.GetProperty("questions").EnumerateArray(), q => Assert.Equal(JsonValueKind.Null, q.GetProperty("review").ValueKind));
         foreach (var q in LearningHelpers.Pack.FinalExam!.Pool!) Assert.DoesNotContain(q.Explanation, attemptText);
-        Assert.Equal(10, attempt.GetProperty("questions").GetArrayLength());
-        Assert.Equal(10, attempt.GetProperty("questions").EnumerateArray().Select(q => q.GetProperty("id").GetString()).Distinct().Count());
-        Assert.InRange(attempt.GetProperty("secondsRemaining").GetInt32(), 890, 900);
+        var exam = LearningHelpers.Pack.FinalExam!;
+        Assert.Equal(exam.QuestionCount, attempt.GetProperty("questions").GetArrayLength());
+        Assert.Equal(exam.QuestionCount, attempt.GetProperty("questions").EnumerateArray().Select(q => q.GetProperty("id").GetString()).Distinct().Count());
+        Assert.InRange(attempt.GetProperty("secondsRemaining").GetInt32(), exam.TimeLimitMinutes * 60 - 10, exam.TimeLimitMinutes * 60);
 
         // One attempt at a time.
         await (await client.PostAsync($"/api/v1/me/learning/courses/{Slug}/exam/attempts", null)).ShouldFailAsync(409, "learning.attempt_in_progress");
@@ -418,7 +422,7 @@ public sealed class LearningTests(ApiFactory api) : IClassFixture<ApiFactory>
             new { userId = Guid.NewGuid(), courseId = Guid.NewGuid(), reason = "Because", confirm = true })).ShouldFailAsync(403);
 
         // Validation uses the pack contract (identical MCQ rules).
-        var bad = LearningHelpers.Pack.Clone();
+        var bad = SamplePacks.V1();
         bad.Slug = "admin-" + Guid.NewGuid().ToString("N")[..8];
         bad.FinalExam!.Pool![0].Correct = new List<int> { 0, 1 };
         bad.FinalExam.Pool[1].Options!.Add("All of the above");
@@ -432,7 +436,7 @@ public sealed class LearningTests(ApiFactory api) : IClassFixture<ApiFactory>
             .ShouldFailAsync(400, "learning.invalid_course");
 
         // Create (draft) → not public → publish → public.
-        var good = LearningHelpers.Pack.Clone();
+        var good = SamplePacks.V1();
         good.Slug = bad.Slug;
         good.Title = "Staff-authored course";
         var created = await manager.PostAsJsonAsync("/api/v1/admin/learning/courses", new { document = JsonDocument.Parse(good.ToJson()).RootElement });
@@ -473,7 +477,7 @@ public sealed class LearningTests(ApiFactory api) : IClassFixture<ApiFactory>
         await LearningHelpers.SubmitAsync(learner, await LearningHelpers.StartAsync(learner), pass: true);
         var starter = await api.WithDbAsync(db => db.Set<Course>().Where(c => c.Slug == Slug).Select(c => c.Id).SingleAsync());
         var questions = await (await manager.GetAsync($"/api/v1/admin/learning/courses/{starter}/questions")).ReadJsonAsync();
-        Assert.Equal(15, questions.GetArrayLength());
+        Assert.Equal(LearningHelpers.Pack.FinalExam!.Pool!.Count, questions.GetArrayLength()); // every pool question is listed
         Assert.Contains(questions.EnumerateArray(), q => q.GetProperty("answered").GetInt32() > 0 && q.GetProperty("percentCorrect").GetInt32() == 100);
         var learners = await (await manager.GetAsync($"/api/v1/admin/learning/courses/{starter}/learners?passed=true")).ReadJsonAsync();
         Assert.True(learners.GetProperty("total").GetInt32() >= 1);

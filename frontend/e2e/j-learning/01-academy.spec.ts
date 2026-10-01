@@ -41,9 +41,9 @@ test('anonymous visitors browse the academy, read a lesson and try its knowledge
   await group.getByRole('button', { name: 'Check answer' }).click();
   await expect(group.getByText('Correct', { exact: true })).toBeVisible();
 
-  // The video lesson shows the "video coming soon" note until the video is produced.
+  // A lesson whose video lecture is not produced yet shows the scripted lecture as "in production" (chapters, transcript).
   await page.getByRole('link', { name: new RegExp(lessons[1]!.title) }).first().click();
-  await expect(page.getByText('Video coming soon')).toBeVisible();
+  await expect(page.getByText('The narrated lecture is in production')).toBeVisible();
   expect(await axeViolations(page)).toEqual([]);
 
   // Exams need an account.

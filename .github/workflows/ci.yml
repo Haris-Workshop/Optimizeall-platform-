@@ -24,7 +24,8 @@ jobs:
   backend:
     name: Backend (build + unit + integration, ${{ matrix.provider }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The MySQL integration suite alone takes ~27 min (each test class creates its own database).
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       matrix:

@@ -32,7 +32,11 @@ jobs:
       run: dotnet restore OptimizeAll.sln
     - name: Build
       run: dotnet build OptimizeAll.sln --no-restore
-    - name: Test
-      run: dotnet test OptimizeAll.sln --no-build --verbosity normal
+    # The test projects run one after another: in parallel the integration hosts and the unit tests compete for the
+    # runner's memory, and integration requests then fail at random with transport errors.
+    - name: Unit tests
+      run: dotnet test tests/OptimizeAll.UnitTests --no-build --verbosity normal
+    - name: Integration tests
+      run: dotnet test tests/OptimizeAll.IntegrationTests --no-build --verbosity normal
       env:
         OPTIMIZEALL_TEST_PROVIDER: Sqlite

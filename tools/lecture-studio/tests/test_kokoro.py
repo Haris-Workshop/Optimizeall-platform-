@@ -75,8 +75,9 @@ class KokoroPlanTests(unittest.TestCase):
         self.assertEqual(cfg.kokoro_voice("anything")["id"], "kokoro:am_adam")
         with self.assertRaises(ValueError):
             self.cfg(kokoro_voices={}).kokoro_voice("marketing")
-        self.assertEqual(self.cfg().kokoro_voice("sales")["id"], "kokoro:bm_george")
-        self.assertEqual(self.cfg().kokoro_voice("ai")["id"], "kokoro:am_michael")
+        for category in ("sales", "ai", "marketing", None):  # one academy narrator unless a category is overridden
+            self.assertEqual(self.cfg().kokoro_voice(category)["id"], "kokoro:af_heart")
+        self.assertEqual(self.cfg(kokoro_voices={"sales": "bm_george", "*": "af_heart"}).kokoro_voice("sales")["id"], "kokoro:bm_george")
 
     def test_the_default_voices_are_real_kokoro_voices(self):
         self.assertTrue(set(kk.DEFAULT_VOICES.values()) <= set(kk.ENGLISH_VOICES))

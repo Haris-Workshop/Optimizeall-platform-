@@ -166,20 +166,12 @@ model but more synthetic than ElevenLabs or Chatterbox.
 **Configure** `studio.config.json` (or `--engine kokoro` / `LECTURE_STUDIO_TTS_ENGINE=kokoro`):
 
 ```json
-{ "tts_engine": "kokoro", "kokoro_voices": { "sales": "bm_george", "*": "am_michael" } }
+{ "tts_engine": "kokoro", "kokoro_voices": { "sales": "bm_george", "*": "af_heart" } }
 ```
 
-Default voices by category: `ai`, `data`, `platform` → `am_michael` (US male); `marketing`, `seo`, `design` → `af_heart`
-(US female); `sales`, `business` → `bm_george` (British male). Any of the voices in `kokoro_tts.ENGLISH_VOICES` works.
-
-**Expressive delivery (default):** Kokoro has no emotion controls, so `kokoro_style: "expressive"` shapes the read itself
-(`studio/delivery.py`). Each scene gets a profile from its template (title welcoming, key idea weighty, code precise, case
-studies conversational, recap warm and unhurried). Each sentence is paced by what it is: a question is asked slightly slower and
-followed by a beat, a very short sentence gets room, an exclamation lifts, a colon holds before what follows, a very long
-sentence keeps its momentum, the first settles in and the last lands. A small seeded variation stops the rhythm repeating.
-`kokoro_master: true` (default) adds light mastering to every scene (warmth, presence, sibilance control, gentle compression,
-peak limiting). A voice may be a blend, e.g. `"ai": "am_michael:0.6+am_fenrir:0.4"`, for a richer timbre than either alone.
-`kokoro_style: "plain"` gives the earlier flat read. Style and mastering are part of the cache key, so changing them re-narrates.
+Default voice: `af_heart` for every category, Kokoro's top-rated voice, so the whole academy has one consistent narrator.
+Override a category with `kokoro_voices` (for example `{"sales": "bm_george"}`), or give a blend:
+`"ai": "af_heart:0.7+af_bella:0.3"`. Any voice in `kokoro_tts.ENGLISH_VOICES` works.
 
 **Tuning:** `kokoro_speed` is 1.0, `kokoro_language` is `en-us` (`en-gb` for British), `kokoro_chunk_chars` is 280 and
 `kokoro_pause_seconds` is 0.2.

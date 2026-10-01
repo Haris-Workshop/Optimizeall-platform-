@@ -39,14 +39,10 @@ ENGLISH_VOICES = (
     "am_santa", "bf_alice", "bf_emma", "bf_isabella", "bf_lily", "bm_daniel", "bm_fable", "bm_george", "bm_lewis",
 )
 
-# Category -> voice, as chosen by listening to samples: a US male for the technical courses, a US female for the
-# marketing-side courses and a British male for sales and business.
-DEFAULT_VOICES = {
-    "ai": "am_michael", "data": "am_michael", "platform": "am_michael",
-    "marketing": "af_heart", "seo": "af_heart", "design": "af_heart",
-    "sales": "bm_george", "business": "bm_george",
-    "*": "am_michael",
-}
+# One narrator for the whole academy: af_heart is Kokoro's top-rated voice (grade A in its published voice table; the male
+# voices grade around C+), and a single consistent voice is also a stronger brand. Override per course category with
+# kokoro_voices, e.g. {"sales": "bm_george"} or a blend such as "af_heart:0.7+af_bella:0.3"; "*" covers every other category.
+DEFAULT_VOICES = {"*": "af_heart"}
 
 
 class KokoroError(ChatterboxError):

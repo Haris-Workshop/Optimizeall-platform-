@@ -24,7 +24,7 @@ test.describe.serial('participant lifecycle on a phone', () => {
   const fits = (where: string) => expectNoHorizontalScroll(page, where);
 
   test('registers, verifies and signs in', async () => {
-    await page.goto('/register');
+    await page.goto('/register?audience=creator');
     await fits('register');
     await page.getByLabel('Email', { exact: true }).fill(me().email);
     await page.getByLabel('Password', { exact: true }).fill(me().password);

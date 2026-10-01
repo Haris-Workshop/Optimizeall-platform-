@@ -88,7 +88,7 @@ test.describe.serial('admin journey', () => {
     // signs them out to the login page (keeping where they were going) and tells them their session ended.
     await pat.getByRole('link', { name: 'Referrals' }).first().click();
     await expect(pat).toHaveURL(/\/login\?expired=1&next=%2Fapp%2Freferrals$/);
-    await expect(pat.getByRole('heading', { level: 1, name: 'Welcome back' })).toBeVisible();
+    await expect(pat.getByRole('heading', { level: 1, name: 'Sign in' })).toBeVisible();
     await expect(pat.getByText('Your session has expired')).toBeVisible();
     // Signed out for real: the portal is no longer reachable without signing in (an ordinary redirect now).
     await pat.goto('/app');

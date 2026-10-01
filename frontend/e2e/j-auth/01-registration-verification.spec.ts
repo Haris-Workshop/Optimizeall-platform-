@@ -35,7 +35,7 @@ test.describe.serial('registration and email verification', () => {
     page.on('request', (r) => {
       if (r.url().endsWith('/api/v1/auth/register')) registrations.push(r.url());
     });
-    await page.goto('/register');
+    await page.goto('/register?audience=creator');
     await field('Email').fill(user().email);
     await field('Display name').fill(user().displayName);
     await field('Country').selectOption('GB');
@@ -96,7 +96,7 @@ test.describe.serial('registration and email verification', () => {
 
   test('registers through the form and lands on "Check your email"', async () => {
     const errors = watchErrors(page);
-    await page.goto('/register');
+    await page.goto('/register?audience=creator');
     await field('Email').fill(`  ${user().email.toUpperCase()}  `);
     await field('Password').fill(user().password);
     await field('Display name').fill(user().displayName);

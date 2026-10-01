@@ -23,8 +23,8 @@ test.describe.serial('participant onboarding', () => {
   const field = (label: string) => page.getByLabel(label, { exact: true });
 
   test('registration validates on the client and focuses the first problem', async () => {
-    await page.goto('/register');
-    await expect(page.getByRole('heading', { level: 1, name: 'Create your account' })).toBeVisible();
+    await page.goto('/register?audience=creator');
+    await expect(page.getByRole('heading', { level: 1, name: 'Create your creator account' })).toBeVisible();
     await page.getByRole('button', { name: 'Create account' }).click();
 
     await expect(field('Email')).toBeFocused();
@@ -75,7 +75,7 @@ test.describe.serial('participant onboarding', () => {
   });
 
   test('registering the same email again looks the same but only notifies the owner', async () => {
-    await page.goto('/register');
+    await page.goto('/register?audience=creator');
     await field('Email').fill(pat().email.toUpperCase());
     await field('Password').fill('Another-Pass#2026!');
     await field('Display name').fill('Impostor');

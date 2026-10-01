@@ -1,0 +1,4 @@
+# Optional: the free CPU narration engine (`narrate kokoro`, tts_engine = "kokoro").
+# kokoro-onnx runs the Kokoro-82M model (Apache-2.0) through ONNX Runtime: no GPU, no torch, no per-character cost.
+# The ~350 MB model files download on first use (SHA-256 verified) into <work_dir>/models/kokoro.
+kokoro-onnx==0.6.1

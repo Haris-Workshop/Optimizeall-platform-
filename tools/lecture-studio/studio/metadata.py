@@ -10,7 +10,8 @@ DESC_MAX = 5000
 TAGS_MAX_CHARS = 480  # YouTube allows 500 incl. separators; keep margin
 
 
-VOICE_ENGINES = {"elevenlabs": "ElevenLabs", "chatterbox": "Chatterbox by Resemble AI"}
+VOICE_ENGINES = {"elevenlabs": "ElevenLabs", "chatterbox": "Chatterbox by Resemble AI",
+                 "kokoro": "Kokoro open-source TTS"}
 
 
 def fmt_chapter(seconds: float) -> str:

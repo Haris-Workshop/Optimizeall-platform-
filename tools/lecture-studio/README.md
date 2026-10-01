@@ -33,6 +33,7 @@ building with a fake HTTP layer, narration cache/ingest — no network, no credi
 | `python3 -m studio render <key> --preview` | **Free design preview**: review stills from estimated timings, before any TTS spend. |
 | `python3 -m studio narrate requests <key>` | JSON list of scenes that still need audio (text to send, voice, model, character count). |
 | `python3 -m studio narrate chatterbox <key>` | Narrates every uncached scene locally with Chatterbox Multilingual v3 (needs `tts_engine: "chatterbox"`; see below). |
+| `python3 -m studio narrate kokoro <key>` | Narrates every uncached scene on the CPU with Kokoro-82M (needs `tts_engine: "kokoro"`; free, see below). |
 | `python3 -m studio narrate ingest <key> --scene s03 --url <signed url> --credits 482.95` | Downloads one generated clip (only `https://storage.googleapis.com`) into the cache. `ingest-batch --file f.json` does many. |
 | `python3 -m studio narrate api <key>` | Unattended alternative: ElevenLabs REST (`ELEVENLABS_API_KEY`), with character timestamps. |
 | `python3 -m studio narrate collect <key>` / `ledger` | Durations + credits per lecture / totals across the cache. |
@@ -151,6 +152,39 @@ You can also set the engine with `--engine chatterbox` or `LECTURE_STUDIO_TTS_EN
 
 **Quality:** listen to the first lecture of each voice before batch runs. Chatterbox does not return character timings, so
 sentence timing falls back to silence detection, the same as the ElevenLabs MCP flow.
+
+## Narration with Kokoro (free, runs on a plain CPU)
+
+[Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) (Apache-2.0) is a small open-source TTS model. It runs faster than
+real time on an ordinary CPU through ONNX Runtime, so a laptop or a cloud VM without a GPU can narrate the whole catalogue
+at no per-character cost. It has 28 built-in English voices and **no voice cloning**; its sound is clearly good for a free
+model but more synthetic than ElevenLabs or Chatterbox.
+
+**Setup** (once): `pip install -r requirements-kokoro.txt`. The ~350 MB model files download on first use into
+`<work_dir>/models/kokoro` (override with `kokoro_model_dir`) and are checked against pinned SHA-256 hashes.
+
+**Configure** `studio.config.json` (or `--engine kokoro` / `LECTURE_STUDIO_TTS_ENGINE=kokoro`):
+
+```json
+{ "tts_engine": "kokoro", "kokoro_voices": { "sales": "bm_george", "*": "am_michael" } }
+```
+
+Default voices by category: `ai`, `data`, `platform` → `am_michael` (US male); `marketing`, `seo`, `design` → `af_heart`
+(US female); `sales`, `business` → `bm_george` (British male). Any of the voices in `kokoro_tts.ENGLISH_VOICES` works.
+
+**Tuning:** `kokoro_speed` is 1.0, `kokoro_language` is `en-us` (`en-gb` for British), `kokoro_chunk_chars` is 280 and
+`kokoro_pause_seconds` is 0.2.
+
+**Run:** `python3 -m studio narrate kokoro <course>/<lesson>` (`--dry-run` lists the chunks without loading the model), or
+`run --all-v2 --stream`, which loads the model once for the whole batch. Scenes are chunked at sentence boundaries, every
+chunk's length is checked against its words, and the WAVs go into the same content-addressed cache; the voice, speed and
+language are part of the cache key. YouTube descriptions say "Narration uses an AI voice (Kokoro open-source TTS)".
+
+**Measured** on a 4-core container: a 7.8-minute lecture (12 scenes, 6,939 characters) narrated in 2 min 43 s, about 2.9× real time.
+
+**Troubleshooting:** if phonemizing fails with `Error processing file '.../espeak-ng-data/phontab'`, the bundled espeak
+library is looking for its data in its build directory. Link that path to the installed `espeakng_loader/espeak-ng-data`
+folder (the exact path is in the error message).
 
 ## Costs and throughput (measured in the pilot, 2026-09-25)
 

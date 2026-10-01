@@ -199,6 +199,9 @@ def build_plan(ref: LectureRef, cfg: Config) -> dict:
     if cfg.tts_engine == "chatterbox":
         voice_info = cfg.chatterbox_voice(pack.get("category"))
         model = cfg.chatterbox_settings().signature()
+    elif cfg.tts_engine == "kokoro":
+        voice_info = cfg.kokoro_voice(pack.get("category"))
+        model = cfg.kokoro_settings().signature()
     else:
         vid = cfg.voice_for(pack.get("category"))
         voice_info = {"id": vid, "name": VOICE_NAMES.get(vid, vid)}

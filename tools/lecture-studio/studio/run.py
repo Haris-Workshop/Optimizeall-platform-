@@ -79,7 +79,8 @@ def run_batch(cfg: Config, args, lectures: list[str]) -> dict:
                 missing_chars = sum(r["chars"] for r in missing)
                 summary["missingCharacters"] += missing_chars
                 if args.dry_run:
-                    unit = "chars of local Chatterbox audio" if plan.get("engine") == "chatterbox" else "chars ≈ credits"
+                    unit = {"chatterbox": "chars of local Chatterbox audio", "kokoro": "chars of local Kokoro audio"}.get(
+                        plan.get("engine"), "chars ≈ credits")
                     log(cfg, {"event": "would-narrate", "key": key, "detail": f"{missing_chars} {unit}"})
                     continue
                 if plan.get("engine") == "chatterbox":
@@ -88,6 +89,12 @@ def run_batch(cfg: Config, args, lectures: list[str]) -> dict:
 
                         synth = ChatterboxSynthesizer(cfg.chatterbox_settings())
                     narrate.synthesize_chatterbox(cfg, plan, synth=synth)
+                elif plan.get("engine") == "kokoro":
+                    if synth is None:  # one model load for the whole batch
+                        from .kokoro_tts import KokoroSynthesizer
+
+                        synth = KokoroSynthesizer(cfg.kokoro_settings(), cfg.kokoro_models)
+                    narrate.synthesize_kokoro(cfg, plan, synth=synth)
                 elif args.narrate_backend == "api":
                     narrate.synthesize_api(cfg, plan)
                 else:

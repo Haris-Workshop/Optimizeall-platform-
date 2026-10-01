@@ -29,6 +29,12 @@ DEFAULT_VOICES = {
 VOICE_NAMES = {VOICE_JACOB: "Jacob L.", VOICE_VANESSA: "Vanessa", VOICE_DANIEL: "Daniel"}
 
 
+def _kokoro_default_voices() -> dict:
+    from .kokoro_tts import DEFAULT_VOICES as kokoro_voices  # light: no model libraries are imported here
+
+    return kokoro_voices
+
+
 def _default_catalog() -> Path:
     env = os.environ.get("LECTURE_STUDIO_CATALOG")
     if env:
@@ -70,7 +76,8 @@ class Config:
     youtube_privacy: str = "unlisted"
     youtube_category_id: str = "27"  # Education
     youtube_language: str = "en"
-    # Narration engine: "elevenlabs" (MCP flow or REST API) or "chatterbox" (Chatterbox Multilingual, local model).
+    # Narration engine: "elevenlabs" (MCP flow or REST API), "chatterbox" (Chatterbox Multilingual, local GPU model) or
+    # "kokoro" (Kokoro-82M, free, runs on a plain CPU).
     tts_engine: str = field(default_factory=lambda: os.environ.get("LECTURE_STUDIO_TTS_ENGINE", "elevenlabs"))
     chatterbox_model: str = "v3"
     chatterbox_language: str = "en"
@@ -83,6 +90,13 @@ class Config:
     # Reference recording per course category (a clean 10-30 s WAV of a voice you have the rights to). Categories
     # without one use the model's built-in default voice.
     chatterbox_voices: dict = field(default_factory=dict)
+    kokoro_language: str = "en-us"
+    kokoro_speed: float = 1.0
+    kokoro_chunk_chars: int = 280
+    kokoro_pause_seconds: float = 0.2
+    kokoro_model_dir: Path | None = None  # default: <work_dir>/models/kokoro (the ~350 MB model files download there)
+    # Built-in Kokoro voice per course category ("*" = any other); see kokoro_tts.ENGLISH_VOICES.
+    kokoro_voices: dict = field(default_factory=lambda: dict(_kokoro_default_voices()))
 
     @property
     def cache_dir(self) -> Path:
@@ -116,6 +130,23 @@ class Config:
             raise FileNotFoundError(f"Chatterbox reference voice not found: {path}")
         return {"id": f"chatterbox:{file_sha(path)[:16]}", "name": path.stem, "ref": str(path)}
 
+    def kokoro_settings(self):
+        from .kokoro_tts import Settings
+
+        return Settings(language=self.kokoro_language, speed=float(self.kokoro_speed),
+                        chunk_chars=int(self.kokoro_chunk_chars), pause_seconds=float(self.kokoro_pause_seconds))
+
+    @property
+    def kokoro_models(self) -> Path:
+        return self.kokoro_model_dir or self.work_dir / "models" / "kokoro"
+
+    def kokoro_voice(self, category: str | None) -> dict:
+        """{id, name, ref} for a category; the voice name is part of the id, so changing it never reuses cached audio."""
+        voice = self.kokoro_voices.get((category or "").lower()) or self.kokoro_voices.get("*")
+        if not voice:
+            raise ValueError(f"no Kokoro voice configured for category {category!r} (and no '*' fallback)")
+        return {"id": f"kokoro:{voice}", "name": f"Kokoro {voice}", "ref": None}
+
     def lesson_url(self, course: str, lesson: str) -> str:
         return f"{self.site_base_url.rstrip('/')}/learn/{course}/{lesson}"
 
@@ -130,7 +161,7 @@ class Config:
                     continue
                 if not hasattr(cfg, key):
                     raise ValueError(f"unknown config key {key!r} in {p}")
-                if key in ("catalog_dir", "work_dir", "node_modules"):
+                if key in ("catalog_dir", "work_dir", "node_modules", "kokoro_model_dir"):
                     value = (p.parent / value).resolve() if not os.path.isabs(value) else Path(value)
                 if key == "chatterbox_voices":
                     value = {k.lower(): str((p.parent / v).resolve()) if not os.path.isabs(v) else v for k, v in value.items()}
@@ -139,8 +170,8 @@ class Config:
             cfg.site_base_url = os.environ["LECTURE_STUDIO_SITE"]
         if os.environ.get("LECTURE_STUDIO_TTS_ENGINE"):
             cfg.tts_engine = os.environ["LECTURE_STUDIO_TTS_ENGINE"]
-        if cfg.tts_engine not in ("elevenlabs", "chatterbox"):
-            raise ValueError(f"tts_engine must be 'elevenlabs' or 'chatterbox', not {cfg.tts_engine!r}")
+        if cfg.tts_engine not in ("elevenlabs", "chatterbox", "kokoro"):
+            raise ValueError(f"tts_engine must be 'elevenlabs', 'chatterbox' or 'kokoro', not {cfg.tts_engine!r}")
         if os.environ.get("LECTURE_STUDIO_WORK"):
             cfg.work_dir = Path(os.environ["LECTURE_STUDIO_WORK"])
         return cfg

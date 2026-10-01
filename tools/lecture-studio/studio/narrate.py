@@ -10,6 +10,8 @@ Two backends produce the same cache entries (cache/tts/<sha256(voice+model+text)
   environment (``/v1/text-to-speech/{voice}/with-timestamps``), which also returns character timings.
 * ``chatterbox``: Chatterbox Multilingual (v3 by default) running locally (see chatterbox_tts.py); no credits, no
   network after the one-time weight download. Needs a plan built with ``tts_engine = "chatterbox"``.
+* ``kokoro``: Kokoro-82M running on a plain CPU (see kokoro_tts.py); free, built-in voices only. Needs a plan built
+  with ``tts_engine = "kokoro"``.
 """
 from __future__ import annotations
 
@@ -60,7 +62,7 @@ def status(cfg: Config, plan: dict) -> list[dict]:
 def requests_for_agent(cfg: Config, plan: dict) -> dict:
     """What the agent must send to creative_generate_speech (only uncached scenes)."""
     if plan.get("engine", "elevenlabs") != "elevenlabs":
-        raise NarrationError(f"{plan['key']} is planned for {plan['engine']}: use `narrate chatterbox`")
+        raise NarrationError(f"{plan['key']} is planned for {plan['engine']}: use `narrate {plan['engine']}`")
     missing = [r for r in status(cfg, plan) if not r["cached"]]
     return {
         "lecture": plan["key"],
@@ -151,7 +153,7 @@ def ingest(cfg: Config, plan: dict, scene_id: str, url: str, *, credits: float |
 def synthesize_api(cfg: Config, plan: dict, *, api_key: str | None = None, http_post=None, dry_run: bool = False) -> list[dict]:
     """Unattended backend: ElevenLabs REST with timestamps. One request per uncached scene, never retried blindly."""
     if plan.get("engine", "elevenlabs") != "elevenlabs":
-        raise NarrationError(f"{plan['key']} is planned for {plan['engine']}: use `narrate chatterbox`")
+        raise NarrationError(f"{plan['key']} is planned for {plan['engine']}: use `narrate {plan['engine']}`")
     api_key = api_key or os.environ.get("ELEVENLABS_API_KEY")
     todo = [s for s in plan["scenes"] if cache_paths(cfg, s["ttsKey"])[0] is None]
     if dry_run:
@@ -227,6 +229,55 @@ def synthesize_chatterbox(cfg: Config, plan: dict, *, synth=None, dry_run: bool 
             "chars": len(s["tts"]),
             "text": s["tts"],
             "backend": "chatterbox",
+            "credits": 0.0,
+            "chunks": info["chunks"],
+            "renderSeconds": round(time.monotonic() - started, 2),
+            "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+        _store(cfg, s["ttsKey"], audio, "wav", meta)
+        log(f"{s['id']}: {meta['seconds']:.1f}s of audio in {meta['renderSeconds']:.1f}s ({len(info['chunks'])} chunks)")
+        out.append({"scene": s["id"], "chars": len(s["tts"]), "seconds": meta["seconds"]})
+    return out
+
+
+def synthesize_kokoro(cfg: Config, plan: dict, *, synth=None, dry_run: bool = False, log=print) -> list[dict]:
+    """Local CPU backend: Kokoro-82M, one WAV per uncached scene (chunked and length-checked)."""
+    from . import chatterbox_tts as cb
+    from . import kokoro_tts as kk
+
+    if plan.get("engine") != "kokoro":
+        raise NarrationError(f"{plan['key']} was planned for {plan.get('engine') or 'elevenlabs'}; "
+                             "set tts_engine to 'kokoro' (or LECTURE_STUDIO_TTS_ENGINE=kokoro) and plan again")
+    todo = [s for s in plan["scenes"] if cache_paths(cfg, s["ttsKey"])[0] is None]
+    if dry_run:
+        return [{"scene": s["id"], "chars": len(s["tts"]), "chunks": len(cb.split_for_tts(s["tts"], cfg.kokoro_chunk_chars)),
+                 "dryRun": True} for s in todo]
+    if not todo:
+        return []
+    settings = cfg.kokoro_settings()
+    if settings.signature() != plan["model"]:
+        raise NarrationError(f"{plan['key']}: the Kokoro settings changed since the plan was built; plan again")
+    if synth is None:
+        synth = kk.KokoroSynthesizer(settings, cfg.kokoro_models, log=log)
+    try:
+        synth.use_voice(plan["voice"]["id"].split(":", 1)[1])
+    except kk.KokoroError as exc:
+        raise NarrationError(f"{plan['key']}: {exc}") from exc
+    out = []
+    for s in todo:
+        started = time.monotonic()
+        try:
+            audio, info = kk.synthesize_scene(synth, s["tts"], key=s["ttsKey"], voice_ref=None, settings=settings, log=log)
+        except cb.ChatterboxError as exc:
+            raise NarrationError(f"{plan['key']} {s['id']}: {exc}") from exc
+        meta = {
+            "key": s["ttsKey"],
+            "voice": plan["voice"]["id"],
+            "voiceName": plan["voice"]["name"],
+            "model": plan["model"],
+            "chars": len(s["tts"]),
+            "text": s["tts"],
+            "backend": "kokoro",
             "credits": 0.0,
             "chunks": info["chunks"],
             "renderSeconds": round(time.monotonic() - started, 2),

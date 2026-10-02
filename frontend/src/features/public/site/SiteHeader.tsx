@@ -1,16 +1,17 @@
 import clsx from 'clsx';
-import { ArrowLeft, ArrowRight, ArrowUpRight, ChevronDown, Menu } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, ChevronDown } from 'lucide-react';
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { defaultLandingPath } from '@/app/portals';
 import { Logo } from '@/components/brand/Logo';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { ButtonLink, Drawer, IconButton } from '@/components/ui';
+import { ButtonLink } from '@/components/ui';
 import { useAuth } from '@/lib/auth/useAuth';
 import { isInternalHref } from '@/lib/safeHref';
 import { type MenuCategory, type MenuItem, useSite } from './api';
 import { useSiteCopy } from './copy';
 import { SiteIcon } from './icons';
+import { MobileMenu } from './MobileMenu';
 import type { ChromeVariant } from './variant';
 
 /**
@@ -288,7 +289,7 @@ function useScrolled(threshold = 8) {
 }
 
 /**
- * The shared header frame: brand, a "Main" navigation, actions and the mobile sheet. Each variant fills the slots, so
+ * The shared header frame: brand, a "Main" navigation, actions and the mobile menu. Each variant fills the slots, so
  * focus order is always brand, navigation, actions, menu button.
  */
 function HeaderShell({
@@ -302,12 +303,10 @@ function HeaderShell({
   brand: ReactNode;
   nav: ReactNode;
   actions: ReactNode;
-  drawer: (close: () => void) => ReactNode;
+  /** The mobile menu's contents. */
+  drawer: ReactNode;
 }) {
-  const location = useLocation();
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const scrolled = useScrolled();
-  useEffect(() => setDrawerOpen(false), [location.pathname]);
   return (
     <header className={clsx('public-header site-header', `site-header--${variant}`)} data-scrolled={scrolled ? '' : undefined}>
       <div className="container public-header__inner">
@@ -317,27 +316,13 @@ function HeaderShell({
         </nav>
         <div className="public-header__actions">
           {actions}
-          <IconButton
-            className="public-header__menu"
-            label="Open menu"
-            icon={<Menu />}
-            aria-expanded={drawerOpen}
-            onClick={() => setDrawerOpen(true)}
-          />
+          <MobileMenu title="Menu" headerContent={<Logo size={26} title="" />}>
+            <nav aria-label="Mobile" className="public-drawer site-drawer">
+              {drawer}
+            </nav>
+          </MobileMenu>
         </div>
       </div>
-      <Drawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        title="Menu"
-        side="right"
-        className="site-drawer-panel"
-        headerContent={<Logo size={26} title="" />}
-      >
-        <nav aria-label="Mobile" className="public-drawer site-drawer">
-          {drawer(() => setDrawerOpen(false))}
-        </nav>
-      </Drawer>
     </header>
   );
 }
@@ -451,7 +436,7 @@ function AgencyHeader() {
           </ButtonLink>
         </>
       }
-      drawer={() => (
+      drawer={
         <>
           <ul>
             {menu.map((item) =>
@@ -515,7 +500,7 @@ function AgencyHeader() {
             ]}
           />
         </>
-      )}
+      }
     />
   );
 }
@@ -555,7 +540,7 @@ function AcademyHeader() {
           </ButtonLink>
         </>
       }
-      drawer={() => (
+      drawer={
         <>
           <ul>
             {ACADEMY_NAV.map((item) => (
@@ -574,7 +559,7 @@ function AcademyHeader() {
           </div>
           <DrawerLinks title="Optimize All" links={[{ label: '← Optimize All', url: '/', hint: 'Marketing agency' }]} />
         </>
-      )}
+      }
     />
   );
 }
@@ -616,7 +601,7 @@ function CreatorsHeader() {
           )}
         </>
       }
-      drawer={() => (
+      drawer={
         <>
           <ul>
             {CREATORS_NAV.map((item) => (
@@ -643,7 +628,7 @@ function CreatorsHeader() {
           </div>
           <DrawerLinks title="Optimize All" links={[{ label: '← Optimize All', url: '/', hint: 'Marketing agency' }]} />
         </>
-      )}
+      }
     />
   );
 }

@@ -737,7 +737,14 @@ svg.site-mega__icon {
   letter-spacing: -0.02em;
 }
 
-/* ---------- Mobile menu sheet ---------- */
+/* ---------- Mobile menu sheet ----------
+ * Rendered once and then shown or hidden (site/MobileMenu.tsx); the drawer's entrance animations replay each time it is
+ * shown. */
+.site-sheet[hidden],
+.site-sheet-backdrop[hidden] {
+  display: none;
+}
+
 .site-drawer-panel .ui-drawer__body {
   display: flex;
   flex-direction: column;

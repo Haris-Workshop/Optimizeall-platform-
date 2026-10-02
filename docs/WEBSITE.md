@@ -195,17 +195,49 @@ unknown.
 | Slot | Kind | Where it renders |
 |---|---|---|
 | `home.partners` | list | Home page, after the hero: "Official marketing partner of" logo strip + statement |
+| `home.band` | list · hero | Home page, after the blog insights: one premium resource card per partner ("Project controls toolkit", "Study kit") |
 | `footer.partners` | list | Footer of every public page: "Optimize All is the official marketing partner of PCI AI and Certuvo." |
 | `blog.inline` | unit | Inside a blog post, before its second section (long posts only) |
-| `blog.end` | unit | After the blog post body |
+| `blog.end` | unit · kit | After the blog post body: the resource card |
+| `blog.index` | unit · bar | After the article list on `/blog` and the category pages (not on tag filters or searches) |
 | `service.detail` | unit | Service pages, after the overview |
+| `services.index` | unit · bar | The services overview, after the service lines |
 | `case-study.detail` | unit | Case studies, after the story |
 | `careers.index` | unit | Careers page, under the open roles |
-| `learn.course`, `learn.lesson`, `learn.exam`, `learn.certificate`, `learn.dashboard` | unit | Academy (`/learn`, built separately): drop in `<PartnerSlot slot="learn.course" keywords={course.tags} categories={[course.category]} />` |
+| `learn.hub` | unit · hero | The academy hub (`/learn`), before the catalogue: one hero card for exam preparation / project controls |
+| `learn.course` (kit), `learn.lesson`, `learn.exam`, `learn.certificate`, `learn.dashboard` | unit | Academy (`/learn`, built separately): drop in `<PartnerSlot slot="learn.course" keywords={course.tags} categories={[course.category]} />` |
 | `partners.profile`, `partners.directory` | page | The partner pages themselves (clicks and impressions only) |
+| `go.link` | page | The referral short links `/go/pciai` and `/go/certuvo` (clicks only) |
 
 List slots show every active partner enabled for them. A unit slot shows **at most one** ad unit, always labelled
-**Sponsored** (with "Partner"), with the relationship statement, a "Visit {host}" link and an internal "About {name}" link.
+**Sponsored**, with the relationship statement, a call to action and an internal "About {name}" link.
+
+**Card variants** (`PartnerVariants` / `slotVariant()`, one component per look in `PartnerCards.tsx`): `hero` (large; only
+the home band and the academy hub use it, so a page never has more than one hero-size placement), `kit` (the rich
+resource card: label, headline, introduction, checklist, button, share row), `inline` (the compact card) and `bar` (one
+slim line). Every card shows the visible disclosure "**Sponsored** · Optimize All is the official marketing partner of
+{Partner}.", every outbound link is `rel="sponsored noopener"` in a new tab through the click counter (UTM tags), and
+there are no inline styles (the brand colours are classes in `partnerCards.css`), no pop-ups and no third-party scripts.
+Below-the-fold units ask the API only when they are about to be scrolled into view and hold their room (class
+`partner-reserve--{variant}`), so nothing shifts when they arrive; the server renders them when the query data is there.
+
+**Words and caps are editable** (Agency → Website → Page copy → **Partner placements**): the resource cards' label,
+headline, introduction, checklist and button per partner (`partners.kit.{slug}.*`; other partners get their tagline), the
+band, the share texts and the disclosure label. *Frequency per placement* (`partners.frequency`, one line `slot | N`)
+caps how often a unit shows: `1` every page, `N` one page in N (a stable sample by page path), `0` off — `blog.inline`
+ships at `2`. Which partners appear where is the per-partner **Placements** switches in Website → Partners (the partner
+order sets the order). Placements added later are switched on once for existing partners by the seeder.
+
+**Sharing.** Every card and partner page has share links: LinkedIn, X, WhatsApp, "Tell a colleague" (email), copy link
+and, where the browser has it, the system share sheet — plain URLs, no scripts. What is shared is the partner's profile
+page on this site with UTM tags (`utm_source={network}`, `utm_medium=social|email|referral`, `utm_campaign=partner-share`,
+`utm_content={slug}`). Each partner page has its own Open Graph / Twitter image, `/og/partners/{slug}.png`: a 1200×630
+card from `SocialCardFactory`'s renderer, tinted with the partner's brand colour and stating the partnership. The
+referral short links **`/go/pciai`** and **`/go/certuvo`** (`PartnerShortLinksController`; aliases in the page copy
+`partners.go.aliases`, the partner slug always works) count a click in slot `go.link` and answer 302 to the partner with
+its UTM tags (`utm_campaign` = the partner's campaign, else `go.link`); they are not cached, `noindex` and disallowed in
+robots.txt. schema.org is unchanged: no `Offer` or rating is marked up (there is no schema.org property for a marketing
+partnership, so the relationship stays visible text).
 
 **Targeting.** `GET /public/partners/placement` scores each active partner enabled for the slot: one point per page
 keyword matching one of its keywords/categories (case- and punctuation-insensitive; whole-word phrase containment),

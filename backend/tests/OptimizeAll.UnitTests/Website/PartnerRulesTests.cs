@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using OptimizeAll.Api.Modules.Website.Partners;
+using OptimizeAll.Api.Modules.Website.SiteSeo.SocialCards;
 using OptimizeAll.Domain.Website;
 
 namespace OptimizeAll.UnitTests.Website;
@@ -156,5 +157,58 @@ public sealed class PartnerRulesTests
         Assert.All(pci.Slots.Concat(certuvo.Slots), s => Assert.NotNull(PartnerSlots.Find(s)));
         Assert.True(pci.Seo.Title!.Length <= 60 && certuvo.Seo.Title!.Length <= 60);
         Assert.True(pci.Seo.Description!.Length <= 200 && certuvo.Seo.Description!.Length <= 200);
+    }
+    [Theory]
+    [InlineData("blog.inline | 2\nblog.end | 1", "blog.inline", 2)]
+    [InlineData("blog.inline | 2\nblog.end | 1", "blog.end", 1)]
+    [InlineData("blog.inline | 2", "learn.hub", 1)] // not listed: no cap
+    [InlineData("learn.hub | 0", "learn.hub", 0)]
+    [InlineData("learn.hub | many", "learn.hub", 1)] // unreadable: no cap
+    [InlineData(null, "learn.hub", 1)]
+    public void Frequency_caps_are_read_from_the_slot_list(string? list, string slot, int expected) =>
+        Assert.Equal(expected, PartnerFrequency.EveryNth(list, slot));
+
+    [Fact]
+    public void A_capped_slot_shows_on_a_stable_share_of_pages_and_zero_shows_on_none()
+    {
+        var pages = Enumerable.Range(0, 400).Select(i => $"/blog/post-{i}").ToList();
+        Assert.All(pages, p => Assert.True(PartnerFrequency.Shows("blog.inline", p, 1)));
+        Assert.All(pages, p => Assert.False(PartnerFrequency.Shows("blog.inline", p, 0)));
+        var shown = pages.Count(p => PartnerFrequency.Shows("blog.inline", p, 2));
+        Assert.InRange(shown, 140, 260); // about one page in two
+        Assert.Equal(shown, pages.Count(p => PartnerFrequency.Shows("blog.inline", p, 2))); // the same pages every time
+    }
+
+    [Fact]
+    public void Short_link_aliases_resolve_from_the_list_and_ignore_everything_else()
+    {
+        const string list = "pciai | pci-ai\nCertuvo | Certuvo\nbroken line";
+        Assert.Equal("pci-ai", PartnerShortLinksController.Resolve(list, "pciai"));
+        Assert.Equal("certuvo", PartnerShortLinksController.Resolve(list, "certuvo"));
+        Assert.Null(PartnerShortLinksController.Resolve(list, "broken line"));
+        Assert.Null(PartnerShortLinksController.Resolve(null, "pciai"));
+    }
+
+    [Fact]
+    public void The_partner_social_card_is_tinted_with_the_brand_colour_and_states_the_partnership()
+    {
+        var pci = PartnerBaselineSeeder.PciAi();
+        var card = PartnerPublicService.SocialCardFor(pci);
+        Assert.Equal("Official marketing partner", card.Eyebrow);
+        Assert.Contains("PCI AI", card.Title);
+        Assert.Equal("Optimize All is the official marketing partner of PCI AI.", card.Subtitle);
+        Assert.Equal("#14285A", card.Accent);
+        Assert.NotEqual(card.Version("Optimize All", "optimizeall.example"), (card with { Accent = "#1D4ED8" }).Version("Optimize All", "optimizeall.example"));
+        var renderer = new SocialCardRenderer();
+        var png = renderer.Render(card, "Optimize All", "optimizeall.example");
+        Assert.True(png.Length > 5_000);
+        Assert.NotEqual(png, renderer.Render(card with { Accent = null }, "Optimize All", "optimizeall.example"));
+    }
+
+    [Fact]
+    public void Every_slot_has_a_variant_and_only_the_home_band_and_the_academy_hub_are_hero_size()
+    {
+        Assert.All(PartnerSlots.All, s => Assert.Contains(s.Variant, new[] { PartnerVariants.Hero, PartnerVariants.Kit, PartnerVariants.Inline, PartnerVariants.Bar }));
+        Assert.Equal(new[] { PartnerSlots.HomeBand, PartnerSlots.LearnHub }, PartnerSlots.All.Where(s => s.Variant == PartnerVariants.Hero).Select(s => s.Name));
     }
 }

@@ -121,7 +121,7 @@ public sealed record PartnerDto(
     bool OfferVisible, DateTime? OfferVisibleUntil, SeoDto Seo, bool IsActive, int SortOrder, string PublicPath,
     DateTime CreatedAt, DateTime UpdatedAt, Guid ConcurrencyStamp);
 
-public sealed record PartnerSlotDto(string Name, PartnerSlotKind Kind, string Label, string Description);
+public sealed record PartnerSlotDto(string Name, PartnerSlotKind Kind, string Label, string Description, string Variant);
 
 public sealed class PartnerReportQuery
 {
@@ -213,7 +213,7 @@ public sealed record PartnerImpressionsResult(int Accepted);
 
 public static class PartnerDtoMapping
 {
-    public static PartnerSlotDto ToDto(PartnerSlot s) => new(s.Name, s.Kind, s.Label, s.Description);
+    public static PartnerSlotDto ToDto(PartnerSlot s) => new(s.Name, s.Kind, s.Label, s.Description, s.Variant);
 
     public static PagedResult<T> Page<T>(IReadOnlyList<T> items) => new(items.ToList(), items.Count, 1, Math.Max(1, items.Count));
 }

@@ -74,7 +74,8 @@ public sealed class WebsitePartnersTests(ApiFactory api) : IClassFixture<ApiFact
 
         var profile = await api.Anonymous().GetJsonAsync($"{Public}/pci-ai");
         Assert.Equal("PCI AI — PCL-AI, PFL-AI and PML-AI certifications", profile.GetProperty("seo").GetProperty("title").GetString());
-        Assert.Equal("/partners/pci-ai.png", profile.GetProperty("seo").GetProperty("ogImageUrl").GetString());
+        // The share image is the partner's generated social card (brand-tinted), not the bare logo.
+        Assert.Matches(@"^https?://[^/]+/og/partners/pci-ai\.png\?v=[0-9a-f]{12}$", profile.GetProperty("seo").GetProperty("ogImageUrl").GetString());
         Assert.Equal("http://app.test/partners/pci-ai", profile.GetProperty("seo").GetProperty("canonicalUrl").GetString());
         Assert.Equal(new[] { "pcl-ai", "pfl-ai", "pml-ai" },
             profile.GetProperty("offerings").EnumerateArray().Select(o => o.GetProperty("anchor").GetString()));
@@ -510,5 +511,109 @@ public sealed class WebsitePartnersTests(ApiFactory api) : IClassFixture<ApiFact
         Assert.Contains("utm_campaign=editorial", anchor.Value);
         // Internal links are untouched.
         Assert.Contains("<a href=\"/services\">our services</a>", html);
+    }
+    // ---------------------------------------------------------------- short links, share images, frequency caps
+
+    /// <summary>Sets (or, with null, resets) one page-copy key the way the editor does: with the entry's current stamp.</summary>
+    private static async Task SetCopyAsync(HttpClient admin, string key, string? value)
+    {
+        var catalog = await admin.GetJsonAsync("/api/v1/agency/website/copy");
+        var entry = catalog.GetProperty("groups").EnumerateArray().SelectMany(g => g.GetProperty("entries").EnumerateArray())
+            .Single(e => e.GetProperty("key").GetString() == key);
+        Guid? stamp = entry.GetProperty("concurrencyStamp").ValueKind == JsonValueKind.Null ? null : entry.GetProperty("concurrencyStamp").GetGuid();
+        await admin.PutJsonAsync("/api/v1/agency/website/copy", new { changes = new[] { new { key, value, concurrencyStamp = stamp } } });
+    }
+
+    [Theory]
+    [InlineData("pciai", "https://pciai.org/")]
+    [InlineData("certuvo", "https://certuvo.com/")]
+    [InlineData("PCI-AI", "https://pciai.org/")] // a partner's own slug works too, in any case
+    public async Task The_short_links_redirect_to_the_partner_with_UTM_tags_and_count_a_click_for_humans_only(string alias, string destination)
+    {
+        var slug = alias.Equals("certuvo", StringComparison.OrdinalIgnoreCase) ? "certuvo" : "pci-ai";
+        var before = (await CountsAsync(slug)).Clicks;
+        var bot = await Visitor("curl/8.0").GetAsync($"/go/{alias}");
+        Assert.Equal(HttpStatusCode.Redirect, bot.StatusCode);
+        Assert.Equal((before, 0).Item1, (await CountsAsync(slug)).Clicks);
+        var response = await Visitor().GetAsync($"/go/{alias}");
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal($"{destination}?utm_source=optimizeall&utm_medium=partner&utm_campaign=go.link", response.Headers.Location!.ToString());
+        Assert.Equal("no-store", response.Headers.CacheControl!.ToString());
+        Assert.Contains("noindex", response.Headers.GetValues("X-Robots-Tag").Single());
+        Assert.Equal(before + 1, (await CountsAsync(slug)).Clicks);
+        var report = await (await api.AdminAsync()).GetJsonAsync($"{Admin}/report");
+        Assert.Contains(report.GetProperty("bySlot").EnumerateArray(), x => x.GetProperty("key").GetString() == PartnerSlots.Go);
+    }
+
+    [Fact]
+    public async Task An_unknown_short_link_is_404_and_the_aliases_are_editable_page_copy()
+    {
+        Assert.Equal(HttpStatusCode.NotFound, (await Visitor().GetAsync("/go/nobody")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await Visitor().GetAsync("/go/https:%2F%2Fevil.example")).StatusCode);
+        var admin = await api.AdminAsync();
+        await SetCopyAsync(admin, "partners.go.aliases", "pciai | pci-ai\nexams | certuvo");
+        try
+        {
+            var response = await Visitor().GetAsync("/go/exams");
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.StartsWith("https://certuvo.com/", response.Headers.Location!.ToString());
+        }
+        finally
+        {
+            await SetCopyAsync(admin, "partners.go.aliases", null);
+        }
+        Assert.Equal(HttpStatusCode.Redirect, (await Visitor().GetAsync("/go/certuvo")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Partner_pages_have_a_branded_social_card_and_share_tags()
+    {
+        var anon = api.Anonymous();
+        var html = await (await anon.GetAsync("/_document/partners/pci-ai")).Content.ReadAsStringAsync();
+        var og = System.Text.RegularExpressions.Regex.Match(html, "<meta property=\"og:image\" content=\"([^\"]+)\"");
+        Assert.True(og.Success, "og:image is present");
+        Assert.Contains("/og/partners/pci-ai.png?v=", og.Groups[1].Value);
+        Assert.Contains("name=\"twitter:card\" content=\"summary_large_image\"", html);
+        var path = new Uri(og.Groups[1].Value).PathAndQuery;
+        var card = await anon.GetAsync(path);
+        Assert.Equal(HttpStatusCode.OK, card.StatusCode);
+        Assert.Equal("image/png", card.Content.Headers.ContentType!.MediaType);
+        var png = await card.Content.ReadAsByteArrayAsync();
+        Assert.True(png.Length > 5_000 && png[1] == (byte)'P' && png[2] == (byte)'N' && png[3] == (byte)'G');
+        // Certuvo's card differs (its own colour and words).
+        var other = await (await anon.GetAsync("/og/partners/certuvo.png")).Content.ReadAsByteArrayAsync();
+        Assert.NotEqual(png, other);
+    }
+
+    [Fact]
+    public async Task A_slots_frequency_cap_is_edited_in_page_copy_and_zero_switches_it_off()
+    {
+        var admin = await api.AdminAsync();
+        var anon = api.Anonymous();
+        var url = $"{Public}/placement?slot=blog.index&path=/blog&categories=project-controls";
+        Assert.NotEqual(JsonValueKind.Null, (await anon.GetJsonAsync(url)).GetProperty("partner").ValueKind); // no cap by default
+        await SetCopyAsync(admin, "partners.frequency", "blog.index | 0");
+        try
+        {
+            Assert.Equal(JsonValueKind.Null, (await anon.GetJsonAsync(url)).GetProperty("partner").ValueKind);
+        }
+        finally
+        {
+            await SetCopyAsync(admin, "partners.frequency", null);
+        }
+        Assert.NotEqual(JsonValueKind.Null, (await anon.GetJsonAsync(url)).GetProperty("partner").ValueKind);
+    }
+
+    [Fact]
+    public async Task The_new_placements_are_listed_with_their_variants_and_switched_on_for_the_seeded_partners()
+    {
+        var slots = (await (await api.AdminAsync()).GetJsonAsync($"{Admin}/slots")).EnumerateArray().ToList();
+        foreach (var name in new[] { "home.band", "blog.index", "services.index", "learn.hub", "go.link" })
+            Assert.Contains(slots, s => s.GetProperty("name").GetString() == name);
+        Assert.Equal("hero", slots.Single(s => s.GetProperty("name").GetString() == "home.band").GetProperty("variant").GetString());
+        Assert.Equal("kit", slots.Single(s => s.GetProperty("name").GetString() == "blog.end").GetProperty("variant").GetString());
+        var partners = (await api.Anonymous().GetJsonAsync(Public)).GetProperty("partners").EnumerateArray().ToList();
+        foreach (var p in partners.Where(p => p.GetProperty("slug").GetString() is "pci-ai" or "certuvo"))
+            Assert.Contains("home.band", p.GetProperty("slots").EnumerateArray().Select(x => x.GetString()));
     }
 }

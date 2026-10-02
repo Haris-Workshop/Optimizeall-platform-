@@ -125,7 +125,16 @@ public enum PartnerSlotKind
     Page,
 }
 
-public sealed record PartnerSlot(string Name, PartnerSlotKind Kind, string Label, string Description);
+/// <summary>How a slot's card looks: Hero (large, once per page), Kit (rich resource card), Inline (compact card), Bar (slim line).</summary>
+public static class PartnerVariants
+{
+    public const string Hero = "hero";
+    public const string Kit = "kit";
+    public const string Inline = "inline";
+    public const string Bar = "bar";
+}
+
+public sealed record PartnerSlot(string Name, PartnerSlotKind Kind, string Label, string Description, string Variant = PartnerVariants.Inline);
 
 /// <summary>
 /// The named placements of the public website. The web app renders them with <c>&lt;PartnerSlot slot="…"&gt;</c>
@@ -134,12 +143,16 @@ public sealed record PartnerSlot(string Name, PartnerSlotKind Kind, string Label
 public static class PartnerSlots
 {
     public const string HomeStrip = "home.partners";
+    public const string HomeBand = "home.band";
     public const string Footer = "footer.partners";
     public const string BlogInline = "blog.inline";
     public const string BlogEnd = "blog.end";
+    public const string BlogIndex = "blog.index";
+    public const string ServicesIndex = "services.index";
     public const string ServiceDetail = "service.detail";
     public const string CaseStudyDetail = "case-study.detail";
     public const string Careers = "careers.index";
+    public const string LearnHub = "learn.hub";
     public const string LearnCourse = "learn.course";
     public const string LearnLesson = "learn.lesson";
     public const string LearnExam = "learn.exam";
@@ -147,23 +160,29 @@ public static class PartnerSlots
     public const string LearnDashboard = "learn.dashboard";
     public const string Profile = "partners.profile";
     public const string Directory = "partners.directory";
+    public const string Go = "go.link";
 
     public static readonly IReadOnlyList<PartnerSlot> All = new PartnerSlot[]
     {
         new(HomeStrip, PartnerSlotKind.List, "Home page — partner strip", "Logo strip \"Official marketing partner of\" on the home page."),
+        new(HomeBand, PartnerSlotKind.List, "Home page — partner band", "One premium band with a card per partner, after the services section. The only hero-size placement on the home page.", PartnerVariants.Hero),
         new(Footer, PartnerSlotKind.List, "Footer — partner line", "\"Optimize All is the official marketing partner of …\" in the footer of every public page."),
         new(BlogInline, PartnerSlotKind.Unit, "Blog post — inline", "One unit inside the article, before its second section."),
-        new(BlogEnd, PartnerSlotKind.Unit, "Blog post — end of article", "One unit after the article body."),
+        new(BlogEnd, PartnerSlotKind.Unit, "Blog post — end of article", "One resource card after the article body (study kit / project controls toolkit).", PartnerVariants.Kit),
+        new(BlogIndex, PartnerSlotKind.Unit, "Blog hub and category pages", "One slim bar after the article list on /blog and its category pages (not on tag filters or searches).", PartnerVariants.Bar),
         new(ServiceDetail, PartnerSlotKind.Unit, "Service pages", "One unit on each service page, after the overview."),
+        new(ServicesIndex, PartnerSlotKind.Unit, "Services overview", "One slim bar on the services overview page.", PartnerVariants.Bar),
         new(CaseStudyDetail, PartnerSlotKind.Unit, "Case studies", "One unit on each case study, after the story."),
         new(Careers, PartnerSlotKind.Unit, "Careers page", "One unit on the careers page."),
-        new(LearnCourse, PartnerSlotKind.Unit, "Academy — course page", "One unit on academy course pages (targets the course category)."),
+        new(LearnHub, PartnerSlotKind.Unit, "Academy — hub", "One hero-size card on the academy hub (/learn); targets exam preparation and project controls.", PartnerVariants.Hero),
+        new(LearnCourse, PartnerSlotKind.Unit, "Academy — course page", "One resource card on academy course pages (targets the course category).", PartnerVariants.Kit),
         new(LearnLesson, PartnerSlotKind.Unit, "Academy — lesson page", "One unit on academy lesson pages."),
         new(LearnExam, PartnerSlotKind.Unit, "Academy — exam page", "One unit on academy course exam pages."),
         new(LearnCertificate, PartnerSlotKind.Unit, "Academy — certificate pages", "One unit on certificate and verification pages."),
         new(LearnDashboard, PartnerSlotKind.Unit, "Academy — My learning", "One unit on the learner's dashboard."),
         new(Profile, PartnerSlotKind.Page, "Partner profile page", "Calls to action on /partners/{slug}."),
         new(Directory, PartnerSlotKind.Page, "Partners page", "Calls to action on /partners."),
+        new(Go, PartnerSlotKind.Page, "Short links (/go/…)", "Clicks on the referral short links /go/pciai and /go/certuvo (edit the aliases in Website → Page copy)."),
     };
 
     private static readonly Dictionary<string, PartnerSlot> ByName = All.ToDictionary(s => s.Name, StringComparer.Ordinal);

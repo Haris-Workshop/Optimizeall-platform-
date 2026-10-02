@@ -17,7 +17,7 @@ export interface RedirectLookup {
  */
 const APP_SEGMENTS = new Set([
   'app', 'agency', 'client', 'admin', 'finance', 'review', 'manage', 'api', 'auth', 'login', 'register', 'check-email',
-  'verify-email', 'forgot-password', 'reset-password', 'join', 'c', 't', 'e', 'p', 'i', 'email', 'f', 'assets', 'design-system',
+  'verify-email', 'forgot-password', 'reset-password', 'join', 'go', 'c', 't', 'e', 'p', 'i', 'email', 'f', 'assets', 'design-system',
   'verify',
 ]);
 

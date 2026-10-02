@@ -772,7 +772,7 @@ public sealed class CatalogAdminService(
         // portals and the API
         "app", "agency", "client", "admin", "finance", "review", "manage", "api",
         // short links: invitations, campaigns, tracking, proposals, invoices, email links, landing pages and forms
-        "join", "c", "t", "e", "p", "i", "email", "lp", "f",
+        "join", "go", "c", "t", "e", "p", "i", "email", "lp", "f",
     };
 
     public static SitePageDto ToDto(SitePage x) => new(

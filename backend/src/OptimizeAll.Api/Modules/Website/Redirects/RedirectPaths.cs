@@ -33,7 +33,7 @@ public static class RedirectPaths
     private static readonly HashSet<string> AppSegments = new(StringComparer.Ordinal)
     {
         "app", "agency", "client", "admin", "finance", "review", "manage", "api", "auth", "login", "register", "check-email",
-        "verify-email", "forgot-password", "reset-password", "join", "c", "t", "e", "p", "i", "email", "f", "assets", "health",
+        "verify-email", "forgot-password", "reset-password", "join", "go", "c", "t", "e", "p", "i", "email", "f", "assets", "health",
         "healthz", "design-system", "verify",
     };
 

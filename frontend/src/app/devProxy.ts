@@ -15,6 +15,8 @@ export function devProxy(apiTarget: string): Record<string, DevProxyRule> {
     // Campaign tracking links (/t/{code}) and email open pixel, click redirect and one-click unsubscribe (/e/…).
     '^/t/': { target: apiTarget, changeOrigin: false },
     '^/e/': { target: apiTarget, changeOrigin: false },
+    // Partner short links (/go/pciai, /go/certuvo): count a click, then 302 to the partner with UTM tags.
+    '^/go/': { target: apiTarget, changeOrigin: false },
     // The API generates the SEO files: robots.txt, the sitemap index and sitemaps, llms.txt / llms-full.txt,
     // the llms/ section files, security.txt, humans.txt, the IndexNow key file and the Markdown version of every page (/{path}.md).
     // Page documents themselves are rendered by the API through the seoShell plugin (seoShell.ts).

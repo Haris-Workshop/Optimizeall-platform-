@@ -132,7 +132,7 @@ public static class RobotsWriter
         .Concat(SeoPageResolver.AuthPaths)
         .Concat(new[] { "/search" })
         .SelectMany(p => new[] { p + "$", p + "/", p + "?" })
-        .Concat(new[] { "/api/", "/p/", "/i/", "/email/", "/join/", "/f/", "/newsletter/", "/blog?q=" })
+        .Concat(new[] { "/api/", "/go/", "/p/", "/i/", "/email/", "/join/", "/f/", "/newsletter/", "/blog?q=" })
         .Distinct().ToList();
 
     /// <summary>Public SEO resources under disallowed prefixes that crawlers may still fetch.</summary>

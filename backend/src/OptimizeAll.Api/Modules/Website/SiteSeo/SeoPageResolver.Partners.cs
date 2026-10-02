@@ -44,6 +44,10 @@ public sealed partial class SeoPageResolver
         page.Source = "Partner";
         page.EditPath = "/agency/website/partners";
         ApplySeo(page, p.Seo, p.JsonLd, p.Name);
+        // The social card of a partner page carries the partner's brand (unless an editor chose an image).
+        if (p.Seo.OgImageUrl is null || p.Seo.OgImageUrl.Contains("/og/partners/", StringComparison.Ordinal))
+            page.Card = new SocialCards.SocialCard("Official marketing partner", $"{p.Name} — {p.Tagline}", p.RelationshipLabel + ".",
+                p.Highlights.Where(h => !string.IsNullOrWhiteSpace(h)).Take(3).ToList(), p.BrandColor);
         Crumbs(page, ("Partners", "/partners"), (p.Name, path));
         page.ModifiedAt = p.UpdatedAt;
         var visit = p.VisitUrl is null ? null : $"{p.VisitUrl}?slot=partners.profile&path={Uri.EscapeDataString(path)}";

@@ -21,6 +21,7 @@ describe('dev/preview proxy (vite.config.ts)', () => {
   it.each([
     ['/api/v1/public/site', '/api'],
     ['/t/abc123', '^/t/'],
+    ['/go/pciai', '^/go/'],
     ['/e/o/token.gif', '^/e/'],
     ['/e/c/token', '^/e/'],
     ['/robots.txt', '^/robots\\.txt$'],
@@ -70,6 +71,7 @@ describe('page documents vs the proxy (vite.config.ts, mirrors nginx `location /
   it.each([
     '/api/v1/public/site',
     '/t/abc123',
+    '/go/certuvo',
     '/e/o/token.gif',
     '/robots.txt',
     '/sitemap.xml',

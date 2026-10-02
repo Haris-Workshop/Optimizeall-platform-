@@ -9,15 +9,15 @@ namespace OptimizeAll.Api.Modules.Website.SiteSeo.SocialCards;
 /// What a page's social card shows: a small uppercase eyebrow (content type and category), the title, an optional
 /// subtitle, a few facts along the bottom ("Free course · 12 lessons · Certificate") and the site's name and host.
 /// Pages get one derived from their content (<see cref="SocialCardFactory"/>); a page builder can set
-/// <see cref="SeoPage.Card"/> to choose the words itself.
+/// <see cref="SeoPage.Card"/> to choose the words itself. <c>Accent</c> (#rrggbb) is a partner's brand colour: the card is then tinted with it.
 /// </summary>
-public sealed record SocialCard(string Eyebrow, string Title, string? Subtitle = null, IReadOnlyList<string>? Facts = null)
+public sealed record SocialCard(string Eyebrow, string Title, string? Subtitle = null, IReadOnlyList<string>? Facts = null, string? Accent = null)
 {
     /// <summary>Changes whenever the rendered image would (the words, the site name/host, the renderer's design).</summary>
     public string Version(string siteName, string host)
     {
         var key = string.Join('\u001f', SocialCardRenderer.DesignVersion, siteName, host, Eyebrow, Title, Subtitle ?? string.Empty,
-            string.Join('\u001e', Facts ?? Array.Empty<string>()));
+            string.Join('\u001e', Facts ?? Array.Empty<string>()), Accent ?? string.Empty);
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)))[..12].ToLowerInvariant();
     }
 }
@@ -34,7 +34,7 @@ public sealed class SocialCardRenderer
     public const int Height = 630;
 
     /// <summary>Bump when the card design changes: every card URL (…?v=) changes with it, so caches refresh.</summary>
-    public const string DesignVersion = "2026-09-a";
+    public const string DesignVersion = "2026-10-a";
 
     private static readonly Rgba Navy = Rgba.Hex("#1f2659");
     private static readonly Rgba NavyDeep = Rgba.Hex("#0e1233");
@@ -61,14 +61,17 @@ public sealed class SocialCardRenderer
         var bold = _bold.Value;
         var regular = _regular.Value;
         var c = new Canvas(Width, Height);
-        c.DiagonalGradient(Navy, NavyDeep);
-        c.Glow(1060, 40, 520, Amber.WithAlpha(0.13f));
+        // A partner's card is tinted with its brand colour (lightened, so it reads on the dark background).
+        var brand = ParseBrand(card.Accent);
+        var accent = brand is { } b ? Rgba.Lerp(b, White, 0.58f) : Amber;
+        c.DiagonalGradient(brand is { } b2 ? Rgba.Lerp(b2, NavyDeep, 0.45f) : Navy, NavyDeep);
+        c.Glow(1060, 40, 520, accent.WithAlpha(0.13f));
         c.Glow(120, 640, 560, Rgba.Hex("#3a4bc4", 0.22f));
 
         // The logo's two rings, large and faint, as a backdrop on the right.
         var rings = new VectorPath();
         rings.Ring(1085, 138, 190, 46);
-        c.Fill(rings, Amber.WithAlpha(0.16f));
+        c.Fill(rings, accent.WithAlpha(0.16f));
         var pale = new VectorPath();
         pale.Ring(930, 10, 140, 36);
         c.Fill(pale, Pale.WithAlpha(0.07f));
@@ -81,7 +84,7 @@ public sealed class SocialCardRenderer
         // Bottom: an amber rule, the facts and the host.
         var bar = new VectorPath();
         bar.Rect(0, Height - 12, Width, 12);
-        c.Fill(bar, Amber);
+        c.Fill(bar, accent);
         const float footerBaseline = Height - 52;
         var hostWidth = TextLayout.Measure(bold, 24, host);
         TextLayout.Draw(c, bold, 24, Width - left - hostWidth, footerBaseline, host, Pale);
@@ -99,7 +102,7 @@ public sealed class SocialCardRenderer
                 {
                     var dot = new VectorPath();
                     dot.Circle(x + 10, footerBaseline - 9, 4);
-                    c.Fill(dot, Amber);
+                    c.Fill(dot, accent);
                     x += 28;
                 }
                 TextLayout.Draw(c, regular, 26, x, footerBaseline, text, White);
@@ -113,10 +116,10 @@ public sealed class SocialCardRenderer
         if (!string.IsNullOrWhiteSpace(card.Eyebrow))
         {
             var eyebrow = TextLayout.Wrap(bold, 24, card.Eyebrow.ToUpperInvariant(), contentWidth, 1, 2.4f)[0];
-            var accent = new VectorPath();
-            accent.RoundedRect(left, y - 19, 36, 6, 3);
-            c.Fill(accent, Amber);
-            TextLayout.Draw(c, bold, 24, left + 50, y, eyebrow, Amber, 2.4f);
+            var rule = new VectorPath();
+            rule.RoundedRect(left, y - 19, 36, 6, 3);
+            c.Fill(rule, accent);
+            TextLayout.Draw(c, bold, 24, left + 50, y, eyebrow, accent, 2.4f);
             y += 30;
         }
         const float footerTop = Height - 110;
@@ -144,6 +147,9 @@ public sealed class SocialCardRenderer
         }
         return c;
     }
+
+    private static Rgba? ParseBrand(string? hex) =>
+        hex is { Length: 7 } && hex[0] == '#' && hex[1..].All(Uri.IsHexDigit) ? Rgba.Hex(hex) : null;
 
     /// <summary>The largest title size (72 → 42 px) at which the title fits the space; the smallest one ellipsizes.</summary>
     private static (float Size, IReadOnlyList<string> Lines) FitTitle(TrueTypeFont font, string title, float width, float height)

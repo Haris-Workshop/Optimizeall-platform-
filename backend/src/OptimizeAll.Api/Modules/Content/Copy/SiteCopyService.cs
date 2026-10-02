@@ -79,6 +79,14 @@ public sealed partial class SiteCopyService(AppDbContext db, IAuditLogger audit,
         return new PublicCopyDto(values, rows.Count == 0 ? null : rows.Max(r => r.UpdatedAt));
     }
 
+    /// <summary>The text of one key as the public site shows it: the editor's override, else the shipped default (null for an unknown key).</summary>
+    public async Task<string?> ValueAsync(string key, CancellationToken ct)
+    {
+        if (!SiteCopyCatalog.ByKey.TryGetValue(key, out var def)) return null;
+        var row = await db.Set<ContentCopyEntry>().AsNoTracking().FirstOrDefaultAsync(r => r.Key == key, ct);
+        return row?.Value ?? def.Default;
+    }
+
     public async Task<CopyCatalogDto> GetCatalogAsync(CopyScope scope, CancellationToken ct)
     {
         var keys = SiteCopyCatalog.Groups.Where(g => g.Scope == scope).SelectMany(g => g.Entries).Select(e => e.Key).ToList();

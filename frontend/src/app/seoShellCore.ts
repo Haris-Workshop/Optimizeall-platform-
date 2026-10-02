@@ -55,7 +55,7 @@ export function fillShell(document: string, shell: Shell): string {
 
 /** Paths the web server never renders as documents: API, tracking, static assets, Vite internals. */
 const NOT_DOCUMENTS =
-  /^\/(api|t|e|assets|media|__shell|_document|_markdown|@[a-z-]+|src|node_modules|health)(\/|$)/;
+  /^\/(api|t|e|go|assets|media|__shell|_document|_markdown|@[a-z-]+|src|node_modules|health)(\/|$)/;
 
 /**
  * Whether a request is for a page document (rendered by the API) rather than an asset or API call: GET or HEAD, not

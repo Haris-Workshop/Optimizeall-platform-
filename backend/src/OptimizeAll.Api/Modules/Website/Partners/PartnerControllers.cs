@@ -5,6 +5,7 @@ using OptimizeAll.Api.Common.Http;
 using OptimizeAll.Api.Common.Security;
 using OptimizeAll.Api.Modules.Website.Shared;
 using OptimizeAll.Domain.Common;
+using OptimizeAll.Domain.Website;
 
 namespace OptimizeAll.Api.Modules.Website.Partners;
 
@@ -109,5 +110,40 @@ public sealed class PublicPartnersController(PartnerPublicService partners, Part
         var target = await tracking.VisitAsync(slug, slot, path, Request.Headers.UserAgent.ToString(), ct)
                      ?? throw new DomainException("website.not_found", "Partner was not found.", DomainErrorKind.NotFound);
         return Redirect(target);
+    }
+}
+
+/// <summary>
+/// Referral-friendly short links: <c>/go/pciai</c> and <c>/go/certuvo</c> count a click (slot <c>go.link</c>) and redirect
+/// (302) to the partner's website with its UTM tags — for newsletters, social bios and sharing. The aliases are edited in
+/// Website → Page copy ("Short links"); a partner's own slug always works too. Like the click counter behind every partner
+/// link, the destination comes from the partner record only (never from the request), the response is not cached and not
+/// indexed, and robots.txt disallows /go/.
+/// </summary>
+[ApiController]
+[AllowAnonymous]
+public sealed class PartnerShortLinksController(PartnerTrackingService tracking, Modules.Content.Copy.SiteCopyService copy) : ControllerBase
+{
+    [HttpGet("/go/{alias}")]
+    [EnableRateLimiting(RateLimitPolicies.Tracking)]
+    public async Task<IActionResult> Go(string alias, CancellationToken ct)
+    {
+        Response.Headers.CacheControl = "no-store";
+        Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
+        var key = alias.Trim().ToLowerInvariant();
+        var slug = Resolve(await copy.ValueAsync("partners.go.aliases", ct), key) ?? key;
+        var target = await tracking.VisitAsync(slug, PartnerSlots.Go, "/go/" + key, Request.Headers.UserAgent.ToString(), ct);
+        return target is null ? NotFound() : Redirect(target);
+    }
+
+    /// <summary>The partner slug an alias stands for in the list "alias | slug" (null when it is not listed).</summary>
+    public static string? Resolve(string? list, string alias)
+    {
+        foreach (var line in (list ?? string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var bar = line.IndexOf('|');
+            if (bar > 0 && line[..bar].Trim().ToLowerInvariant() == alias) return line[(bar + 1)..].Trim().ToLowerInvariant();
+        }
+        return null;
     }
 }

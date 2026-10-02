@@ -68,6 +68,7 @@ describe('seo shell (server-rendered pages)', () => {
     ['GET', '/robots.txt', false],
     ['GET', '/services/seo.md', false],
     ['GET', '/t/abc', false],
+    ['GET', '/go/pciai', false],
     ['GET', '/e/o/x.gif', false],
     ['GET', '/@vite/client', false],
     ['GET', '/src/main.tsx', false],

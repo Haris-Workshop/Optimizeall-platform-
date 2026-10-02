@@ -40,13 +40,28 @@ public sealed class PartnerBaselineSeeder(TimeProvider clock) : ISeeder
             if (created.Contains(pci) && !pci.RelatedPartnerIds.Contains(certuvo.Id)) pci.RelatedPartnerIds.Add(certuvo.Id);
             if (created.Contains(certuvo) && !certuvo.RelatedPartnerIds.Contains(pci.Id)) certuvo.RelatedPartnerIds.Add(pci.Id);
         }
+        // Placements added later (the home band, the blog hub, the services overview, the academy hub) are switched on once
+        // for partners that already exist; after that the editor's choice always wins.
+        const string placementsKey = "partner-slots:2026-10-placements";
+        if (!ledger.WasSeeded(placementsKey))
+        {
+            foreach (var partner in existing.Values.Where(p => !created.Contains(p)))
+                foreach (var slot in AddedPlacements.Where(slot => !partner.Slots.Contains(slot)))
+                    partner.Slots = partner.Slots.Append(slot).ToList();
+        }
+        ledger.Record(placementsKey);
         await db.SaveChangesAsync(ct);
     }
 
+    private static readonly string[] AddedPlacements =
+    {
+        PartnerSlots.HomeBand, PartnerSlots.BlogIndex, PartnerSlots.ServicesIndex, PartnerSlots.LearnHub,
+    };
+
     private static readonly string[] Everywhere =
     {
-        PartnerSlots.HomeStrip, PartnerSlots.Footer, PartnerSlots.BlogInline, PartnerSlots.BlogEnd, PartnerSlots.ServiceDetail,
-        PartnerSlots.CaseStudyDetail,
+        PartnerSlots.HomeStrip, PartnerSlots.HomeBand, PartnerSlots.Footer, PartnerSlots.BlogInline, PartnerSlots.BlogEnd,
+        PartnerSlots.BlogIndex, PartnerSlots.ServiceDetail, PartnerSlots.ServicesIndex, PartnerSlots.CaseStudyDetail,
     };
 
     public static WebsitePartner PciAi() => new()
@@ -94,7 +109,7 @@ public sealed class PartnerBaselineSeeder(TimeProvider clock) : ISeeder
             "project finance", "project management", "AI",
         },
         Categories = new() { "ai", "project-controls", "project-finance", "project-management", "leadership", "finance" },
-        Slots = Everywhere.Concat(new[] { PartnerSlots.Careers, PartnerSlots.LearnCourse, PartnerSlots.LearnLesson }).ToList(),
+        Slots = Everywhere.Concat(new[] { PartnerSlots.Careers, PartnerSlots.LearnHub, PartnerSlots.LearnCourse, PartnerSlots.LearnLesson }).ToList(),
         BrandColor = "#14285A",
         UtmSource = "optimizeall",
         UtmMedium = "partner",
@@ -169,7 +184,7 @@ public sealed class PartnerBaselineSeeder(TimeProvider clock) : ISeeder
         },
         Slots = Everywhere.Concat(new[]
         {
-            PartnerSlots.LearnCourse, PartnerSlots.LearnLesson, PartnerSlots.LearnExam, PartnerSlots.LearnCertificate, PartnerSlots.LearnDashboard,
+            PartnerSlots.LearnHub, PartnerSlots.LearnCourse, PartnerSlots.LearnLesson, PartnerSlots.LearnExam, PartnerSlots.LearnCertificate, PartnerSlots.LearnDashboard,
         }).ToList(),
         BrandColor = "#1D4ED8",
         UtmSource = "optimizeall",

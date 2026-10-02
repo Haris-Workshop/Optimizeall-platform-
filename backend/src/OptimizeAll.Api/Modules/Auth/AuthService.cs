@@ -304,20 +304,20 @@ public sealed class AuthService(
     }
 
     /// <summary>
-    /// Counts a failed attempt in a single atomic UPDATE so concurrent guesses are all counted, and starts the
-    /// lockout when the threshold is reached (the counter resets for the next window).
+    /// Counts a failed attempt atomically, so concurrent guesses are all counted, and starts the lockout when the
+    /// threshold is reached (the counter resets for the next window). Two statements whose SET clauses never read a
+    /// column another clause of the same statement writes: MySQL evaluates SET assignments left to right (later ones
+    /// see earlier results) and EF Core does not keep the SetProperty order, so a single statement that both counted and
+    /// compared locked MySQL accounts one failure early. Exactly one of several concurrent failures starts the lockout.
     /// </summary>
     private async Task RegisterFailedLoginAsync(Guid userId, CancellationToken ct)
     {
         DateTime? lockUntil = Now.Add(LockoutDuration);
-        // LockoutEndsAt is assigned first: MySQL evaluates SET assignments left to right (later ones see earlier
-        // results), so it must read FailedLoginCount before that is changed. SQLite reads the old row for all of them.
-        await db.Set<User>().Where(u => u.Id == userId).ExecuteUpdateAsync(s => s
-            .SetProperty(u => u.LockoutEndsAt, u => u.FailedLoginCount + 1 >= MaxFailedLogins ? lockUntil : u.LockoutEndsAt)
-            .SetProperty(u => u.FailedLoginCount, u => u.FailedLoginCount + 1 >= MaxFailedLogins ? 0 : u.FailedLoginCount + 1), ct);
-        var locked = await db.Set<User>().AsNoTracking()
-            .AnyAsync(u => u.Id == userId && u.LockoutEndsAt == lockUntil, ct);
-        if (locked)
+        await db.Set<User>().Where(u => u.Id == userId)
+            .ExecuteUpdateAsync(s => s.SetProperty(u => u.FailedLoginCount, u => u.FailedLoginCount + 1), ct);
+        var locked = await db.Set<User>().Where(u => u.Id == userId && u.FailedLoginCount >= MaxFailedLogins)
+            .ExecuteUpdateAsync(s => s.SetProperty(u => u.LockoutEndsAt, lockUntil).SetProperty(u => u.FailedLoginCount, 0), ct);
+        if (locked > 0)
         {
             audit.Record("auth.locked_out", nameof(User), userId);
             await db.SaveChangesAsync(ct);

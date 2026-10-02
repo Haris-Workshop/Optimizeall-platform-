@@ -399,16 +399,21 @@ public sealed class TwoFactorService(
                 DomainErrorKind.TooManyRequests);
     }
 
-    /// <summary>Counts a wrong code in one atomic update and starts the lockout at the threshold (like password lockout).</summary>
+    /// <summary>
+    /// Counts a wrong code and starts the lockout at the threshold (like password lockout). Two atomic statements whose
+    /// SET clauses never read a column another clause of the same statement writes: MySQL evaluates SET assignments left
+    /// to right (later ones see earlier results) while SQLite reads the old row, and the order EF Core emits them in is
+    /// not ours to rely on. Concurrent wrong codes are all counted, and exactly one of them starts the lockout.
+    /// </summary>
     private async Task RegisterFailureAsync(UserTwoFactor row, CancellationToken ct)
     {
         var max = Options.MaxFailedAttempts;
         DateTime? lockUntil = Now.AddMinutes(Options.LockoutMinutes);
-        // LockoutEndsAt first: MySQL evaluates SET assignments left to right (see AuthService.RegisterFailedLoginAsync).
-        await db.Set<UserTwoFactor>().Where(t => t.Id == row.Id).ExecuteUpdateAsync(s => s
-            .SetProperty(t => t.LockoutEndsAt, t => t.FailedAttempts + 1 >= max ? lockUntil : t.LockoutEndsAt)
-            .SetProperty(t => t.FailedAttempts, t => t.FailedAttempts + 1 >= max ? 0 : t.FailedAttempts + 1), ct);
-        if (await db.Set<UserTwoFactor>().AsNoTracking().AnyAsync(t => t.Id == row.Id && t.LockoutEndsAt == lockUntil, ct))
+        await db.Set<UserTwoFactor>().Where(t => t.Id == row.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.FailedAttempts, t => t.FailedAttempts + 1), ct);
+        var locked = await db.Set<UserTwoFactor>().Where(t => t.Id == row.Id && t.FailedAttempts >= max)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.LockoutEndsAt, lockUntil).SetProperty(t => t.FailedAttempts, 0), ct);
+        if (locked > 0)
         {
             audit.Record("auth.2fa_locked_out", nameof(User), row.UserId);
             await db.SaveChangesAsync(ct);

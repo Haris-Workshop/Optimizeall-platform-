@@ -90,6 +90,13 @@ public sealed class AuthTests(ApiFactory api) : IClassFixture<ApiFactory>
     {
         var user = await api.CreateUserAsync();
         var client = NewClient();
+        // Four failures don't lock yet (MySQL once locked one attempt early: the count and the comparison shared an UPDATE).
+        for (var i = 0; i < 4; i++)
+            await (await client.PostAsJsonAsync("/api/v1/auth/login", new { email = user.Email, password = "wrong-password-123" }))
+                .ShouldFailAsync(401, "auth.invalid_credentials");
+        (await client.PostAsJsonAsync("/api/v1/auth/login", new { email = user.Email, password = user.Password })).EnsureSuccessStatusCode();
+
+        // A success resets the count; five failures in a row lock.
         for (var i = 0; i < 5; i++)
             await (await client.PostAsJsonAsync("/api/v1/auth/login", new { email = user.Email, password = "wrong-password-123" }))
                 .ShouldFailAsync(401, "auth.invalid_credentials");

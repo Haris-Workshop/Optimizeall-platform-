@@ -130,7 +130,7 @@
   const BODY_BOTTOM = 760;
 
   // Brand mark (reproduces frontend/src/components/brand/Logo.tsx, viewBox 8 4 88 88).
-  function markSVG({ primary = "#c9cff5", accent = "#fcb31e", cls = "" } = {}) {
+  function markSVG({ primary = "#262f6e", accent = "#fcb31e", cls = "" } = {}) {
     return `<svg class="${cls}" viewBox="8 4 88 88" xmlns="http://www.w3.org/2000/svg">
       <circle class="ra" cx="56" cy="52" r="30" fill="none" stroke="${accent}" stroke-width="12" transform="rotate(-90 56 52)"/>
       <circle class="rp" cx="38" cy="34" r="22" fill="none" stroke="${primary}" stroke-width="11" transform="rotate(-90 38 34)"/>
@@ -220,7 +220,7 @@
     put(root, h("div", "bg bg-base"));
     put(root, h("div", "bg bg-glow"));
     put(root, h("div", "bg bg-grid"));
-    const rings = put(root, h("div", "bg-rings", markSVG({ primary: "#ffffff", accent: "#ffffff" })));
+    const rings = put(root, h("div", "bg-rings", markSVG({ primary: "#1f2659", accent: "#1f2659" })));
     rings.querySelector("svg").style.cssText = "width:100%;height:100%";
   }
 
@@ -286,7 +286,7 @@
 
   T.title = (c, sc) => {
     c.classList.add("t-title");
-    const eb = put(c, h("div", "eyebrow", `Module ${sc.module.index}<span style="color:rgba(201,207,245,.4);margin:0 14px">/</span>Lesson ${sc.lesson.number}`));
+    const eb = put(c, h("div", "eyebrow", `Module ${sc.module.index}<span style="color:rgba(29,23,76,.35);margin:0 14px">/</span>Lesson ${sc.lesson.number}`));
     const t1 = put(c, h("div", "h1", esc(sc.lectureTitle)));
     const titleH = t1.offsetHeight;
     const course = put(c, h("div", "course", esc(sc.course.title)), { top: `${118 + titleH + 24}px` });
@@ -323,7 +323,7 @@
     enter(learn.querySelector(".k"), 1.0, { y: 10 });
     chips.forEach((ch, i) => enter(ch, rt(i, chips.length), { y: 18, dur: 0.55 }));
     // hero mark
-    const hm = put(c, h("div", "hero-mark", markSVG({ primary: "#c9cff5", accent: "#fcb31e" })));
+    const hm = put(c, h("div", "hero-mark", markSVG({ primary: "#262f6e", accent: "#fcb31e" })));
     const svg = hm.querySelector("svg");
     A(svg.querySelector(".ra"), 0.2, 1.4, { dash: [0, 1] }, "inOut");
     A(svg.querySelector(".rp"), 0.45, 1.3, { dash: [0, 1] }, "inOut");
@@ -647,7 +647,7 @@
     const xl = mk("text", { x: x1 + 20, y: y0 + 48, "text-anchor": "end", class: "axl" }); xl.textContent = (d.axes[0] || "").toUpperCase();
     const yl = mk("text", { x: x0 - 20, y: y1 - 36, class: "axl" }); yl.textContent = (d.axes[1] || "").toUpperCase();
     A(xl, 1.2, 0.5, { opacity: [0, 1] }); A(yl, 1.2, 0.5, { opacity: [0, 1] });
-    const colors = ["#fcb31e", "#8fb8ff", "#8fe3b6", "#ff9e7a"];
+    const colors = ["#e29a00", "#3b6fd8", "#1f9d63", "#e0612f"];
     const n = Math.max(1, d.curves || 1);
     const curveT = d.curveAt || scene.audioStart + 0.4;
     const hill = (x, max, half, s) => (max * Math.pow(x, s)) / (Math.pow(x, s) + Math.pow(half, s));
@@ -705,13 +705,13 @@
       if (d.annotate === "hill") {
         const maxY = y0 - max * (y0 - y1);
         const hx = x0 + half * (x1 - x0), hy = y0 - hill(half, max, half, s) * (y0 - y1);
-        const ml = mk("line", { x1: x0, x2: x1, y1: maxY, y2: maxY, class: "tan", style: "stroke:#8fb8ff" });
-        const hl2 = mk("path", { d: `M${hx},${y0} L${hx},${hy} L${x0},${hy}`, class: "tan", style: "stroke:#8fe3b6;fill:none" });
+        const ml = mk("line", { x1: x0, x2: x1, y1: maxY, y2: maxY, class: "tan", style: "stroke:#3b6fd8" });
+        const hl2 = mk("path", { d: `M${hx},${y0} L${hx},${hy} L${x0},${hy}`, class: "tan", style: "stroke:#1f9d63;fill:none" });
         const t1 = d.curveAt + 2.0;
         A(ml, t1, 0.7, { opacity: [0, 1] }, "out");
         A(hl2, t1 + 1.2, 0.7, { opacity: [0, 1] }, "out");
-        const lm = put(card, h("div", "tag callout", "max response"), { left: `${x0 + 20}px`, top: `${maxY - 52}px`, color: "#8fb8ff" });
-        const lh = put(card, h("div", "tag callout", "half-saturation spend"), { left: `${hx + 16}px`, top: `${y0 - 58}px`, color: "#8fe3b6" });
+        const lm = put(card, h("div", "tag callout", "max response"), { left: `${x0 + 20}px`, top: `${maxY - 52}px`, color: "#3b6fd8" });
+        const lh = put(card, h("div", "tag callout", "half-saturation spend"), { left: `${hx + 16}px`, top: `${y0 - 58}px`, color: "#1f9d63" });
         enter(lm, t1 + 0.2, { y: 10 });
         enter(lh, t1 + 1.4, { y: 10 });
       } else {
@@ -805,7 +805,7 @@
     const next = sc.data.next;
     const rowH = Math.min(120, (740 - top) / Math.max(1, n));
     items.forEach((it, i) => {
-      const row = put(c, h("div", "rc", `<svg viewBox="0 0 54 54"><circle cx="27" cy="27" r="24" fill="rgba(252,179,30,0.14)" stroke="#fcb31e" stroke-width="3"/><path d="M16 28 L24 35 L39 19" fill="none" stroke="#fcb31e" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="txt">${richc(it)}</div>`), { top: `${top + i * rowH}px`, width: next ? "900px" : "1600px" });
+      const row = put(c, h("div", "rc", `<svg viewBox="0 0 54 54"><circle cx="27" cy="27" r="24" fill="rgba(252,179,30,0.14)" stroke="#e29a00" stroke-width="3"/><path d="M16 28 L24 35 L39 19" fill="none" stroke="#c98500" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="txt">${richc(it)}</div>`), { top: `${top + i * rowH}px`, width: next ? "900px" : "1600px" });
       const t = rt(i, n + (next ? 1 : 0));
       enter(row, t, { x: -24, y: 0, dur: 0.55 });
       A(row.querySelector("path"), t + 0.2, 0.45, { dash: [0, 1] }, "out");
@@ -830,7 +830,7 @@
   // ---------------------------------------------------------------- intro / outro
   function buildIntro(sc) {
     const st = put(root, h("div", "center-stack"));
-    const mk = put(st, h("div", "intro-mark", markSVG({ primary: "#c9cff5", accent: "#fcb31e" })));
+    const mk = put(st, h("div", "intro-mark", markSVG({ primary: "#262f6e", accent: "#fcb31e" })));
     const word = put(st, h("div", "intro-word", "OPTIMIZE ALL"));
     const tag = put(st, h("div", "intro-tag", "ACADEMY"));
     const svg = mk.querySelector("svg");
@@ -855,7 +855,7 @@
     const nx = sc.nextLesson;
     const card = put(c, h("div", "card nextc", `<div class="k">${nx ? "Next lesson" : "What's next"}</div><div class="v">${esc(nx ? nx.title : "Take the final exam and earn your badge")}</div>`));
     enter(card, 1.1, { y: 40, dur: 0.9, ease: "out5" });
-    const mk = put(c, h("div", "mark", markSVG({ primary: "#c9cff5", accent: "#fcb31e" })));
+    const mk = put(c, h("div", "mark", markSVG({ primary: "#262f6e", accent: "#fcb31e" })));
     const svg = mk.querySelector("svg");
     A(svg.querySelector(".ra"), 0.3, 1.3, { dash: [0, 1] }, "inOut");
     A(svg.querySelector(".rp"), 0.5, 1.2, { dash: [0, 1] }, "inOut");

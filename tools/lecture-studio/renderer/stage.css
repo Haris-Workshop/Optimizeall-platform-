@@ -288,3 +288,62 @@ svg.wires .head { fill: var(--amber); }
 .p-badge .k { font-family: var(--mono); font-size: 24px; letter-spacing: 0.3em; color: var(--lav); text-transform: uppercase; margin-right: -0.3em; }
 .p-badge .v { font-family: var(--display); font-weight: 850; font-size: 150px; line-height: 0.95; color: #fff; letter-spacing: -0.03em; }
 .p-badge .m { font-family: var(--mono); font-size: 22px; letter-spacing: 0.24em; color: var(--amber); text-transform: uppercase; margin-top: 6px; margin-right: -0.24em; }
+
+/* ================================================================== light theme (default)
+   A bright stage: white-to-lavender background, navy ink for text, white cards with soft shadows. The brand amber stays
+   for fills (bars, chips, the try/next cards); amber TEXT uses --amber-text, which keeps WCAG AA contrast on white.
+   The code window, captions and the thumbnail badge stay dark on purpose (contrast for code and burned-in text). */
+:root {
+  --deep: #f5f6fc;
+  --lav: #454c86;
+  --lav-dim: rgba(29, 23, 76, 0.58);
+  --line: rgba(31, 38, 89, 0.14);
+  --glass: rgba(31, 38, 89, 0.04);
+  --glass-2: #ffffff;
+  --amber-soft: #a35f00;
+  --amber-text: #a35f00;
+}
+body { color: var(--ink); }
+.bg-base {
+  background:
+    radial-gradient(1200px 820px at 10% 0%, rgba(201, 207, 245, 0.75), transparent 62%),
+    radial-gradient(1000px 900px at 100% 100%, rgba(255, 227, 166, 0.55), transparent 70%),
+    linear-gradient(160deg, #ffffff 0%, #f6f7fd 48%, #eef0fb 100%);
+}
+.bg-glow { background: radial-gradient(640px 520px at 92% 88%, rgba(252, 179, 30, 0.16), transparent 70%); }
+.bg-grid { background-image: radial-gradient(rgba(31, 38, 89, 0.13) 1.3px, transparent 1.4px); opacity: 0.6; }
+.bg-rings { opacity: 0.03; }
+
+.brand .word { color: var(--ink); }
+.brand .word b, .chrome-bottom .sep, .eyebrow, em.n, .arrow, .lower3 .k, .b-card .idx, .b-row .idx, .f-node .step,
+.vs, .note .i, .intro-tag, .outro .nextc .k, .outro .big span, .stat .v em.n, .p-brand b, .t-keyidea .eyebrow,
+.pill .ck, .chain .arr { color: var(--amber-text); }
+.note .i, .vs { border-color: var(--amber); }
+.chrome-bottom { color: rgba(29, 23, 76, 0.55); }
+.progress-track { background: rgba(31, 38, 89, 0.08); }
+
+.lower3 { box-shadow: 0 18px 50px rgba(31, 38, 89, 0.16); }
+.lower3 .body { background: rgba(255, 255, 255, 0.96); }
+.tag { background: rgba(255, 255, 255, 0.8); }
+.card {
+  background: linear-gradient(180deg, #ffffff, #fbfbfe);
+  border: 1px solid rgba(31, 38, 89, 0.10);
+  box-shadow: 0 24px 60px rgba(31, 38, 89, 0.12), 0 2px 6px rgba(31, 38, 89, 0.05);
+}
+.chip, .pill { box-shadow: 0 10px 30px rgba(31, 38, 89, 0.08); }
+.chain .node { background: rgba(252, 179, 30, 0.16); border-color: rgba(214, 140, 0, 0.45); }
+.b-row .x { background: rgba(214, 52, 52, 0.10); color: #c0392b; }
+.cmp .lbl { background: rgba(31, 38, 89, 0.08); }
+svg.wires path.soft { stroke: rgba(31, 38, 89, 0.30); }
+.win { box-shadow: 0 34px 80px rgba(31, 38, 89, 0.28); }
+.t-keyidea .qm { color: rgba(252, 179, 30, 0.28); }
+.beat .node { background: #ffffff; }
+
+.chart-card .axis { stroke: rgba(31, 38, 89, 0.45); }
+.chart-card .gridl { stroke: rgba(31, 38, 89, 0.08); }
+.chart-card .axl { fill: rgba(29, 23, 76, 0.65); }
+.chart-card .tan { stroke: var(--ink); }
+.chart-card .dot { fill: var(--ink); }
+
+.p-glow { background: radial-gradient(closest-side, rgba(252, 179, 30, 0.30), transparent 70%); }
+.p-title { color: var(--ink); }

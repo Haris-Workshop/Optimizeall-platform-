@@ -20,6 +20,8 @@ public enum CopyType
     List,
     /// <summary>One item per line as <c>Title | Text</c>.</summary>
     Pairs,
+    /// <summary>A link target: a path on this site (<c>/contact</c>, <c>/register?audience=creator</c>) or an https:// address.</summary>
+    Link,
 }
 
 public sealed record CopyEntryDefinition(
@@ -48,6 +50,7 @@ public static class SiteCopyCatalog
     public static int MaxLength(CopyType type) => type switch
     {
         CopyType.Text => 300,
+        CopyType.Link => 500,
         CopyType.Textarea => 5000,
         _ => 10000,
     };

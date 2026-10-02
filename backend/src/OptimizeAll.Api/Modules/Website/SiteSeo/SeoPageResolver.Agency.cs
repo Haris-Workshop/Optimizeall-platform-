@@ -21,7 +21,11 @@ public sealed partial class SeoPageResolver
         c.Add(new ParagraphNode(_copy.Text("agency.cta.eyebrow")));
         c.Add(new HeadingNode(2, title));
         if (!string.IsNullOrWhiteSpace(text)) c.Add(new ParagraphNode(text));
-        c.Add(new LinkListNode(new[] { Consultation(), secondary ?? new LinkItem(_copy.Text("agency.cta.secondary"), "/free-audit") }));
+        c.Add(new LinkListNode(new[]
+        {
+            new LinkItem(_copy.Text("agency.cta.primary"), _copy.Text("agency.cta.primaryUrl")),
+            secondary ?? new LinkItem(_copy.Text("agency.cta.secondary"), _copy.Text("agency.cta.secondaryUrl")),
+        }));
         c.Add(new ListNode(_copy.List("agency.cta.points")));
     }
 
@@ -74,7 +78,7 @@ public sealed partial class SeoPageResolver
         {
             c.Add(new HeadingNode(2, s.Service.Name));
             c.Add(new ParagraphNode(s.Service.Tagline));
-            c.Add(new FactsNode(s.Packages.Select(p => KeyValuePair.Create(p.Name, PackagePrice(p))).ToList()));
+            c.Add(new FactsNode(s.Packages.Select(p => KeyValuePair.Create(p.Name, PackagePrice(p, _copy.Text("shared.pricing.customQuote")))).ToList()));
             c.Add(new ActionNode(_copy.Text("pricing.service.link", ("name", s.Service.Name)), $"/services/{s.Service.Slug}#pricing"));
         }
         PairsSection(c, "pricing.how");
@@ -161,7 +165,7 @@ public sealed partial class SeoPageResolver
             c.Add(new ParagraphNode(_copy.Text("services.detail.pricingIntro")));
             foreach (var p in s.Packages)
             {
-                c.Add(new HeadingNode(3, $"{p.Name}: {PackagePrice(p)}"));
+                c.Add(new HeadingNode(3, $"{p.Name}: {PackagePrice(p, _copy.Text("shared.pricing.customQuote"))}"));
                 if (!string.IsNullOrWhiteSpace(p.Description)) c.Add(new ParagraphNode(p.Description));
                 if (p.Features.Count > 0) c.Add(new ListNode(p.Features));
             }

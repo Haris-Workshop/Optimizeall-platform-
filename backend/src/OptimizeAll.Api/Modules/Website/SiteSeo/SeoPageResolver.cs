@@ -352,8 +352,8 @@ public sealed partial class SeoPageResolver(
         _ => string.Empty,
     };
 
-    public static string PackagePrice(PublicPackageDto p) =>
-        p.IsCustomQuote || p.Price is null ? "Custom quote" : $"{Money(p.Price.Value, p.Currency)} {Period(p.BillingPeriod)}".Trim()
+    public static string PackagePrice(PublicPackageDto p, string customQuote = "Custom quote") =>
+        p.IsCustomQuote || p.Price is null ? customQuote : $"{Money(p.Price.Value, p.Currency)} {Period(p.BillingPeriod)}".Trim()
             + (p.SetupFee is { } fee and > 0 ? $" + {Money(fee, p.Currency)} setup" : string.Empty);
 
     // ---------------------------------------------------------------- Non-content pages
@@ -466,6 +466,6 @@ public sealed partial class SeoPageResolver(
         if (_settings.Header.Cta is { } cta) header.Add(new LinkItem(cta.Label, cta.Url));
         var footer = _settings.Footer.Columns.Select(c => (c.Title, (IReadOnlyList<LinkItem>)c.Links.Select(l => new LinkItem(l.Label, l.Url)).ToList())).ToList();
         return new SiteChromeLinks(_settings.SiteName, header.DistinctBy(l => l.Href).ToList(), footer,
-            _settings.Footer.LegalLinks.Select(l => new LinkItem(l.Label, l.Url)).ToList());
+            _settings.Footer.LegalLinks.Select(l => new LinkItem(l.Label, l.Url)).ToList()) { FaviconUrl = _settings.Brand?.FaviconUrl };
     }
 }

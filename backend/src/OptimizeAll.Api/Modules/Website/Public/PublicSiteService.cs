@@ -103,7 +103,7 @@ public sealed class PublicSiteService(
             .Select(x => (bool?)x.IsEnabled).FirstOrDefaultAsync(ct) ?? false;
         return new PublicSiteDto(s.SiteName, s.Tagline, s.Header, s.Footer, s.Contact, s.Social, s.TrustLogos, s.Announcement,
             s.Seo with { SiteUrl = await BaseUrlAsync(ct) }, s.Analytics, menu, ConsentTexts.Dto, booking,
-            (await seoSettings.GetAsync(ct)).LlmsTxtEnabled);
+            (await seoSettings.GetAsync(ct)).LlmsTxtEnabled, s.Brand, s.Layouts, s.Products);
     }
 
     public async Task<HomeDto> HomeAsync(CancellationToken ct)

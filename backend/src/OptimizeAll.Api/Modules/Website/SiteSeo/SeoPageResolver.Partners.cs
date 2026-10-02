@@ -25,11 +25,11 @@ public sealed partial class SeoPageResolver
         if (dir.Partners.Count == 0) page.NoIndex = true;
         Crumbs(page, ("Partners", "/partners"));
         var c = page.Content;
-        c.Add(new ParagraphNode("Partners"));
-        c.Add(new HeadingNode(1, "Our partners"));
+        c.Add(new ParagraphNode(_copy.Text("partners.index.eyebrow")));
+        c.Add(new HeadingNode(1, _copy.Text("partners.index.title")));
         c.Add(new ParagraphNode(dir.Partners.Count > 0
-            ? $"{_settings.SiteName} is the official marketing partner of {PartnerPublicService.JoinNames(dir.Partners.Select(p => p.Name).ToList())}. Each is an independent platform; here is what they offer."
-            : $"Organizations {_settings.SiteName} is the official marketing partner of."));
+            ? _copy.Text("partners.index.lead", ("names", PartnerPublicService.JoinNames(dir.Partners.Select(p => p.Name).ToList())))
+            : _copy.Text("partners.index.leadEmpty")));
         if (dir.Partners.Count > 0)
             c.Add(new LinkListNode(dir.Partners.Select(p => new LinkItem(p.Name, p.ProfilePath, $"{p.Tagline} ({p.RelationshipLabel})")).ToList()));
         page.ModifiedAt = (await partners.ActiveAsync(ct)).Select(p => (DateTime?)p.UpdatedAt).Max();
@@ -52,7 +52,7 @@ public sealed partial class SeoPageResolver
         page.ModifiedAt = p.UpdatedAt;
         var visit = p.VisitUrl is null ? null : $"{p.VisitUrl}?slot=partners.profile&path={Uri.EscapeDataString(path)}";
         var c = page.Content;
-        c.Add(new ParagraphNode("Official marketing partner"));
+        c.Add(new ParagraphNode(_copy.Text("partners.profile.eyebrow")));
         c.Add(new HeadingNode(1, p.Name));
         c.Add(new ParagraphNode(p.Tagline));
         c.Add(new ParagraphNode(p.RelationshipLabel + "."));
@@ -68,7 +68,7 @@ public sealed partial class SeoPageResolver
         if (p.Offer is { } offer)
         {
             c.Add(new ParagraphNode(offer.Code is null ? offer.Text : $"{offer.Text} Code: {offer.Code}"));
-            if (visit is not null) c.Add(new ActionNode("Get the offer", visit));
+            if (visit is not null) c.Add(new ActionNode(_copy.Text("partners.profile.offerCta"), visit));
         }
         if (p.Offerings.Count > 0)
         {
@@ -83,7 +83,7 @@ public sealed partial class SeoPageResolver
         }
         if (p.Related.Count > 0)
         {
-            c.Add(new HeadingNode(2, "Related partners"));
+            c.Add(new HeadingNode(2, _copy.Text("partners.profile.related")));
             c.Add(new LinkListNode(p.Related.Select(r => new LinkItem(r.Name, r.ProfilePath, r.Tagline)).ToList()));
         }
         if (visit is not null)

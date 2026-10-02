@@ -64,6 +64,9 @@ public sealed record SiteChromeLinks(string SiteName, IReadOnlyList<LinkItem> He
 {
     /// <summary>Whether /llms.txt is published (Website → SEO), so the footer links it.</summary>
     public bool LlmsTxt { get; init; } = true;
+
+    /// <summary>The uploaded browser icon (Site settings → Brand), written after the shell's own icons so it wins; null: the built-in icons.</summary>
+    public string? FaviconUrl { get; init; }
 }
 
 /// <summary>Writes the content tree and site chrome as HTML (every text encoded; links limited to safe schemes).</summary>

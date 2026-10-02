@@ -22,7 +22,69 @@ public sealed record HeaderSettings(IReadOnlyList<MenuItem> Menu, SiteLink? Cta,
 
 public sealed record FooterColumn(string Title, IReadOnlyList<SiteLink> Links);
 
-public sealed record FooterSettings(string? Blurb, IReadOnlyList<FooterColumn> Columns, IReadOnlyList<SiteLink> LegalLinks);
+/// <summary>
+/// The site footer. <see cref="ProductLinks"/> ("More from Optimize All": the sibling products) and <see cref="SignInLinks"/>
+/// (one sign-in group labelled by audience) are the two small groups after the columns; stored documents without them
+/// read the defaults (<see cref="SiteSettingsService.Normalize"/>).
+/// </summary>
+public sealed record FooterSettings(
+    string? Blurb, IReadOnlyList<FooterColumn> Columns, IReadOnlyList<SiteLink> LegalLinks,
+    IReadOnlyList<SiteLink>? ProductLinks = null, IReadOnlyList<SiteLink>? SignInLinks = null);
+
+/// <summary>
+/// Brand assets: the logo in the header and footer (light and, optionally, dark backgrounds) and the browser icon. Null:
+/// the built-in Optimize All logo and icons.
+/// </summary>
+public sealed record BrandSettings(string? LogoUrl, string? LogoDarkUrl, string? FaviconUrl)
+{
+    public static readonly BrandSettings Empty = new(null, null, null);
+}
+
+/// <summary>A section of a built-in page and whether it is shown (the list order is the page order).</summary>
+public sealed record PageSection(string Key, bool Visible);
+
+/// <summary>Section order and visibility of the home page and the creators page (the hero always comes first).</summary>
+public sealed record PageLayouts(IReadOnlyList<PageSection> Home, IReadOnlyList<PageSection> Creators);
+
+/// <summary>
+/// The chrome of a sibling product site (Academy at /learn, Creators at /creators): its header navigation and call to
+/// action, and the links and note of its footer.
+/// </summary>
+public sealed record ProductChrome(IReadOnlyList<SiteLink> Nav, SiteLink Cta, IReadOnlyList<SiteLink> FooterLinks, string? FooterNote, SiteLink? FooterNoteLink);
+
+public sealed record ProductSites(ProductChrome Academy, ProductChrome Creators);
+
+/// <summary>The sections of the pages whose layout is editable (key → admin label), in their default order.</summary>
+public static class PageLayoutCatalog
+{
+    public static readonly IReadOnlyList<(string Key, string Label)> Home = new[]
+    {
+        ("logos", "Client logos"), ("partners", "Partner placements"), ("services", "Services"), ("proof", "Results and case studies"),
+        ("process", "How we work"), ("industries", "Industries"), ("testimonials", "Testimonials"), ("insights", "Latest articles"),
+        ("more", "More from Optimize All (Academy, Creators)"), ("cta", "Closing call to action and pricing"), ("newsletter", "Newsletter"),
+    };
+
+    public static readonly IReadOnlyList<(string Key, string Label)> Creators = new[]
+    {
+        ("how", "How it works (#how-it-works)"), ("earnings", "How earnings work"), ("rules", "Campaign rules (#rules)"),
+        ("faq", "Most asked questions"), ("cta", "Closing call to action"),
+    };
+
+    public static IReadOnlyList<PageSection> Defaults(IReadOnlyList<(string Key, string Label)> catalog) =>
+        catalog.Select(x => new PageSection(x.Key, true)).ToList();
+
+    /// <summary>The stored order with unknown and repeated keys dropped and sections added since appended (shown).</summary>
+    public static IReadOnlyList<PageSection> Merge(IReadOnlyList<PageSection>? stored, IReadOnlyList<(string Key, string Label)> catalog)
+    {
+        var known = catalog.Select(x => x.Key).ToHashSet(StringComparer.Ordinal);
+        var result = new List<PageSection>();
+        foreach (var section in stored ?? Array.Empty<PageSection>())
+            if (section?.Key is { } key && known.Contains(key) && result.All(r => r.Key != key)) result.Add(new PageSection(key, section.Visible));
+        foreach (var (key, _) in catalog)
+            if (result.All(r => r.Key != key)) result.Add(new PageSection(key, true));
+        return result;
+    }
+}
 
 public sealed record ContactSettings(string? Email, string? Phone, string? WhatsApp, string? Address, string? Hours);
 
@@ -56,9 +118,13 @@ public sealed record SiteSettings(
     DefaultSeo Seo,
     OrganizationSchema Organization,
     AnalyticsSettings Analytics,
-    IReadOnlyList<HomeStat> HomeStats);
+    IReadOnlyList<HomeStat> HomeStats,
+    BrandSettings? Brand = null,
+    PageLayouts? Layouts = null,
+    ProductSites? Products = null);
 
-public sealed record SiteSettingsDto(SiteSettings Settings, DateTime UpdatedAt, Guid ConcurrencyStamp);
+/// <param name="Defaults">The shipped defaults (for "reset to default" in the editor).</param>
+public sealed record SiteSettingsDto(SiteSettings Settings, DateTime UpdatedAt, Guid ConcurrencyStamp, SiteSettings? Defaults = null);
 
 public sealed class UpdateSiteSettingsRequest
 {
@@ -90,7 +156,7 @@ public sealed partial class SiteSettingsService(AppDbContext db, IAuditLogger au
     public async Task<SiteSettingsDto> GetForEditAsync(CancellationToken ct)
     {
         var doc = await EnsureAsync(ct);
-        return new SiteSettingsDto(Parse(doc.Json), doc.UpdatedAt, doc.ConcurrencyStamp);
+        return new SiteSettingsDto(Parse(doc.Json), doc.UpdatedAt, doc.ConcurrencyStamp, Defaults);
     }
 
     public async Task<SiteSettingsDto> UpdateAsync(UpdateSiteSettingsRequest request, CancellationToken ct)
@@ -103,7 +169,7 @@ public sealed partial class SiteSettingsService(AppDbContext db, IAuditLogger au
         audit.Record("website.settings_updated", nameof(SiteSettingsDocument), doc.Id, before, normalized);
         await db.SaveChangesAsync(ct);
         publicOrigin.SiteUrlChanged(normalized.Seo.SiteUrl);
-        return new SiteSettingsDto(normalized, doc.UpdatedAt, doc.ConcurrencyStamp);
+        return new SiteSettingsDto(normalized, doc.UpdatedAt, doc.ConcurrencyStamp, Defaults);
     }
 
     private async Task<SiteSettingsDocument> EnsureAsync(CancellationToken ct)
@@ -121,13 +187,70 @@ public sealed partial class SiteSettingsService(AppDbContext db, IAuditLogger au
         if (string.IsNullOrWhiteSpace(json)) return Defaults;
         try
         {
-            return JsonSerializer.Deserialize<SiteSettings>(json, Json) ?? Defaults;
+            return Normalize(JsonSerializer.Deserialize<SiteSettings>(json, Json) ?? Defaults);
         }
         catch (JsonException)
         {
             return Defaults;
         }
     }
+
+    /// <summary>
+    /// Fills in the parts a stored document may not have yet (brand, page layouts, product sites, the footer's product and
+    /// sign-in groups, the header's quiet link) with the defaults, so every reader sees the same complete settings and the
+    /// site looks exactly as before until an editor changes them.
+    /// </summary>
+    public static SiteSettings Normalize(SiteSettings s)
+    {
+        var footer = s.Footer ?? Defaults.Footer;
+        var header = s.Header ?? Defaults.Header;
+        var layouts = s.Layouts;
+        return s with
+        {
+            Header = header with { SecondaryLink = header.SecondaryLink ?? DefaultSecondaryLink },
+            Footer = footer with
+            {
+                ProductLinks = footer.ProductLinks ?? DefaultProductLinks,
+                SignInLinks = footer.SignInLinks ?? DefaultSignInLinks,
+            },
+            Brand = s.Brand ?? BrandSettings.Empty,
+            Layouts = new PageLayouts(PageLayoutCatalog.Merge(layouts?.Home, PageLayoutCatalog.Home),
+                PageLayoutCatalog.Merge(layouts?.Creators, PageLayoutCatalog.Creators)),
+            Products = new ProductSites(s.Products?.Academy ?? DefaultAcademy, s.Products?.Creators ?? DefaultCreators),
+        };
+    }
+
+    public static readonly SiteLink DefaultSecondaryLink = new("Free Academy", "/learn");
+
+    /// <summary>The footer's "More from Optimize All" group (frontend SiteFooter.tsx shipped these as constants).</summary>
+    public static readonly IReadOnlyList<SiteLink> DefaultProductLinks = new SiteLink[]
+    {
+        new("Optimize All Academy", "/learn"), new("Optimize All Creators", "/creators"),
+    };
+
+    /// <summary>One sign-in group labelled by audience; all open /login (the audience only chooses the page's wording).</summary>
+    public static readonly IReadOnlyList<SiteLink> DefaultSignInLinks = new SiteLink[]
+    {
+        new("Client login", "/login"), new("Creator sign in", "/login?audience=creator"), new("Academy sign in", "/login?audience=learner"),
+    };
+
+    public static readonly ProductChrome DefaultAcademy = new(
+        new SiteLink[] { new("Courses", "/learn"), new("Learning paths", "/learn/paths"), new("Certificates", "/learn#certificates"), new("Verify a certificate", "/verify") },
+        new SiteLink("Start learning free", "/learn"),
+        new SiteLink[] { new("Courses", "/learn"), new("Learning paths", "/learn/paths"), new("Certificates", "/learn#certificates"), new("Verify a certificate", "/verify") },
+        "Optimize All Academy is run by Optimize All, a marketing agency.",
+        new SiteLink("Work with us", "/services"));
+
+    public static readonly ProductChrome DefaultCreators = new(
+        new SiteLink[] { new("How it works", "/creators#how-it-works"), new("FAQ", "/creators/faq"), new("Campaign rules", "/creators#rules") },
+        new SiteLink("Create a creator account", "/register?audience=creator"),
+        new SiteLink[]
+        {
+            new("How it works", "/creators#how-it-works"), new("FAQ", "/creators/faq"), new("Campaign rules", "/creators#rules"),
+            new("Create a creator account", "/register?audience=creator"), new("Creator sign in", "/login?audience=creator"),
+        },
+        "Optimize All Creators is run by Optimize All, a marketing agency.",
+        new SiteLink("Visit Optimize All", "/"));
 
     /// <summary>Validates every field (links, images, ids) and returns a trimmed copy. Throws 400 with field errors.</summary>
     public SiteSettings Validate(SiteSettings s)
@@ -192,6 +315,41 @@ public sealed partial class SiteSettingsService(AppDbContext db, IAuditLogger au
             columns.Add(new FooterColumn(Req(cols[i].Title, $"footer.columns[{i}].title", 40), links));
         }
         var legal = (s.Footer?.LegalLinks ?? Array.Empty<SiteLink>()).Select((l, j) => Link(l, $"footer.legalLinks[{j}]", true)!).Where(l => l is not null).ToList();
+        List<SiteLink> Links(IReadOnlyList<SiteLink>? links, string field, int max)
+        {
+            var list = (links ?? Array.Empty<SiteLink>()).Select((l, j) => Link(l, $"{field}[{j}]", true)!).Where(l => l is not null).ToList();
+            if (list.Count > max) e.Add(field, $"Use at most {max} links.");
+            return list;
+        }
+        var productLinks = Links(s.Footer?.ProductLinks ?? DefaultProductLinks, "footer.productLinks", 8);
+        var signInLinks = Links(s.Footer?.SignInLinks ?? DefaultSignInLinks, "footer.signInLinks", 8);
+
+        var b0 = s.Brand ?? BrandSettings.Empty;
+        var brand = new BrandSettings(rules.Image(b0.LogoUrl, "brand.logoUrl", e), rules.Image(b0.LogoDarkUrl, "brand.logoDarkUrl", e),
+            rules.Image(b0.FaviconUrl, "brand.faviconUrl", e));
+
+        IReadOnlyList<PageSection> Sections(IReadOnlyList<PageSection>? sections, IReadOnlyList<(string Key, string Label)> catalog, string field)
+        {
+            var known = catalog.Select(x => x.Key).ToHashSet(StringComparer.Ordinal);
+            var input = sections ?? Array.Empty<PageSection>();
+            for (var i = 0; i < input.Count; i++)
+                if (input[i]?.Key is not { } key || !known.Contains(key)) e.Add($"{field}[{i}].key", "Unknown section.");
+            if (input.Select(x => x?.Key).Distinct().Count() != input.Count) e.Add(field, "List each section once.");
+            return PageLayoutCatalog.Merge(input, catalog);
+        }
+        var layouts = new PageLayouts(Sections(s.Layouts?.Home, PageLayoutCatalog.Home, "layouts.home"),
+            Sections(s.Layouts?.Creators, PageLayoutCatalog.Creators, "layouts.creators"));
+
+        ProductChrome Product(ProductChrome? p, ProductChrome fallback, string field)
+        {
+            p ??= fallback;
+            var nav = Links(p.Nav, field + ".nav", 8);
+            var cta = Link(p.Cta, field + ".cta", required: true);
+            var footerLinks = Links(p.FooterLinks, field + ".footerLinks", 12);
+            return new ProductChrome(nav, cta ?? fallback.Cta, footerLinks, Opt(p.FooterNote, field + ".footerNote", 200), Link(p.FooterNoteLink, field + ".footerNoteLink"));
+        }
+        var products = new ProductSites(Product(s.Products?.Academy, DefaultAcademy, "products.academy"),
+            Product(s.Products?.Creators, DefaultCreators, "products.creators"));
 
         var c0 = s.Contact ?? new ContactSettings(null, null, null, null, null);
         var email = Opt(c0.Email, "contact.email", 254);
@@ -266,8 +424,8 @@ public sealed partial class SiteSettingsService(AppDbContext db, IAuditLogger au
         var result = new SiteSettings(
             Req(s.SiteName, "siteName", 80),
             Req(s.Tagline, "tagline", 120),
-            new HeaderSettings(menu, Link(s.Header?.Cta, "header.cta"), Link(s.Header?.SecondaryLink, "header.secondaryLink")),
-            new FooterSettings(Opt(s.Footer?.Blurb, "footer.blurb", 400), columns, legal),
+            new HeaderSettings(menu, Link(s.Header?.Cta, "header.cta"), Link(s.Header?.SecondaryLink, "header.secondaryLink") ?? DefaultSecondaryLink),
+            new FooterSettings(Opt(s.Footer?.Blurb, "footer.blurb", 400), columns, legal, productLinks, signInLinks),
             new ContactSettings(email, phone, whatsapp, Opt(c0.Address, "contact.address", 300), Opt(c0.Hours, "contact.hours", 120)),
             social,
             logos,
@@ -279,7 +437,10 @@ public sealed partial class SiteSettingsService(AppDbContext db, IAuditLogger au
                 Opt(o0.Region, "organization.region", 100), Opt(o0.PostalCode, "organization.postalCode", 20), country,
                 WebsiteRules.Lines(o0.AreaServed, "organization.areaServed", e, 30, 80)),
             new AnalyticsSettings(ga4, gtm, pixel),
-            stats);
+            stats,
+            brand,
+            layouts,
+            products);
         e.ThrowIfAny();
         return result;
     }
@@ -301,7 +462,9 @@ public sealed partial class SiteSettingsService(AppDbContext db, IAuditLogger au
             {
                 new("Privacy policy", "/privacy-policy"), new("Terms of service", "/terms-of-service"), new("Cookie policy", "/cookie-policy"),
                 new("Accessibility", "/accessibility"), new("Refund policy", "/refund-policy"),
-            }),
+            },
+            DefaultProductLinks,
+            DefaultSignInLinks),
         new ContactSettings("hello@optimizeall.com", null, null, null, "Monday–Friday, 9:00–18:00"),
         Array.Empty<SocialProfile>(),
         Array.Empty<TrustLogo>(),
@@ -310,7 +473,10 @@ public sealed partial class SiteSettingsService(AppDbContext db, IAuditLogger au
             "A digital marketing agency for strategy, performance marketing, SEO, content and AI, with reporting tied to revenue. Free Academy courses too.", null, null),
         new OrganizationSchema("Optimize All", null, null, null, null, null, null, null, Array.Empty<string>()),
         new AnalyticsSettings(null, null, null),
-        Array.Empty<HomeStat>());
+        Array.Empty<HomeStat>(),
+        BrandSettings.Empty,
+        new PageLayouts(PageLayoutCatalog.Defaults(PageLayoutCatalog.Home), PageLayoutCatalog.Defaults(PageLayoutCatalog.Creators)),
+        new ProductSites(DefaultAcademy, DefaultCreators));
 
     private static MenuItem[] DefaultMenu => new MenuItem[]
     {

@@ -38,90 +38,125 @@ public sealed partial class SeoPageResolver
         c.Add(new ListNode(_copy.List("home.hero.proof")));
         c.Add(new LinkListNode(new[]
         {
-            new LinkItem(_copy.Text("home.hero.primaryCta"), "/book-a-consultation"), new LinkItem(_copy.Text("home.hero.secondaryCta"), "/case-studies"),
+            new LinkItem(_copy.Text("home.hero.primaryCta"), _copy.Text("home.hero.primaryCtaUrl")),
+            new LinkItem(_copy.Text("home.hero.secondaryCta"), _copy.Text("home.hero.secondaryCtaUrl")),
         }));
 
-        c.Add(new HeadingNode(2, _copy.Text("home.services.title")));
-        c.Add(new ParagraphNode(_copy.Text("home.services.intro")));
-        for (var gi = 0; gi < home.ServiceCategories.Count; gi++)
+        // The sections after the hero, in the order and visibility set in Site settings → Page layout (the web app reads the
+        // same settings). Client logos and partner placements have no crawlable copy of their own.
+        void Services()
         {
-            var group = home.ServiceCategories[gi];
-            c.Add(new HeadingNode(3, group.Name));
-            if (!string.IsNullOrWhiteSpace(group.Description)) c.Add(new ParagraphNode(group.Description));
-            c.Add(new LinkListNode(group.Services.Take(gi < 2 ? 6 : 4).Select(s => new LinkItem(s.Name, $"/services/{s.Slug}")).ToList()));
+            c.Add(new HeadingNode(2, _copy.Text("home.services.title")));
+            c.Add(new ParagraphNode(_copy.Text("home.services.intro")));
+            for (var gi = 0; gi < home.ServiceCategories.Count; gi++)
+            {
+                var group = home.ServiceCategories[gi];
+                c.Add(new HeadingNode(3, group.Name));
+                if (!string.IsNullOrWhiteSpace(group.Description)) c.Add(new ParagraphNode(group.Description));
+                c.Add(new LinkListNode(group.Services.Take(gi < 2 ? 6 : 4).Select(s => new LinkItem(s.Name, $"/services/{s.Slug}")).ToList()));
+            }
+            c.Add(new ActionNode(_copy.Text("home.services.cta"), "/services"));
         }
-        c.Add(new ActionNode(_copy.Text("home.services.cta"), "/services"));
-
-        if (home.Stats.Count > 0)
+        void Proof()
         {
-            c.Add(new HeadingNode(2, _copy.Text("home.results.title")));
-            c.Add(new ParagraphNode(_copy.Text("home.results.intro")));
-            c.Add(new FactsNode(home.Stats.Select(s => KeyValuePair.Create(s.Label, $"{s.Value} ({s.Measurement.ToString().ToLowerInvariant()})")).ToList()));
+            if (home.Stats.Count > 0)
+            {
+                c.Add(new HeadingNode(2, _copy.Text("home.results.title")));
+                c.Add(new ParagraphNode(_copy.Text("home.results.intro")));
+                c.Add(new FactsNode(home.Stats.Select(s => KeyValuePair.Create(s.Label, $"{s.Value} ({s.Measurement.ToString().ToLowerInvariant()})")).ToList()));
+            }
+            if (home.FeaturedCaseStudies.Count > 0)
+            {
+                c.Add(new HeadingNode(2, _copy.Text("home.caseStudies.title")));
+                c.Add(new ParagraphNode(_copy.Text("home.caseStudies.intro")));
+                c.Add(new LinkListNode(home.FeaturedCaseStudies.Select(cs => new LinkItem(cs.Title, $"/case-studies/{cs.Slug}", cs.Summary)).ToList()));
+                c.Add(new ActionNode(_copy.Text("home.caseStudies.cta"), "/case-studies"));
+            }
         }
-        if (home.FeaturedCaseStudies.Count > 0)
+        void Process()
         {
-            c.Add(new HeadingNode(2, _copy.Text("home.caseStudies.title")));
-            c.Add(new ParagraphNode(_copy.Text("home.caseStudies.intro")));
-            c.Add(new LinkListNode(home.FeaturedCaseStudies.Select(cs => new LinkItem(cs.Title, $"/case-studies/{cs.Slug}", cs.Summary)).ToList()));
-            c.Add(new ActionNode(_copy.Text("home.caseStudies.cta"), "/case-studies"));
+            c.Add(new HeadingNode(2, _copy.Text("home.process.title")));
+            c.Add(new ParagraphNode(_copy.Text("home.process.intro")));
+            foreach (var (title, text) in _copy.Pairs("home.process.steps"))
+            {
+                c.Add(new HeadingNode(3, title));
+                c.Add(new ParagraphNode(text));
+            }
+            c.Add(new ActionNode(_copy.Text("home.process.cta"), "/how-we-work"));
         }
-        c.Add(new HeadingNode(2, _copy.Text("home.process.title")));
-        c.Add(new ParagraphNode(_copy.Text("home.process.intro")));
-        foreach (var (title, text) in _copy.Pairs("home.process.steps"))
+        void Industries()
         {
-            c.Add(new HeadingNode(3, title));
-            c.Add(new ParagraphNode(text));
-        }
-        c.Add(new ActionNode(_copy.Text("home.process.cta"), "/how-we-work"));
-        if (home.Industries.Count > 0)
-        {
+            if (home.Industries.Count == 0) return;
             c.Add(new HeadingNode(2, _copy.Text("home.industries.title")));
             c.Add(new ParagraphNode(_copy.Text("home.industries.intro")));
             c.Add(new LinkListNode(home.Industries.Take(6).Select(i => new LinkItem(i.Name, $"/industries/{i.Slug}", i.Summary)).ToList()));
             c.Add(new ActionNode(_copy.Text("home.industries.cta"), "/industries"));
         }
-        if (home.Testimonials.Count > 0)
+        void Testimonials()
         {
+            if (home.Testimonials.Count == 0) return;
             c.Add(new HeadingNode(2, _copy.Text("home.testimonials.title")));
             foreach (var t in home.Testimonials.Take(4))
                 c.Add(new QuoteNode(t.Quote, string.Join(", ", new[] { t.AuthorName, t.AuthorRole, t.Company }.Where(x => !string.IsNullOrWhiteSpace(x)))));
         }
-        if (home.LatestPosts.Count > 0)
+        void Insights()
         {
+            if (home.LatestPosts.Count == 0) return;
             c.Add(new HeadingNode(2, _copy.Text("home.blog.title")));
             c.Add(new ParagraphNode(_copy.Text("home.blog.intro")));
             c.Add(new LinkListNode(home.LatestPosts.Select(p => new LinkItem(p.Title, $"/blog/{p.Slug}", p.Excerpt)).ToList()));
             c.Add(new ActionNode(_copy.Text("home.blog.cta"), "/blog"));
         }
-        // The other two products, once each, in their own band.
-        c.Add(new HeadingNode(2, _copy.Text("home.more.title")));
-        c.Add(new ParagraphNode(_copy.Text("home.more.intro")));
-        c.Add(new LinkListNode(new[]
+        void More()
         {
-            new LinkItem(_copy.Text("home.more.academy.title"), "/learn", $"{_copy.Text("home.more.academy.kicker")}. {_copy.Text("home.more.academy.text")}"),
-            new LinkItem(_copy.Text("home.more.creators.title"), "/creators", $"{_copy.Text("home.more.creators.kicker")}. {_copy.Text("home.more.creators.text")}"),
-        }));
-        // Closing call to action, with the pricing teaser beside it.
-        c.Add(new ParagraphNode(_copy.Text("home.cta.eyebrow")));
-        c.Add(new HeadingNode(2, _copy.Text("home.cta.title")));
-        c.Add(new ParagraphNode(_copy.Text("home.cta.text")));
-        c.Add(new LinkListNode(new[]
-        {
-            new LinkItem(_copy.Text("home.cta.primary"), "/book-a-consultation"), new LinkItem(_copy.Text("home.cta.secondary"), "/free-audit"),
-        }));
-        c.Add(new ListNode(_copy.List("home.cta.points")));
-        if (home.PricingTeaser.Count > 0)
-        {
-            c.Add(new HeadingNode(3, _copy.Text("home.pricing.title")));
-            c.Add(new ParagraphNode(_copy.Text("home.pricing.intro")));
-            c.Add(new FactsNode(home.PricingTeaser.Select(p => KeyValuePair.Create($"{p.ServiceName} — {p.Package.Name}", PackagePrice(p.Package))).ToList()));
-            c.Add(new ActionNode(_copy.Text("home.pricing.cta"), "/pricing"));
+            // The other two products, once each, in their own band.
+            c.Add(new HeadingNode(2, _copy.Text("home.more.title")));
+            c.Add(new ParagraphNode(_copy.Text("home.more.intro")));
+            c.Add(new LinkListNode(new[]
+            {
+                new LinkItem(_copy.Text("home.more.academy.title"), "/learn", $"{_copy.Text("home.more.academy.kicker")}. {_copy.Text("home.more.academy.text")}"),
+                new LinkItem(_copy.Text("home.more.creators.title"), "/creators", $"{_copy.Text("home.more.creators.kicker")}. {_copy.Text("home.more.creators.text")}"),
+            }));
         }
-        c.Add(new HeadingNode(2, _copy.Text("home.newsletter.title")));
-        c.Add(new ParagraphNode(_copy.Text("home.newsletter.intro")));
+        void Cta()
+        {
+            // Closing call to action, with the pricing teaser beside it.
+            c.Add(new ParagraphNode(_copy.Text("home.cta.eyebrow")));
+            c.Add(new HeadingNode(2, _copy.Text("home.cta.title")));
+            c.Add(new ParagraphNode(_copy.Text("home.cta.text")));
+            c.Add(new LinkListNode(new[]
+            {
+                new LinkItem(_copy.Text("home.cta.primary"), _copy.Text("home.cta.primaryUrl")),
+                new LinkItem(_copy.Text("home.cta.secondary"), _copy.Text("home.cta.secondaryUrl")),
+            }));
+            c.Add(new ListNode(_copy.List("home.cta.points")));
+            if (home.PricingTeaser.Count > 0)
+            {
+                c.Add(new HeadingNode(3, _copy.Text("home.pricing.title")));
+                c.Add(new ParagraphNode(_copy.Text("home.pricing.intro")));
+                c.Add(new FactsNode(home.PricingTeaser.Select(p => KeyValuePair.Create($"{p.ServiceName} — {p.Package.Name}", PackagePrice(p.Package, _copy.Text("shared.pricing.customQuote")))).ToList()));
+                c.Add(new ActionNode(_copy.Text("home.pricing.cta"), "/pricing"));
+            }
+        }
+        void Newsletter()
+        {
+            c.Add(new HeadingNode(2, _copy.Text("home.newsletter.title")));
+            c.Add(new ParagraphNode(_copy.Text("home.newsletter.intro")));
+        }
+        var sections = new Dictionary<string, Action>(StringComparer.Ordinal)
+        {
+            ["services"] = Services, ["proof"] = Proof, ["process"] = Process, ["industries"] = Industries, ["testimonials"] = Testimonials,
+            ["insights"] = Insights, ["more"] = More, ["cta"] = Cta, ["newsletter"] = Newsletter,
+        };
+        foreach (var section in HomeLayout(_settings))
+            if (section.Visible && sections.TryGetValue(section.Key, out var write)) write();
         page.ModifiedAt = Latest(_settingsUpdatedAt, _copyUpdatedAt, home.LatestPosts.Select(p => p.PublishedAt).Max());
         return AddCatalogVideos(page);
     }
+
+    /// <summary>The home page's sections in the editor's order (defaults when the settings predate the layout).</summary>
+    private static IReadOnlyList<PageSection> HomeLayout(SiteSettings settings) =>
+        settings.Layouts?.Home ?? PageLayoutCatalog.Defaults(PageLayoutCatalog.Home);
 
     // ---------------------------------------------------------------- Built-in listing pages
 
@@ -332,35 +367,58 @@ public sealed partial class SeoPageResolver
         c.Add(new HeadingNode(1, $"{_copy.Text("creators.hero.title")} {_copy.Text("creators.hero.titleAccent")}".Trim()));
         c.Add(new ParagraphNode(_copy.Text("creators.hero.lead")));
         c.Add(new ListNode(_copy.List("creators.hero.trust")));
-        c.Add(new ActionNode(_copy.Text("creators.hero.primaryCta"), "/register?audience=creator"));
-        c.Add(new HeadingNode(2, _copy.Text("creators.how.title")));
-        foreach (var (title, text) in _copy.Pairs("creators.how.steps"))
+        c.Add(new ActionNode(_copy.Text("creators.hero.primaryCta"), _copy.Text("creators.hero.primaryCtaUrl")));
+        // The sections after the hero in the order and visibility of Site settings → Page layout (as the web app shows them).
+        var faqs = new List<FaqEntry>();
+        void How()
         {
-            c.Add(new HeadingNode(3, title));
-            c.Add(new ParagraphNode(text));
+            c.Add(new HeadingNode(2, _copy.Text("creators.how.title")));
+            foreach (var (title, text) in _copy.Pairs("creators.how.steps"))
+            {
+                c.Add(new HeadingNode(3, title));
+                c.Add(new ParagraphNode(text));
+            }
         }
-        c.Add(new HeadingNode(2, _copy.Text("creators.earn.title")));
-        c.Add(new ParagraphNode(_copy.Text("creators.earn.intro")));
-        foreach (var (title, text) in _copy.Pairs("creators.earn.stages"))
+        void Earnings()
         {
-            c.Add(new HeadingNode(3, title));
-            c.Add(new ParagraphNode(text));
+            c.Add(new HeadingNode(2, _copy.Text("creators.earn.title")));
+            c.Add(new ParagraphNode(_copy.Text("creators.earn.intro")));
+            foreach (var (title, text) in _copy.Pairs("creators.earn.stages"))
+            {
+                c.Add(new HeadingNode(3, title));
+                c.Add(new ParagraphNode(text));
+            }
+            c.Add(new ParagraphNode(_copy.Text("creators.earn.note")));
         }
-        c.Add(new ParagraphNode(_copy.Text("creators.earn.note")));
-        c.Add(new HeadingNode(2, _copy.Text("creators.rules.title")));
-        c.Add(new ParagraphNode(_copy.Text("creators.rules.lead")));
-        foreach (var (title, text) in _copy.Pairs("creators.rules.items"))
+        void Rules()
         {
-            c.Add(new HeadingNode(3, title));
-            c.Add(new ParagraphNode(text));
+            c.Add(new HeadingNode(2, _copy.Text("creators.rules.title")));
+            c.Add(new ParagraphNode(_copy.Text("creators.rules.lead")));
+            foreach (var (title, text) in _copy.Pairs("creators.rules.items"))
+            {
+                c.Add(new HeadingNode(3, title));
+                c.Add(new ParagraphNode(text));
+            }
         }
-        c.Add(new HeadingNode(2, _copy.Text("creators.faq.title")));
-        var faqs = _copy.Pairs("creators.faq.items").Select(p => new FaqEntry(p.Title, p.Text)).ToList();
-        foreach (var f in faqs) c.Add(new QuestionNode(f.Question, f.Answer));
-        c.Add(new ActionNode(_copy.Text("creators.faq.cta"), "/creators/faq"));
-        c.Add(new HeadingNode(2, _copy.Text("creators.cta.title")));
-        c.Add(new ParagraphNode(_copy.Text("creators.cta.text")));
-        c.Add(new ActionNode(_copy.Text("creators.cta.button"), "/register?audience=creator"));
+        void Faq()
+        {
+            c.Add(new HeadingNode(2, _copy.Text("creators.faq.title")));
+            faqs = _copy.Pairs("creators.faq.items").Select(p => new FaqEntry(p.Title, p.Text)).ToList();
+            foreach (var f in faqs) c.Add(new QuestionNode(f.Question, f.Answer));
+            c.Add(new ActionNode(_copy.Text("creators.faq.cta"), "/creators/faq"));
+        }
+        void Cta()
+        {
+            c.Add(new HeadingNode(2, _copy.Text("creators.cta.title")));
+            c.Add(new ParagraphNode(_copy.Text("creators.cta.text")));
+            c.Add(new ActionNode(_copy.Text("creators.cta.button"), _copy.Text("creators.cta.buttonUrl")));
+        }
+        var sections = new Dictionary<string, Action>(StringComparer.Ordinal)
+        {
+            ["how"] = How, ["earnings"] = Earnings, ["rules"] = Rules, ["faq"] = Faq, ["cta"] = Cta,
+        };
+        foreach (var section in _settings.Layouts?.Creators ?? PageLayoutCatalog.Defaults(PageLayoutCatalog.Creators))
+            if (section.Visible && sections.TryGetValue(section.Key, out var write)) write();
         if (_ld.FaqPage(faqs) is { } faqLd) page.JsonLd.Add(faqLd);
         page.ModifiedAt = Latest(_copyUpdatedAt, _settingsUpdatedAt);
         return AddCatalogVideos(page);

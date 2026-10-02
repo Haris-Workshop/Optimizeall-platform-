@@ -148,11 +148,12 @@ public class AgencyFirstDefaultsTests
     }
 
     [Fact]
-    public void A_stored_document_without_the_secondary_link_reads_as_null()
+    public void A_stored_document_without_the_secondary_link_reads_the_default_link()
     {
+        // The web app always showed "Free Academy" when the link was missing; the settings now say so explicitly.
         var json = System.Text.Json.JsonSerializer.Serialize(D, SiteSettingsService.Json).Replace(",\"secondaryLink\":{\"label\":\"Free Academy\",\"url\":\"/learn\"}", string.Empty);
         Assert.DoesNotContain("secondaryLink", json);
-        Assert.Null(SiteSettingsService.Parse(json).Header.SecondaryLink);
+        Assert.Equal(SiteSettingsService.DefaultSecondaryLink, SiteSettingsService.Parse(json).Header.SecondaryLink);
         Assert.Equal(D.Header.Cta, SiteSettingsService.Parse(json).Header.Cta);
     }
 

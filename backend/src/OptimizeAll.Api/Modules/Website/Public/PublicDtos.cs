@@ -21,7 +21,8 @@ public sealed record MenuCategoryDto(string Slug, string Name, string? Descripti
 public sealed record PublicSiteDto(
     string SiteName, string Tagline, HeaderSettings Header, FooterSettings Footer, ContactSettings Contact, IReadOnlyList<SocialProfile> Social,
     IReadOnlyList<TrustLogo> TrustLogos, AnnouncementBar Announcement, DefaultSeo Seo, AnalyticsSettings Analytics,
-    IReadOnlyList<MenuCategoryDto> ServiceMenu, ConsentTextsDto Consent, bool BookingEnabled, bool LlmsTxt);
+    IReadOnlyList<MenuCategoryDto> ServiceMenu, ConsentTextsDto Consent, bool BookingEnabled, bool LlmsTxt,
+    BrandSettings? Brand = null, PageLayouts? Layouts = null, ProductSites? Products = null);
 
 public sealed record PriceDto(decimal Amount, string Currency, PackageBillingPeriod BillingPeriod);
 

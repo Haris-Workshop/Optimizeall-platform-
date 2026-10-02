@@ -175,6 +175,9 @@ public sealed partial class SiteCopyService(AppDbContext db, IAuditLogger audit,
             case CopyType.Text:
                 if (value.Contains('\n')) errors.Add(field, "Use a single line.");
                 break;
+            case CopyType.Link:
+                if (!IsLink(value)) errors.Add(field, "Use a path on this site such as /contact, or an https:// address.");
+                break;
             case CopyType.List:
             case CopyType.Pairs:
                 var lines = value.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).ToList();
@@ -194,6 +197,12 @@ public sealed partial class SiteCopyService(AppDbContext db, IAuditLogger audit,
                 : $"Unknown placeholder {{{unknown[0]}}}. Available: {string.Join(", ", def.Placeholders.Select(p => "{" + p + "}"))}.");
         return value;
     }
+
+    /// <summary>A same-site path (not protocol-relative) or an absolute https URL, on one line without spaces.</summary>
+    public static bool IsLink(string value) =>
+        value.Length > 0 && !value.Any(char.IsWhiteSpace) &&
+        ((value.StartsWith('/') && !value.StartsWith("//", StringComparison.Ordinal) && !value.StartsWith("/\\", StringComparison.Ordinal)) ||
+         (Uri.TryCreate(value, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps && !string.IsNullOrEmpty(u.Host)));
 
     private static bool IsPair(string line)
     {

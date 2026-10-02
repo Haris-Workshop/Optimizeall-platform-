@@ -50,10 +50,12 @@ public sealed class PartnerPublicService(AppDbContext db, PublicSiteService site
         var ld = new JsonLd(await site.BaseUrlAsync(ct), await site.SettingsAsync(ct));
         var pld = new PartnerJsonLd(ld);
         var names = JoinNames(partners.Select(p => p.Name).ToList());
-        const string title = "Our partners";
+        // Editable page texts (Agency → Website → Page texts → Partners pages); the defaults are the former wording.
+        var pageCopy = new SiteSeo.CopyReader((await copy.GetPublicAsync(ct)).Values);
+        var title = pageCopy.Text("partners.index.title");
         var description = partners.Count == 0
             ? "Organizations Optimize All works with as their marketing partner."
-            : Truncate($"Optimize All is the official marketing partner of {names}. Learn about each platform and what it offers.", 200);
+            : Truncate(pageCopy.Text("partners.index.description", ("names", names)), 200);
         var seo = new PublicSeoDto(title, description, null, ld.Url("/partners"), false);
         return new PublicPartnersDto(
             partners.Select(Card).ToList(),

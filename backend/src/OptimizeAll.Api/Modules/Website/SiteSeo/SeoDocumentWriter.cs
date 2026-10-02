@@ -127,7 +127,9 @@ public static class SeoDocumentWriter
         foreach (var img in page.Content.OfType<ImageNode>().Where(i => i.Priority).Take(1))
             sb.Append("<link rel=\"preload\" as=\"image\" href=\"").Append(e(img.Src)).Append("\" fetchpriority=\"high\">\n");
         sb.Append(InlineStyle).Append('\n');
-        sb.Append(ShellHeadInclude).Append("\n</head>\n<body>\n<div id=\"root\">");
+        sb.Append(ShellHeadInclude).Append('\n');
+        if (chrome.FaviconUrl is { Length: > 0 } icon) sb.Append("<link rel=\"icon\" href=\"").Append(e(icon)).Append("\" data-oa-brand>\n");
+        sb.Append("</head>\n<body>\n<div id=\"root\">");
         var body = new StringBuilder(8 * 1024);
         SeoHtml.WriteBody(body, page, chrome);
         sb.Append(SeoPartnerLinks.Apply(body.ToString(), partnerLinks ?? Array.Empty<OptimizeAll.Domain.Website.PartnerLinkRule>()));

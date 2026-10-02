@@ -46,6 +46,11 @@ describe('site copy', () => {
     expect(copy.text('shared.header.megaCta')).toBe('Get a free marketing audit');
     // The website 404's links heading matches the server-rendered 404 ("Helpful links").
     expect(copy.text('shared.page404.linksTitle')).toBe('Helpful links');
+    // The academy hub's h1 (title + highlighted part) keeps the words the SEO title and the journeys look for.
+    expect(`${copy.text('academy.hero.title')} ${copy.text('academy.hero.titleAccent')}`).toBe('Free courses. Real skills. Verified certificates.');
+    // Creators earnings: stages from post to payout, and no promised figures.
+    expect(copy.pairs('creators.earn.stages')).toHaveLength(4);
+    expect(copy.text('creators.earn.note')).toMatch(/never promise/);
   });
 
   it('renders the shipped wording when overrides cannot be loaded, and editor overrides once they are', async () => {
@@ -67,5 +72,7 @@ describe('site copy', () => {
     expect(screen.queryByRole('heading', { name: /Step 3/ })).not.toBeInTheDocument();
     // Untouched keys keep their defaults.
     expect(screen.getByRole('heading', { name: 'Fair for you, honest with your audience' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Know the reward before you post' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Reward shown up front' })).toBeInTheDocument();
   });
 });

@@ -1,32 +1,31 @@
-import {
-  ArrowRight,
-  BadgeCheck,
-  CalendarClock,
-  CheckCircle2,
-  Eye,
-  FileCheck2,
-  Hash,
-  Megaphone,
-  ShieldCheck,
-  Upload,
-  UserCheck,
-  Wallet,
-} from 'lucide-react';
-import { useEffect } from 'react';
+import { ArrowRight, BadgeCheck, CalendarClock, Check, Eye, Hash, Megaphone, ReceiptText, Upload, UserCheck, Wallet } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ButtonLink } from '@/components/ui/ButtonLink';
+import { CreatorsHeroArt } from './landing/CreatorsArt';
 import { useSiteCopy } from './site/copy';
 import { useDocumentHead } from './site/head';
+import { useReveal } from './site/motion';
+import './site/marketing.css';
 import './LandingPage.css';
 
-/** Icons for the editable steps and rules (by position; extra items reuse them in order). */
+/** Icons for the editable steps, earnings stages and rules (by position; extra items reuse them in order). */
 const STEP_ICONS = [Megaphone, Upload, Wallet];
+const EARN_ICONS = [ReceiptText, UserCheck, CalendarClock, BadgeCheck];
 const RULE_ICONS = [UserCheck, Hash, Eye, CalendarClock];
 
-/** Marketing home page for prospective participants. */
+/**
+ * Optimize All Creators (/creators): the creator programme's front page. A dark hero stage (value proposition, account
+ * and how-it-works calls to action, trust points, the post-to-payout art), the three steps, how earnings work (no
+ * figures: every campaign states its own reward), the rules, the most asked questions and a closing call to action.
+ * Every word is editable page copy (`creators.*`); the server-rendered page (SeoPageResolver.CreatorsPage) follows the
+ * same order.
+ */
 export function LandingPage() {
   const { hash } = useLocation();
   const copy = useSiteCopy();
+  const root = useRef<HTMLDivElement>(null);
+  useReveal(root);
   useDocumentHead({ title: copy.text('creators.seo.title'), description: copy.text('creators.seo.description') });
 
   // Router links to /creators#section: scroll to the section and move focus there for keyboard users.
@@ -40,141 +39,149 @@ export function LandingPage() {
   }, [hash]);
 
   return (
-    <div className="landing">
-      <section className="landing-hero" aria-labelledby="hero-title">
-        <div className="container landing-hero__inner">
-          <div className="landing-hero__copy">
-            <p className="landing-hero__eyebrow">
-              <span className="landing-hero__dot" aria-hidden="true" />
-              {copy.text('creators.hero.eyebrow')}
-            </p>
-            <h1 id="hero-title" className="landing-hero__title">
-              {copy.text('creators.hero.title')} <span className="landing-hero__accent">{copy.text('creators.hero.titleAccent')}</span>
-            </h1>
-            <p className="landing-hero__lead">{copy.text('creators.hero.lead')}</p>
-            <div className="landing-hero__ctas">
-              <ButtonLink to="/register?audience=creator" variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
-                {copy.text('creators.hero.primaryCta')}
-              </ButtonLink>
-              <ButtonLink to="/creators#how-it-works" variant="secondary" size="lg">
-                {copy.text('creators.hero.secondaryCta')}
-              </ButtonLink>
-            </div>
-            <ul className="landing-hero__trust">
-              {copy.list('creators.hero.trust').map((item) => (
-                <li key={item}>
-                  <CheckCircle2 aria-hidden="true" /> {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="landing-hero__visual" aria-hidden="true">
-            <div className="hero-card hero-card--main">
-              <div className="hero-card__row">
-                <span className="hero-card__label">Next payout</span>
-                <span className="hero-card__pill">Scheduled</span>
+    <div ref={root} className="cr">
+      <section className="cr-stage cr-hero" aria-labelledby="hero-title">
+        <div className="cr-stage__panel">
+          <div className="cr-stage__backdrop" aria-hidden="true" />
+          <div className="container cr-hero__inner">
+            <div className="cr-hero__copy">
+              <p className="cr-pill">
+                <span className="cr-pill__dot" aria-hidden="true" />
+                {copy.text('creators.hero.eyebrow')}
+              </p>
+              <h1 id="hero-title" className="cr-display">
+                {copy.text('creators.hero.title')} <span className="cr-accent">{copy.text('creators.hero.titleAccent')}</span>
+              </h1>
+              <p className="cr-lead">{copy.text('creators.hero.lead')}</p>
+              <div className="cr-actions">
+                <ButtonLink to="/register?audience=creator" variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
+                  {copy.text('creators.hero.primaryCta')}
+                </ButtonLink>
+                <ButtonLink to="/creators#how-it-works" variant="secondary" size="lg">
+                  {copy.text('creators.hero.secondaryCta')}
+                </ButtonLink>
               </div>
-              <p className="hero-card__amount">{copy.text('creators.hero.payoutSchedule')}</p>
-              <div className="hero-card__bar">
-                <span style={{ width: '72%' }} />
-              </div>
-              <ul className="hero-card__list">
-                <li>
-                  <FileCheck2 /> Post submitted <span>Proof received</span>
-                </li>
-                <li>
-                  <BadgeCheck /> Reviewed <span>Approved</span>
-                </li>
-                <li>
-                  <Wallet /> Earnings <span>Added to payout</span>
-                </li>
+              <ul className="cr-trust">
+                {copy.list('creators.hero.trust').map((item) => (
+                  <li key={item}>
+                    <Check aria-hidden="true" /> {item}
+                  </li>
+                ))}
               </ul>
             </div>
-            <div className="hero-card hero-card--float">
-              <ShieldCheck />
-              <span>
-                <strong>Disclosure included</strong>
-                <span>#ad added to caption</span>
-              </span>
+            <div className="cr-hero__visual">
+              <CreatorsHeroArt payoutSchedule={copy.text('creators.hero.payoutSchedule')} />
             </div>
-            <div className="hero-rings" />
           </div>
         </div>
       </section>
 
-      <section id="how-it-works" tabIndex={-1} className="landing-section" aria-labelledby="how-title">
+      <section id="how-it-works" tabIndex={-1} className="cr-section" aria-labelledby="how-title">
         <div className="container">
-          <div className="landing-section__header">
-            <p className="eyebrow">{copy.text('creators.how.eyebrow')}</p>
-            <h2 id="how-title" className="landing-section__title">
+          <div className="cr-head" data-reveal="">
+            <p className="cr-eyebrow">{copy.text('creators.how.eyebrow')}</p>
+            <h2 id="how-title" className="cr-title">
               {copy.text('creators.how.title')}
             </h2>
           </div>
-          <ol className="landing-steps">
+          <ol className="cr-steps" data-reveal="stagger">
             {copy.pairs('creators.how.steps').map(({ title, text }, index) => {
               const Icon = STEP_ICONS[index % STEP_ICONS.length];
               return (
-              <li key={title} className="landing-step">
-                <span className="landing-step__number" aria-hidden="true">
-                  {index + 1}
-                </span>
-                <span className="landing-step__icon" aria-hidden="true">
-                  <Icon />
-                </span>
-                <h3 className="landing-step__title">
-                  <span className="visually-hidden">Step {index + 1}: </span>
-                  {title}
-                </h3>
-                <p className="landing-step__text">{text}</p>
-              </li>
+                <li key={title} className="cr-step">
+                  <div className="cr-step__top">
+                    <span className="cr-step__num tabular" aria-hidden="true">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <span className="cr-step__icon" aria-hidden="true">
+                      <Icon />
+                    </span>
+                  </div>
+                  <h3 className="cr-step__title">
+                    <span className="visually-hidden">Step {index + 1}: </span>
+                    {title}
+                  </h3>
+                  <p className="cr-step__text">{text}</p>
+                </li>
               );
             })}
           </ol>
         </div>
       </section>
 
-      <section id="rules" tabIndex={-1} className="landing-section landing-section--alt" aria-labelledby="rules-title">
-        <div className="container">
-          <div className="landing-section__header">
-            <p className="eyebrow">{copy.text('creators.rules.eyebrow')}</p>
-            <h2 id="rules-title" className="landing-section__title">
-              {copy.text('creators.rules.title')}
+      <section id="earnings" className="cr-section cr-section--tint" aria-labelledby="earn-title">
+        <div className="container cr-split">
+          <div className="cr-head cr-head--side" data-reveal="">
+            <p className="cr-eyebrow">{copy.text('creators.earn.eyebrow')}</p>
+            <h2 id="earn-title" className="cr-title">
+              {copy.text('creators.earn.title')}
             </h2>
-            <p className="landing-section__lead">{copy.text('creators.rules.lead')}</p>
+            <p className="cr-intro">{copy.text('creators.earn.intro')}</p>
+            <p className="cr-note">{copy.text('creators.earn.note')}</p>
           </div>
-          <ul className="landing-rules">
-            {copy.pairs('creators.rules.items').map(({ title, text }, index) => {
-              const Icon = RULE_ICONS[index % RULE_ICONS.length];
+          <ol className="cr-ledger" data-reveal="stagger">
+            {copy.pairs('creators.earn.stages').map(({ title, text }, index) => {
+              const Icon = EARN_ICONS[index % EARN_ICONS.length];
               return (
-              <li key={title} className="landing-rule">
-                <span className="landing-rule__icon" aria-hidden="true">
-                  <Icon />
-                </span>
-                <h3 className="landing-rule__title">{title}</h3>
-                <p className="landing-rule__text">{text}</p>
-              </li>
+                <li key={title} className="cr-ledger__item">
+                  <span className="cr-ledger__icon" aria-hidden="true">
+                    <Icon />
+                  </span>
+                  <div>
+                    <h3 className="cr-ledger__title">{title}</h3>
+                    <p className="cr-ledger__text">{text}</p>
+                  </div>
+                </li>
               );
             })}
-          </ul>
+          </ol>
         </div>
       </section>
 
-      <section className="landing-section" aria-labelledby="faq-title">
-        <div className="container landing-faq">
-          <div className="landing-section__header landing-faq__header">
-            <p className="eyebrow">{copy.text('creators.faq.eyebrow')}</p>
-            <h2 id="faq-title" className="landing-section__title">
+      <section id="rules" tabIndex={-1} className="cr-chapter" aria-labelledby="rules-title">
+        <div className="cr-stage__panel">
+          <div className="cr-stage__backdrop" aria-hidden="true" />
+          <div className="container cr-chapter__inner">
+            <div className="cr-head" data-reveal="">
+              <p className="cr-eyebrow">{copy.text('creators.rules.eyebrow')}</p>
+              <h2 id="rules-title" className="cr-title">
+                {copy.text('creators.rules.title')}
+              </h2>
+              <p className="cr-intro">{copy.text('creators.rules.lead')}</p>
+            </div>
+            <ul className="cr-rules" data-reveal="stagger">
+              {copy.pairs('creators.rules.items').map(({ title, text }, index) => {
+                const Icon = RULE_ICONS[index % RULE_ICONS.length];
+                return (
+                  <li key={title} className="cr-rule">
+                    <span className="cr-rule__icon" aria-hidden="true">
+                      <Icon />
+                    </span>
+                    <h3 className="cr-rule__title">{title}</h3>
+                    <p className="cr-rule__text">{text}</p>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="cr-section" aria-labelledby="faq-title">
+        <div className="container cr-split">
+          <div className="cr-head cr-head--side" data-reveal="">
+            <p className="cr-eyebrow">{copy.text('creators.faq.eyebrow')}</p>
+            <h2 id="faq-title" className="cr-title">
               {copy.text('creators.faq.title')}
             </h2>
-            <p className="landing-section__lead">{copy.text('creators.faq.lead')}</p>
-            <ButtonLink to="/creators/faq" variant="secondary" trailingIcon={<ArrowRight />}>
+            <p className="cr-intro">{copy.text('creators.faq.lead')}</p>
+            <ButtonLink to="/creators/faq" variant="secondary" trailingIcon={<ArrowRight />} className="cr-head__button">
               {copy.text('creators.faq.cta')}
             </ButtonLink>
           </div>
-          <dl className="landing-faq__list">
+          <dl className="cr-faq" data-reveal="stagger">
             {copy.pairs('creators.faq.items').map((item) => (
-              <div key={item.title} className="landing-faq__item">
+              <div key={item.title} className="cr-faq__item">
                 <dt>{item.title}</dt>
                 <dd>{item.text}</dd>
               </div>
@@ -183,17 +190,23 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="landing-cta" aria-labelledby="cta-title">
-        <div className="container landing-cta__inner">
-          <div>
-            <h2 id="cta-title" className="landing-cta__title">
+      <section className="cr-stage cr-cta" aria-labelledby="cta-title">
+        <div className="cr-stage__panel">
+          <div className="cr-stage__backdrop" aria-hidden="true" />
+          <div className="container cr-cta__inner" data-reveal="">
+            <h2 id="cta-title" className="cr-cta__title">
               {copy.text('creators.cta.title')}
             </h2>
-            <p className="landing-cta__text">{copy.text('creators.cta.text')}</p>
+            <p className="cr-cta__text">{copy.text('creators.cta.text')}</p>
+            <div className="cr-actions cr-actions--center">
+              <ButtonLink to="/register?audience=creator" variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
+                {copy.text('creators.cta.button')}
+              </ButtonLink>
+              <ButtonLink to="/login" variant="secondary" size="lg">
+                {copy.text('creators.cta.secondary')}
+              </ButtonLink>
+            </div>
           </div>
-          <ButtonLink to="/register?audience=creator" variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
-            {copy.text('creators.cta.button')}
-          </ButtonLink>
         </div>
       </section>
     </div>

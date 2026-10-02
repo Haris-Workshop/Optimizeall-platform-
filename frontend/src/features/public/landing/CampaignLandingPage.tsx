@@ -21,7 +21,7 @@ export function CampaignLandingPage() {
   if (query.isError) {
     if (isApiError(query.error) && query.error.status === 404) return <LandingUnavailable kind="campaign" />;
     return (
-      <div className="container campaign-landing__loading">
+      <div className="container cr-landing__loading">
         <ErrorState error={query.error} onRetry={() => void query.refetch()} />
       </div>
     );
@@ -50,11 +50,11 @@ export function CampaignLandingPage() {
       disclosure={data.disclosure}
     >
       {data.assets.length > 0 && (
-        <section aria-labelledby="landing-assets-title" className="campaign-landing__assets">
-          <h2 id="landing-assets-title" className="campaign-landing__section-title">
+        <section aria-labelledby="landing-assets-title" className="cr-assets">
+          <h2 id="landing-assets-title" className="cr-title cr-title--sm">
             Content you’ll share
           </h2>
-          <ul className="campaign-landing__gallery">
+          <ul className="cr-assets__gallery">
             {data.assets.map((asset) => (
               <li key={asset.id}>
                 <figure>

@@ -352,13 +352,21 @@ public sealed partial class SeoPageResolver
         c.Add(new HeadingNode(1, $"{_copy.Text("creators.hero.title")} {_copy.Text("creators.hero.titleAccent")}".Trim()));
         c.Add(new ParagraphNode(_copy.Text("creators.hero.lead")));
         c.Add(new ListNode(_copy.List("creators.hero.trust")));
-        c.Add(new ActionNode(_copy.Text("creators.hero.primaryCta"), "/register"));
+        c.Add(new ActionNode(_copy.Text("creators.hero.primaryCta"), "/register?audience=creator"));
         c.Add(new HeadingNode(2, _copy.Text("creators.how.title")));
         foreach (var (title, text) in _copy.Pairs("creators.how.steps"))
         {
             c.Add(new HeadingNode(3, title));
             c.Add(new ParagraphNode(text));
         }
+        c.Add(new HeadingNode(2, _copy.Text("creators.earn.title")));
+        c.Add(new ParagraphNode(_copy.Text("creators.earn.intro")));
+        foreach (var (title, text) in _copy.Pairs("creators.earn.stages"))
+        {
+            c.Add(new HeadingNode(3, title));
+            c.Add(new ParagraphNode(text));
+        }
+        c.Add(new ParagraphNode(_copy.Text("creators.earn.note")));
         c.Add(new HeadingNode(2, _copy.Text("creators.rules.title")));
         c.Add(new ParagraphNode(_copy.Text("creators.rules.lead")));
         foreach (var (title, text) in _copy.Pairs("creators.rules.items"))
@@ -372,6 +380,7 @@ public sealed partial class SeoPageResolver
         c.Add(new ActionNode(_copy.Text("creators.faq.cta"), "/creators/faq"));
         c.Add(new HeadingNode(2, _copy.Text("creators.cta.title")));
         c.Add(new ParagraphNode(_copy.Text("creators.cta.text")));
+        c.Add(new ActionNode(_copy.Text("creators.cta.button"), "/register?audience=creator"));
         if (_ld.FaqPage(faqs) is { } faqLd) page.JsonLd.Add(faqLd);
         page.ModifiedAt = Latest(_copyUpdatedAt, _settingsUpdatedAt);
         return AddCatalogVideos(page);

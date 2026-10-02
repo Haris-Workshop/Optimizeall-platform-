@@ -49,21 +49,27 @@ public sealed partial class SeoPageResolver
         var courses = await learning.CatalogAsync(new CatalogQuery { Page = 1, PageSize = 200 }, ct);
         page.ModifiedAt = courses.Items.Select(c => c.PublishedAt).Max();
         var c = page.Content;
-        c.Add(new ParagraphNode("Optimize All Academy"));
-        c.Add(new HeadingNode(1, "Free courses. Real skills. Verified certificates."));
-        c.Add(new ParagraphNode("Practical training in sales, marketing, SEO and AI — built for creators, freelancers and growing teams. " +
-                                "Read every lesson for free; create a free account to track progress, take the final assessment and earn a " +
-                                "certificate you can add to LinkedIn."));
+        // The same editable words, in the same order, as the web app's hub (AcademyPages.tsx, `academy.*` page copy).
+        c.Add(new ParagraphNode(_copy.Text("academy.hero.eyebrow")));
+        c.Add(new HeadingNode(1, $"{_copy.Text("academy.hero.title")} {_copy.Text("academy.hero.titleAccent")}".Trim()));
+        c.Add(new ParagraphNode(_copy.Text("academy.hero.lead")));
+        c.Add(new ListNode(_copy.List("academy.hero.points")));
         var paths = await learning.Paths.ListAsync(ct);
         if (paths.Paths.Count > 0)
         {
-            c.Add(new HeadingNode(2, "Learning paths"));
+            c.Add(new HeadingNode(2, _copy.Text("academy.paths.title")));
+            c.Add(new ParagraphNode(_copy.Text("academy.paths.intro")));
             c.Add(new LinkListNode(paths.Paths.Select(p => new LinkItem($"{p.Title} learning path", LearningLinks.PathPath(p.Slug),
                 $"{p.Subtitle} · {p.CourseCount} courses")).ToList()));
         }
+        c.Add(new HeadingNode(2, _copy.Text("academy.cert.title")));
+        c.Add(new ParagraphNode(_copy.Text("academy.cert.text")));
+        c.Add(new ListNode(_copy.List("academy.cert.points")));
+        c.Add(new ActionNode(_copy.Text("academy.cert.cta"), "/verify"));
+        c.Add(new HeadingNode(2, _copy.Text("academy.catalog.title")));
         foreach (var group in courses.Items.GroupBy(x => x.Category).OrderBy(g => g.Key))
         {
-            c.Add(new HeadingNode(2, PublicLearningService.CategoryLabels[group.Key]));
+            c.Add(new HeadingNode(3, PublicLearningService.CategoryLabels[group.Key]));
             c.Add(new LinkListNode(group.Select(x => new LinkItem(x.Title, LearningLinks.CoursePath(x.Slug), x.Subtitle)).ToList()));
         }
         return page;

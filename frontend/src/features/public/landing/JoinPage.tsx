@@ -30,7 +30,7 @@ export function JoinPage() {
   if (query.isError) {
     if (isApiError(query.error) && query.error.status === 404) return <LandingUnavailable kind="invitation" />;
     return (
-      <div className="container campaign-landing__loading">
+      <div className="container cr-landing__loading">
         <ErrorState error={query.error} onRetry={() => void query.refetch()} />
       </div>
     );

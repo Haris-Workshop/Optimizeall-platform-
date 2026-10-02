@@ -148,7 +148,9 @@ seed_env+=("Database__Seed__${#seed_profiles[@]}=None")
 # ------------------------------------------------------------------ builds
 if [ "${E2E_SKIP_BUILD:-}" != "1" ]; then
   log "Building API (Release)"
-  dotnet build "$API_PROJECT" -c Release -nologo -v quiet || die "API build failed"
+  # No MSBuild/Roslyn server reuse: those background servers inherit this script's file descriptors (incl. a flock held
+  # by the caller) and outlive the run, which keeps the lock held and blocks every queued e2e run.
+  dotnet build "$API_PROJECT" -c Release -nologo -v quiet -nodeReuse:false -p:UseSharedCompilation=false || die "API build failed"
   if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
     log "Installing frontend dependencies"
     (cd "$FRONTEND_DIR" && npm ci --no-audit --no-fund) || die "npm ci failed"

@@ -36,7 +36,7 @@ export const publicRoutes: RouteObject[] = [
   { path: 'search', lazy: async () => ({ Component: (await import('./pages/MiscPages')).SearchPage }) },
   // The academy overview moved into the /learn hub (its content sits at the bottom of the hub); About is a CMS page.
   { path: 'academy', element: <StaticRedirect to="/learn" /> },
-  { path: 'about', lazy: async () => ({ Component: (await import('./pages/PillarPages')).AboutPage }) },
+  { path: 'about', lazy: async () => ({ Component: (await import('./pages/AboutPage')).AboutPage }) },
   { path: 'partners', lazy: async () => ({ Component: (await import('./partners/PartnerPages')).PartnersPage }) },
   { path: 'partners/:slug', lazy: async () => ({ Component: (await import('./partners/PartnerPages')).PartnerProfilePage }) },
   // Free academy (Learning module) and public certificate verification.

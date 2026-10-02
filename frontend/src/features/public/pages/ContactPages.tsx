@@ -1,52 +1,64 @@
-import { Clock, Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
-import { Button, FormField, Select, Textarea } from '@/components/ui';
+import { ArrowRight, CalendarClock, Clock, Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
+import { useId, useState, type FormEvent, type ReactNode } from 'react';
+import { Button, ButtonLink, FormField, Select, Textarea } from '@/components/ui';
 import { usePage, useServices, useSite } from '../site/api';
 import { Blocks } from '../site/Blocks';
 import { useSiteCopy } from '../site/copy';
-import { PageHero } from '../site/components';
 import { useDocumentHead } from '../site/head';
-import { ContactFields, type ContactValues, EMPTY_CONTACT, FormSuccess, ServicePicker, useLeadForm, validateContact } from './leadForm';
+import { CheckList, CoHero, StepList } from './companyKit';
+import { ContactFields, type ContactValues, EMPTY_CONTACT, FormSuccess, ServicePicker, SubmitRow, useLeadForm, validateContact } from './leadForm';
+
+/**
+ * /contact and /free-audit: a dark hero, then the form on a raised card with the reassurance beside it. Words come from
+ * the editable page copy (`contact.*`, `audit.*`) and the contact page's CMS text; contact details from the site
+ * settings. The server-rendered HTML (backend SeoPageResolver.FormPageAsync) carries the same texts.
+ */
+
+function ContactItem({ icon, label, value, href, external }: { icon: ReactNode; label: string; value: string; href?: string; external?: boolean }) {
+  const body = (
+    <>
+      <span className="oa-co-contactlist__icon" aria-hidden="true">
+        {icon}
+      </span>
+      <span>
+        <span className="oa-co-contactlist__label">{label}</span>
+        <span className="oa-co-contactlist__value">{value}</span>
+      </span>
+    </>
+  );
+  return (
+    <li>
+      {href ? (
+        <a href={href} className="oa-co-contactlist__link" target={external ? '_blank' : undefined} rel={external ? 'noopener noreferrer' : undefined}>
+          {body}
+          {external && <span className="visually-hidden"> (opens in a new tab)</span>}
+        </a>
+      ) : (
+        body
+      )}
+    </li>
+  );
+}
 
 function ContactDetails() {
   const { data: site } = useSite();
   const copy = useSiteCopy();
+  const id = useId();
   const c = site?.contact;
-  if (!c) return null;
+  if (!c || !(c.email || c.phone || c.whatsApp || c.address || c.hours)) return null;
   return (
-    <div className="site-hero__panel">
-      <h2 className="public-footer__heading">{copy.text('contact.details.title')}</h2>
-      <ul className="site-checklist">
-        {c.email && (
-          <li>
-            <Mail aria-hidden="true" /> <a href={`mailto:${c.email}`}>{c.email}</a>
-          </li>
-        )}
-        {c.phone && (
-          <li>
-            <Phone aria-hidden="true" /> <a href={`tel:${c.phone.replace(/[^\d+]/g, '')}`}>{c.phone}</a>
-          </li>
-        )}
-        {c.whatsApp && (
-          <li>
-            <MessageCircle aria-hidden="true" />{' '}
-            <a href={`https://wa.me/${c.whatsApp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
-              WhatsApp us<span className="visually-hidden"> (opens in a new tab)</span>
-            </a>
-          </li>
-        )}
-        {c.address && (
-          <li>
-            <MapPin aria-hidden="true" /> {c.address}
-          </li>
-        )}
-        {c.hours && (
-          <li>
-            <Clock aria-hidden="true" /> {c.hours}
-          </li>
-        )}
+    <section className="oa-co-panel" aria-labelledby={id}>
+      <h2 id={id} className="oa-co-panel__title">
+        {copy.text('contact.details.title')}
+      </h2>
+      <ul className="oa-co-contactlist">
+        {c.email && <ContactItem icon={<Mail />} label="Email" value={c.email} href={`mailto:${c.email}`} />}
+        {c.phone && <ContactItem icon={<Phone />} label="Phone" value={c.phone} href={`tel:${c.phone.replace(/[^\d+]/g, '')}`} />}
+        {c.whatsApp && <ContactItem icon={<MessageCircle />} label="WhatsApp" value="WhatsApp us" href={`https://wa.me/${c.whatsApp.replace(/\D/g, '')}`} external />}
+        {c.address && <ContactItem icon={<MapPin />} label="Address" value={c.address} />}
+        {c.hours && <ContactItem icon={<Clock />} label="Hours" value={c.hours} />}
       </ul>
-    </div>
+    </section>
   );
 }
 
@@ -60,6 +72,8 @@ export function ContactPage() {
   const [slugs, setSlugs] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const copy = useSiteCopy();
+  const callId = useId();
+  const formTitleId = useId();
   useDocumentHead({ title: copy.text('contact.seo.title'), description: copy.text('contact.seo.description') });
 
   const submit = (e: FormEvent) => {
@@ -71,17 +85,32 @@ export function ContactPage() {
     if (Object.keys(next).length === 0) form.mutation.mutate({ ...contact, message, serviceSlugs: slugs });
   };
   const all = { ...form.serverErrors, ...errors };
+  const cmsText = page.data?.blocks.filter((b) => b.type === 'richText') ?? [];
 
   return (
-    <>
-      <PageHero eyebrow={copy.text('contact.hero.eyebrow')} title={copy.text('contact.hero.title')} breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Contact' }]} />
-      <div className="container site-form-layout">
+    <div className="oa-co-page">
+      <CoHero
+        className="oa-co-hero--overlap"
+        size="compact"
+        eyebrow={copy.text('contact.hero.eyebrow')}
+        title={copy.text('contact.hero.title')}
+        lead={copy.text('contact.hero.lead')}
+        breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Contact' }]}
+        meta={<CheckList items={copy.list('contact.points')} className="oa-co-checks--inline" />}
+      />
+      <div className="container oa-co-formlayout">
         {form.mutation.isSuccess ? (
           <FormSuccess title={copy.text('contact.success.title')} reference={form.mutation.data.reference}>
             <p>{form.mutation.data.message}</p>
           </FormSuccess>
         ) : (
-          <form className="site-form" onSubmit={submit} noValidate aria-label="Contact form">
+          <form className="oa-co-card oa-co-form" onSubmit={submit} noValidate aria-label="Contact form">
+            <div className="oa-co-card__head">
+              <h2 id={formTitleId} className="oa-co-card__title">
+                {copy.text('contact.form.title')}
+              </h2>
+              <p className="oa-co-card__intro">{copy.text('contact.form.intro')}</p>
+            </div>
             <ContactFields values={contact} onChange={setContact} errors={all} />
             <FormField label="How can we help?" required error={all.message}>
               <Textarea rows={5} maxLength={5000} value={message} onChange={(e) => setMessage(e.target.value)} />
@@ -89,17 +118,37 @@ export function ContactPage() {
             <ServicePicker groups={services.data ?? []} selected={slugs} onChange={setSlugs} legend="Services you're interested in (optional)" error={all.serviceSlugs} />
             {form.consentField(errors.consent)}
             {form.generalError}
-            <Button type="submit" size="lg" loading={form.mutation.isPending} disabled={form.token.isLoading}>
-              {copy.text('contact.submit')}
-            </Button>
+            <SubmitRow>
+              <Button type="submit" size="lg" variant="highlight" loading={form.mutation.isPending} disabled={form.token.isLoading}>
+                {copy.text('contact.submit')}
+              </Button>
+            </SubmitRow>
           </form>
         )}
-        <aside className="site-aside">
-          {page.data && <Blocks blocks={page.data.blocks.filter((b) => b.type === 'richText')} />}
+        <aside className="oa-co-aside" aria-label="Contact details">
+          {cmsText.length > 0 && (
+            <div className="oa-co-panel oa-co-panel--quiet oa-co-panel--cms">
+              <Blocks blocks={cmsText} />
+            </div>
+          )}
+          <section className="oa-co-panel oa-co-panel--dark" aria-labelledby={callId}>
+            <span className="oa-co-panel__icon" aria-hidden="true">
+              <CalendarClock />
+            </span>
+            <h2 id={callId} className="oa-co-panel__title">
+              {copy.text('contact.call.title')}
+            </h2>
+            <p>{copy.text('contact.call.text')}</p>
+            <div>
+              <ButtonLink to="/book-a-consultation" variant="secondary" trailingIcon={<ArrowRight />}>
+                {copy.text('contact.call.cta')}
+              </ButtonLink>
+            </div>
+          </section>
           <ContactDetails />
         </aside>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -114,6 +163,8 @@ export function FreeAuditPage() {
   const [slugs, setSlugs] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const copy = useSiteCopy();
+  const includedId = useId();
+  const stepsId = useId();
   useDocumentHead({ title: copy.text('audit.seo.title'), description: copy.text('audit.seo.description') });
 
   const submit = (e: FormEvent) => {
@@ -130,20 +181,25 @@ export function FreeAuditPage() {
   const all = { ...form.serverErrors, ...errors };
 
   return (
-    <>
-      <PageHero
+    <div className="oa-co-page">
+      <CoHero
+        className="oa-co-hero--overlap"
+        size="compact"
         eyebrow={copy.text('audit.hero.eyebrow')}
         title={copy.text('audit.hero.title')}
         lead={copy.text('audit.hero.lead')}
         breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Free audit' }]}
       />
-      <div className="container site-form-layout">
+      <div className="container oa-co-formlayout">
         {form.mutation.isSuccess ? (
           <FormSuccess title={copy.text('audit.success.title')} reference={form.mutation.data.reference}>
             <p>{copy.text('audit.success.text')}</p>
           </FormSuccess>
         ) : (
-          <form className="site-form" onSubmit={submit} noValidate aria-label="Free audit request">
+          <form className="oa-co-card oa-co-form" onSubmit={submit} noValidate aria-label="Free audit request">
+            <div className="oa-co-card__head">
+              <h2 className="oa-co-card__title">{copy.text('audit.form.title')}</h2>
+            </div>
             <ContactFields values={contact} onChange={setContact} errors={all} websiteRequired />
             <FormField label="What are your goals?" required error={all.goals} hint="E.g. more qualified leads, lower cost per sale, rank for key terms.">
               <Textarea rows={4} maxLength={2000} value={goals} onChange={(e) => setGoals(e.target.value)} />
@@ -157,22 +213,28 @@ export function FreeAuditPage() {
             </FormField>
             {form.consentField(errors.consent)}
             {form.generalError}
-            <Button type="submit" size="lg" variant="highlight" loading={form.mutation.isPending} disabled={form.token.isLoading}>
-              {copy.text('audit.submit')}
-            </Button>
+            <SubmitRow>
+              <Button type="submit" size="lg" variant="highlight" loading={form.mutation.isPending} disabled={form.token.isLoading}>
+                {copy.text('audit.submit')}
+              </Button>
+            </SubmitRow>
           </form>
         )}
-        <aside className="site-aside">
-          <div className="site-hero__panel">
-            <h2 className="public-footer__heading">{copy.text('audit.included.title')}</h2>
-            <ul className="site-checklist">
-              {copy.list('audit.included.items').map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
+        <aside className="oa-co-aside" aria-label="About the audit">
+          <section className="oa-co-panel oa-co-panel--dark" aria-labelledby={includedId}>
+            <h2 id={includedId} className="oa-co-panel__title">
+              {copy.text('audit.included.title')}
+            </h2>
+            <CheckList items={copy.list('audit.included.items')} />
+          </section>
+          <section className="oa-co-panel" aria-labelledby={stepsId}>
+            <h2 id={stepsId} className="oa-co-panel__title">
+              {copy.text('audit.steps.title')}
+            </h2>
+            <StepList steps={copy.pairs('audit.steps.items')} className="oa-co-steps--compact" />
+          </section>
         </aside>
       </div>
-    </>
+    </div>
   );
 }

@@ -1,16 +1,22 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Checkbox, FormField, RadioGroup, Select, Textarea } from '@/components/ui';
 import { formatMoney } from '@/lib/format/money';
 import { usePricing, useServices } from '../site/api';
-import { PageHero, PERIOD_SUFFIX } from '../site/components';
+import { PERIOD_SUFFIX } from '../site/components';
 import { useSiteCopy } from '../site/copy';
 import { useDocumentHead } from '../site/head';
-import { ContactFields, type ContactValues, EMPTY_CONTACT, FormSuccess, ServicePicker, useLeadForm, validateContact } from './leadForm';
+import { CheckList, CoHero } from './companyKit';
+import { ContactFields, type ContactValues, EMPTY_CONTACT, FormSuccess, ServicePicker, SubmitRow, useLeadForm, validateContact } from './leadForm';
 
 const STEPS = ['Services', 'Project', 'Your details'] as const;
 
-/** /get-a-quote — three-step quote request: services & packages → budget & timeline → contact details. */
+/**
+ * /get-a-quote — three-step quote request: services & packages → budget & timeline → contact details. Each step is
+ * validated before the next; the step heading takes focus when the step changes; the summary beside the form follows
+ * the visitor's answers.
+ */
 export function QuotePage() {
   const [params] = useSearchParams();
   const services = useServices();
@@ -28,6 +34,8 @@ export function QuotePage() {
   // The step the heading was last focused for (StrictMode-safe, unlike a "first render" flag).
   const focusedStep = useRef(step);
   const copy = useSiteCopy();
+  const summaryId = useId();
+  const nextId = useId();
   useDocumentHead({ title: copy.text('quote.seo.title'), description: copy.text('quote.seo.description') });
 
   useEffect(() => {
@@ -90,37 +98,55 @@ export function QuotePage() {
 
   const all = { ...form.serverErrors, ...errors };
 
+  // The live summary: names of the chosen services and packages, and the labels of the chosen budget and timeline.
+  const serviceNames = (services.data ?? []).flatMap((g) => g.services).filter((s) => slugs.includes(s.slug)).map((s) => s.name);
+  const packageNames = packagesForSelection.flatMap((s) => s.packages.filter((p) => packageIds.includes(p.id)).map((p) => `${s.service.name} — ${p.name}`));
+  const budgetLabel = form.budgetRanges.find((b) => b.value === budget)?.label;
+  const timelineLabel = form.timelines.find((t) => t.value === timeline)?.label;
+  const nothingYet = serviceNames.length === 0 && packageNames.length === 0 && !budgetLabel && !timelineLabel;
+
   return (
-    <>
-      <PageHero
+    <div className="oa-co-page">
+      <CoHero
+        className="oa-co-hero--overlap"
+        size="compact"
         eyebrow={copy.text('quote.hero.eyebrow')}
         title={copy.text('quote.hero.title')}
         lead={copy.text('quote.hero.lead')}
         breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Get a quote' }]}
+        meta={<CheckList items={copy.list('quote.points')} className="oa-co-checks--inline" />}
       />
-      <div className="container site-form-layout">
+      <div className="container oa-co-formlayout">
         {form.mutation.isSuccess ? (
           <FormSuccess title={copy.text('quote.success.title')} reference={form.mutation.data.reference}>
             <p>{copy.text('quote.success.text')}</p>
           </FormSuccess>
         ) : (
-          <form className="site-form" onSubmit={submit} noValidate aria-labelledby="quote-step-title">
-            <ol className="site-wizard" aria-label="Quote steps">
+          <form className="oa-co-card oa-co-form" onSubmit={submit} noValidate aria-labelledby="quote-step-title">
+            <ol className="oa-co-stepper" aria-label="Quote steps">
               {STEPS.map((label, i) => (
                 <li key={label} aria-current={i === step ? 'step' : undefined} className={i < step ? 'is-done' : i === step ? 'is-current' : undefined}>
-                  <span className="tabular">{i + 1}</span> {label}
+                  <span className="oa-co-stepper__row">
+                    <span className="oa-co-stepper__n tabular" aria-hidden="true">
+                      {i < step ? <Check /> : i + 1}
+                    </span>
+                    <span className="oa-co-stepper__label">
+                      {label}
+                      {i < step && <span className="visually-hidden"> (done)</span>}
+                    </span>
+                  </span>
                 </li>
               ))}
             </ol>
-            <h2 id="quote-step-title" ref={headingRef} tabIndex={-1} className="site-section__title">
+            <h2 id="quote-step-title" ref={headingRef} tabIndex={-1} className="oa-co-card__title">
               Step {step + 1} of {STEPS.length}: {STEPS[step]}
             </h2>
 
             {step === 0 && (
-              <>
+              <div key="s0" className="oa-co-wizard__step">
                 <ServicePicker groups={services.data ?? []} selected={slugs} onChange={setSlugs} legend="Which services do you need?" error={all.serviceSlugs} />
                 {packagesForSelection.length > 0 && (
-                  <fieldset className="site-checkgroup">
+                  <fieldset className="site-checkgroup oa-co-packages">
                     <legend>Interested in a specific package? (optional)</legend>
                     <div className="site-checkgroup__grid">
                       {packagesForSelection.flatMap(({ service, packages }) =>
@@ -141,11 +167,11 @@ export function QuotePage() {
                     </div>
                   </fieldset>
                 )}
-              </>
+              </div>
             )}
 
             {step === 1 && (
-              <>
+              <div key="s1" className="oa-co-wizard__step">
                 <FormField label="Monthly budget" required error={all.budgetRange}>
                   <Select value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="Choose a range" options={form.budgetRanges} />
                 </FormField>
@@ -160,48 +186,87 @@ export function QuotePage() {
                 <FormField label="Project details" required error={all.message} hint="Goals, current situation, anything we should know.">
                   <Textarea rows={5} maxLength={5000} value={message} onChange={(e) => setMessage(e.target.value)} />
                 </FormField>
-              </>
+              </div>
             )}
 
             {step === 2 && (
-              <>
+              <div key="s2" className="oa-co-wizard__step">
                 <ContactFields values={contact} onChange={setContact} errors={all} />
                 {form.consentField(errors.consent)}
                 {form.generalError}
-              </>
+              </div>
             )}
 
-            <div className="site-form__actions">
+            <div className="oa-co-wizard__actions">
               {step > 0 ? (
-                <Button type="button" variant="secondary" onClick={() => setStep((s) => s - 1)}>
+                <Button type="button" variant="ghost" leadingIcon={<ArrowLeft />} onClick={() => setStep((s) => s - 1)}>
                   Back
                 </Button>
               ) : (
                 <span />
               )}
               {step < STEPS.length - 1 ? (
-                <Button type="button" onClick={next}>
+                <Button type="button" size="lg" trailingIcon={<ArrowRight />} onClick={next}>
                   Next
                 </Button>
               ) : (
-                <Button type="submit" variant="highlight" loading={form.mutation.isPending} disabled={form.token.isLoading}>
-                  {copy.text('quote.submit')}
-                </Button>
+                <SubmitRow>
+                  <Button type="submit" size="lg" variant="highlight" loading={form.mutation.isPending} disabled={form.token.isLoading}>
+                    {copy.text('quote.submit')}
+                  </Button>
+                </SubmitRow>
               )}
             </div>
           </form>
         )}
-        <aside className="site-aside">
-          <div className="site-hero__panel">
-            <h2 className="public-footer__heading">{copy.text('quote.next.title')}</h2>
-            <ol className="site-prose">
+        <aside className="oa-co-aside" aria-label="Your quote request">
+          <section className="oa-co-panel oa-co-panel--dark" aria-labelledby={summaryId}>
+            <h2 id={summaryId} className="oa-co-panel__title">
+              {copy.text('quote.summary.title')}
+            </h2>
+            {nothingYet ? (
+              <p>{copy.text('quote.summary.empty')}</p>
+            ) : (
+              <dl className="oa-co-dl">
+                {serviceNames.length > 0 && (
+                  <div>
+                    <dt>Services</dt>
+                    <dd>{serviceNames.join(', ')}</dd>
+                  </div>
+                )}
+                {packageNames.length > 0 && (
+                  <div>
+                    <dt>Packages</dt>
+                    <dd>{packageNames.join(', ')}</dd>
+                  </div>
+                )}
+                {budgetLabel && (
+                  <div>
+                    <dt>Budget</dt>
+                    <dd>{budgetLabel}</dd>
+                  </div>
+                )}
+                {timelineLabel && (
+                  <div>
+                    <dt>Start</dt>
+                    <dd>{timelineLabel}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
+          </section>
+          <section className="oa-co-panel" aria-labelledby={nextId}>
+            <h2 id={nextId} className="oa-co-panel__title">
+              {copy.text('quote.next.title')}
+            </h2>
+            <ol className="oa-co-numbered">
               {copy.list('quote.next.items').map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ol>
-          </div>
+          </section>
         </aside>
       </div>
-    </>
+    </div>
   );
 }

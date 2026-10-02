@@ -276,7 +276,17 @@
         { "key": "blog.empty.title", "label": "No articles title", "type": "text", "default": "No articles found" },
         { "key": "blog.empty.description", "label": "No articles text", "type": "text", "default": "Try another topic or search term." },
         { "key": "blog.newsletter.title", "label": "Newsletter title", "type": "text", "default": "Get new articles by email" },
-        { "key": "blog.detail.relatedTitle", "label": "Article: related articles title", "type": "text", "default": "Related articles" }
+        { "key": "blog.detail.relatedTitle", "label": "Article: related articles title", "type": "text", "default": "Related articles" },
+        { "key": "blog.topics.all", "label": "Topics: all topics button", "type": "text", "default": "All topics" },
+        { "key": "blog.search.label", "label": "Search box label", "type": "text", "default": "Search articles" },
+        { "key": "blog.latest.label", "label": "Lead article label", "type": "text", "default": "Latest" },
+        { "key": "blog.topic.eyebrow", "label": "Topic page eyebrow", "type": "text", "default": "Topic" },
+        { "key": "blog.tags.title", "label": "Popular tags title", "type": "text", "default": "Popular tags" },
+        { "key": "blog.detail.tocTitle", "label": "Article: table of contents title", "type": "text", "default": "On this page" },
+        { "key": "blog.detail.shareTitle", "label": "Article: share title", "type": "text", "default": "Share" },
+        { "key": "blog.detail.authorLabel", "label": "Article: author box label", "type": "text", "default": "Written by" },
+        { "key": "blog.detail.backLink", "label": "Article: link back to the blog", "type": "text", "default": "All articles" },
+        { "key": "blog.newsletter.text", "label": "Newsletter text", "type": "text", "default": "Practical playbooks from our strategists. No spam, unsubscribe any time." }
       ]
     },
     {
@@ -304,7 +314,26 @@
         { "key": "careers.detail.benefitsTitle", "label": "Job page: benefits title", "type": "text", "default": "Benefits" },
         { "key": "careers.detail.applyTitle", "label": "Job page: application form title", "type": "text", "default": "Apply for this role" },
         { "key": "careers.cta.title", "label": "Careers: closing call-to-action title", "type": "text", "default": "Not the right role?" },
-        { "key": "careers.cta.text", "label": "Careers: closing call-to-action text", "type": "text", "default": "Tell us about yourself — we hire throughout the year." }
+        { "key": "careers.cta.text", "label": "Careers: closing call-to-action text", "type": "text", "default": "Tell us about yourself — we hire throughout the year." },
+        { "key": "team.people.eyebrow", "label": "Team: people eyebrow", "type": "text", "default": "The team" },
+        { "key": "team.people.title", "label": "Team: people title", "type": "text", "default": "Meet the people you will work with" },
+        { "key": "team.empty.title", "label": "Team: no profiles title", "type": "text", "default": "Meet us on a call" },
+        { "key": "team.empty.text", "label": "Team: no profiles text", "type": "text", "default": "Book a free consultation to talk to a senior strategist directly." },
+        { "key": "team.principles.eyebrow", "label": "Team: principles eyebrow", "type": "text", "default": "How we work together" },
+        { "key": "team.principles.title", "label": "Team: principles title", "type": "text", "default": "One senior team on every account" },
+        { "key": "team.principles.items", "label": "Team: principles", "type": "pairs", "default": "Senior on every account | The strategists you meet are the people who plan and run your marketing.\nOne accountable team | Specialists across channels share one plan, one set of numbers and one point of contact.\nWritten-first | Plans, decisions and results are written down, so nothing lives only in someone's head." },
+        { "key": "team.join.eyebrow", "label": "Team: join us eyebrow", "type": "text", "default": "Careers" },
+        { "key": "careers.why.eyebrow", "label": "Careers: why join eyebrow", "type": "text", "default": "Why Optimize All" },
+        { "key": "careers.why.title", "label": "Careers: why join title", "type": "text", "default": "Senior work, done properly" },
+        { "key": "careers.why.items", "label": "Careers: reasons to join", "type": "pairs", "default": "Small and senior | You work directly with clients and experienced specialists, not through layers of account management.\nRemote-friendly | Work where you do your best thinking; the team runs on written communication, not office hours.\nWritten-first | Briefs, decisions and results are written down, so everyone can do focused work and catch up asynchronously.\nReal learning budgets | Time and money for courses, certifications and conferences that make your work better." },
+        { "key": "careers.roles.eyebrow", "label": "Careers: open roles eyebrow", "type": "text", "default": "Join the team" },
+        { "key": "careers.roles.intro", "label": "Careers: open roles introduction", "type": "text", "default": "Every role lists its location, workplace and contract type up front." },
+        { "key": "careers.process.eyebrow", "label": "Careers: hiring eyebrow", "type": "text", "default": "Hiring" },
+        { "key": "careers.process.title", "label": "Careers: hiring title", "type": "text", "default": "How hiring works" },
+        { "key": "careers.process.steps", "label": "Careers: hiring steps", "type": "pairs", "default": "Apply | Send your CV and, if you like, a note about work you are proud of.\nConversations | Talk with the people you would work with about the role and how we work.\nDecision | We let you know the outcome, whichever way it goes." },
+        { "key": "careers.detail.factsTitle", "label": "Job page: facts title", "type": "text", "default": "At a glance" },
+        { "key": "careers.detail.applyIntro", "label": "Job page: application form introduction", "type": "text", "default": "It takes a few minutes. Attach your CV as a PDF of up to 5 MB." },
+        { "key": "careers.detail.backLink", "label": "Job page: link back to all roles", "type": "text", "default": "All open roles" }
       ]
     },
     {
@@ -350,7 +379,27 @@
         { "key": "booking.empty.description", "label": "Booking: no slots text", "type": "text", "default": "Please use the contact form and we'll find a time." },
         { "key": "booking.submit", "label": "Booking: button (no time picked)", "type": "text", "default": "Book my call" },
         { "key": "booking.agenda.title", "label": "Booking: agenda title", "type": "text", "default": "On the call" },
-        { "key": "booking.agenda.items", "label": "Booking: agenda", "type": "list", "default": "Your goals and current marketing\nQuick wins we can see straight away\nWhether we're the right fit — honestly" }
+        { "key": "booking.agenda.items", "label": "Booking: agenda", "type": "list", "default": "Your goals and current marketing\nQuick wins we can see straight away\nWhether we're the right fit — honestly" },
+        { "key": "forms.privacyNote", "label": "All forms: note beside the send button", "type": "text", "default": "We use your details only to respond to this request." },
+        { "key": "contact.hero.lead", "label": "Contact: hero introduction", "type": "textarea", "default": "Tell us where you are and where you want to be. A strategist, not a salesperson, replies within one business day." },
+        { "key": "contact.form.title", "label": "Contact: form title", "type": "text", "default": "Send us a message" },
+        { "key": "contact.form.intro", "label": "Contact: form introduction", "type": "text", "default": "A few details and a sentence or two about your goals is plenty." },
+        { "key": "contact.points", "label": "Contact: reassurance points", "type": "list", "default": "A strategist replies within one business day\nNo obligation and no sales pitch\nYour details are used only to reply to you" },
+        { "key": "contact.call.title", "label": "Contact: call panel title", "type": "text", "default": "Prefer to talk?" },
+        { "key": "contact.call.text", "label": "Contact: call panel text", "type": "text", "default": "Book a free 30-minute strategy call at a time that suits you." },
+        { "key": "contact.call.cta", "label": "Contact: call panel button", "type": "text", "default": "Book a consultation" },
+        { "key": "audit.form.title", "label": "Free audit: form title", "type": "text", "default": "Tell us about your marketing" },
+        { "key": "audit.steps.title", "label": "Free audit: how it works title", "type": "text", "default": "How the audit works" },
+        { "key": "audit.steps.items", "label": "Free audit: how it works steps", "type": "pairs", "default": "Request | Tell us about your website, goals and budget.\nReview | A senior strategist reviews your tracking, search visibility, paid media and website.\nWalkthrough | We take you through the findings and a prioritised 90-day plan." },
+        { "key": "booking.time.title", "label": "Booking: choose a time title", "type": "text", "default": "Choose a time" },
+        { "key": "booking.details.title", "label": "Booking: your details title", "type": "text", "default": "Your details" },
+        { "key": "booking.summary.title", "label": "Booking: summary title", "type": "text", "default": "Your call" },
+        { "key": "booking.summary.empty", "label": "Booking: summary before a time is picked", "type": "text", "default": "Pick a day and a time" },
+        { "key": "booking.summary.length", "label": "Booking: call length", "type": "text", "default": "{minutes}-minute call", "placeholders": ["minutes"] },
+        { "key": "booking.points", "label": "Booking: reassurance points", "type": "list", "default": "Free, with no obligation\nWith a senior strategist\nNo sales pitch" },
+        { "key": "quote.summary.title", "label": "Quote: summary title", "type": "text", "default": "Your request" },
+        { "key": "quote.summary.empty", "label": "Quote: summary before anything is chosen", "type": "text", "default": "Nothing chosen yet" },
+        { "key": "quote.points", "label": "Quote: reassurance points", "type": "list", "default": "Three quick steps\nA tailored proposal within two business days\nNo obligation" }
       ]
     },
     {

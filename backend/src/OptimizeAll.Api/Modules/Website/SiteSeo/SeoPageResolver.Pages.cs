@@ -206,11 +206,25 @@ public sealed partial class SeoPageResolver
     {
         var page = CopyPage("/team", "AboutPage");
         var team = await site.TeamAsync(ct);
+        // Same order and headings as the web app's team page (frontend TeamAndCareersPages.tsx): the people, the
+        // principles, then the careers call to action.
+        page.Content.Add(new HeadingNode(2, _copy.Text("team.people.title")));
+        if (team.Count == 0)
+        {
+            page.Content.Add(new ParagraphNode(_copy.Text("team.empty.title")));
+            page.Content.Add(new ParagraphNode(_copy.Text("team.empty.text")));
+        }
         foreach (var m in team)
         {
-            page.Content.Add(new HeadingNode(2, m.Name));
+            page.Content.Add(new HeadingNode(3, m.Name));
             page.Content.Add(new ParagraphNode(m.Role));
-            if (!string.IsNullOrWhiteSpace(m.Bio)) page.Content.Add(new MarkdownNode(m.Bio, 3));
+            if (!string.IsNullOrWhiteSpace(m.Bio)) page.Content.Add(new MarkdownNode(m.Bio, 4));
+        }
+        page.Content.Add(new HeadingNode(2, _copy.Text("team.principles.title")));
+        foreach (var (title, text) in _copy.Pairs("team.principles.items"))
+        {
+            page.Content.Add(new HeadingNode(3, title));
+            if (text.Length > 0) page.Content.Add(new ParagraphNode(text));
         }
         page.Content.Add(new HeadingNode(2, _copy.Text("team.join.title")));
         page.Content.Add(new ParagraphNode(_copy.Text("team.join.text")));
@@ -223,6 +237,17 @@ public sealed partial class SeoPageResolver
     {
         var page = CopyPage("/careers");
         var jobs = await careers.PublicJobsAsync(ct);
+        // Same order and headings as the web app's careers page: why join, the open roles, how hiring works.
+        void Pairs(string titleKey, string itemsKey)
+        {
+            page.Content.Add(new HeadingNode(2, _copy.Text(titleKey)));
+            foreach (var (title, text) in _copy.Pairs(itemsKey))
+            {
+                page.Content.Add(new HeadingNode(3, title));
+                if (text.Length > 0) page.Content.Add(new ParagraphNode(text));
+            }
+        }
+        Pairs("careers.why.title", "careers.why.items");
         page.Content.Add(new HeadingNode(2, _copy.Text("careers.openRoles")));
         if (jobs.Count == 0)
         {
@@ -230,7 +255,11 @@ public sealed partial class SeoPageResolver
             page.Content.Add(new ParagraphNode(_copy.Text("careers.empty.description")));
         }
         else
+        {
+            page.Content.Add(new ParagraphNode(_copy.Text("careers.roles.intro")));
             page.Content.Add(new LinkListNode(jobs.Select(j => new LinkItem(j.Title, $"/careers/{j.Slug}", $"{j.Department} · {j.Location} · {j.Summary}")).ToList()));
+        }
+        Pairs("careers.process.title", "careers.process.steps");
         page.Content.Add(new HeadingNode(2, _copy.Text("careers.cta.title")));
         page.Content.Add(new ParagraphNode(_copy.Text("careers.cta.text")));
         page.Content.Add(new ActionNode("Contact us", "/contact"));
@@ -246,17 +275,29 @@ public sealed partial class SeoPageResolver
         var page = CopyPage(path, path == "/contact" ? "ContactPage" : "WebPage");
         var prefix = CopyPages[path];
         var c = page.Content;
+        // The hero's reassurance points and the panels beside each form, as on the web app's pages (ContactPages.tsx,
+        // BookConsultationPage.tsx, QuotePage.tsx).
         switch (prefix)
         {
+            case "contact":
+                c.Add(new ListNode(_copy.List("contact.points")));
+                c.Add(new HeadingNode(2, _copy.Text("contact.call.title")));
+                c.Add(new ParagraphNode(_copy.Text("contact.call.text")));
+                c.Add(new ActionNode(_copy.Text("contact.call.cta"), "/book-a-consultation"));
+                break;
             case "audit":
                 c.Add(new HeadingNode(2, _copy.Text("audit.included.title")));
                 c.Add(new ListNode(_copy.List("audit.included.items")));
+                c.Add(new HeadingNode(2, _copy.Text("audit.steps.title")));
+                c.Add(new ListNode(_copy.Pairs("audit.steps.items").Select(p => p.Text.Length > 0 ? $"{p.Title}: {p.Text}" : p.Title).ToList(), Ordered: true));
                 break;
             case "quote":
+                c.Add(new ListNode(_copy.List("quote.points")));
                 c.Add(new HeadingNode(2, _copy.Text("quote.next.title")));
                 c.Add(new ListNode(_copy.List("quote.next.items"), Ordered: true));
                 break;
             case "booking":
+                c.Add(new ListNode(_copy.List("booking.points")));
                 c.Add(new HeadingNode(2, _copy.Text("booking.agenda.title")));
                 c.Add(new ListNode(_copy.List("booking.agenda.items")));
                 break;

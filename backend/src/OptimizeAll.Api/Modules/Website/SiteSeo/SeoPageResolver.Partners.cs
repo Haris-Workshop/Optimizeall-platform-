@@ -53,12 +53,14 @@ public sealed partial class SeoPageResolver
         c.Add(new ParagraphNode(p.Tagline));
         c.Add(new ParagraphNode(p.RelationshipLabel + "."));
         if (visit is not null) c.Add(new ActionNode($"Visit {p.WebsiteHost}", visit));
-        if (p.Highlights.Count > 0) c.Add(new ListNode(p.Highlights));
+        // As on the web app's profile (PartnerPages.tsx): the description, then "at a glance" (highlights and the offer).
         if (!string.IsNullOrWhiteSpace(p.DescriptionMarkdown))
         {
             c.Add(new HeadingNode(2, $"About {p.Name}"));
             c.Add(new MarkdownNode(p.DescriptionMarkdown, 3));
         }
+        if (p.Highlights.Count > 0 || p.Offer is not null) c.Add(new HeadingNode(2, $"{p.Name} at a glance"));
+        if (p.Highlights.Count > 0) c.Add(new ListNode(p.Highlights));
         if (p.Offer is { } offer)
         {
             c.Add(new ParagraphNode(offer.Code is null ? offer.Text : $"{offer.Text} Code: {offer.Code}"));

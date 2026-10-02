@@ -1,10 +1,11 @@
 import { useMutation } from '@tanstack/react-query';
-import { CheckCircle2 } from 'lucide-react';
-import { useId, useState, type ReactNode } from 'react';
-import { Alert, ButtonLink, Checkbox, FormField, Input } from '@/components/ui';
+import { Check, Lock } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { Alert, ButtonLink, FormField, Input } from '@/components/ui';
 import { api } from '@/lib/api/client';
 import { errorMessage, isApiError } from '@/lib/api/errors';
 import { type ServiceCategoryGroup, useSite } from '../site/api';
+import { useSiteCopy } from '../site/copy';
 import { ConsentCheckbox, fieldErrorsOf, Honeypot, useFormToken, useRenewFormToken, withFormEnvelope } from '../site/forms';
 
 export interface ContactValues {
@@ -71,7 +72,10 @@ export function ContactFields({
   );
 }
 
-/** Checkbox list of services grouped by service line. */
+/**
+ * The services as toggle chips, grouped under their service line. Each chip is a real checkbox labelled with the
+ * service name, so keyboard, screen-reader and form behaviour are the browser's own.
+ */
 export function ServicePicker({
   groups,
   selected,
@@ -87,16 +91,30 @@ export function ServicePicker({
 }) {
   const id = useId();
   const toggle = (slug: string, on: boolean) => onChange(on ? [...selected, slug] : selected.filter((s) => s !== slug));
+  const visible = groups.filter((g) => g.services.length > 0);
   return (
-    <fieldset className="site-checkgroup" aria-describedby={error ? `${id}-error` : undefined}>
+    <fieldset className="oa-co-picker" aria-describedby={error ? `${id}-error` : undefined} data-invalid={error ? 'true' : undefined}>
       <legend>{legend}</legend>
-      <div className="site-checkgroup__grid">
-        {groups.flatMap((g) =>
-          g.services.map((s) => (
-            <Checkbox key={s.slug} label={s.name} checked={selected.includes(s.slug)} onChange={(e) => toggle(s.slug, e.target.checked)} />
-          )),
-        )}
-      </div>
+      {visible.map((g) => (
+        <div key={g.slug} className="oa-co-picker__group">
+          {visible.length > 1 && (
+            <p className="oa-co-picker__label" aria-hidden="true">
+              {g.name}
+            </p>
+          )}
+          <div className="oa-co-picker__chips">
+            {g.services.map((s) => (
+              <label key={s.slug} className="oa-co-pick">
+                <input type="checkbox" checked={selected.includes(s.slug)} onChange={(e) => toggle(s.slug, e.target.checked)} />
+                <span className="oa-co-pick__box" aria-hidden="true">
+                  <Check />
+                </span>
+                {s.name}
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
       {error && (
         <p className="site-field-error" id={`${id}-error`} role="alert">
           {error}
@@ -144,14 +162,41 @@ export function useLeadForm<T extends object>(path: string) {
   return { token, consent, mutation, serverErrors, consentField, generalError, budgetRanges: token.data?.budgetRanges ?? [], timelines: token.data?.timelines ?? [] };
 }
 
-export function FormSuccess({ title, reference, children }: { title: string; reference?: string; children?: ReactNode }) {
+/** The send button with the privacy note beside it (editable: `forms.privacyNote`). */
+export function SubmitRow({ children }: { children: ReactNode }) {
+  const copy = useSiteCopy();
   return (
-    <div className="site-form" role="status" aria-live="polite">
-      <CheckCircle2 aria-hidden="true" width={40} height={40} className="site-success-icon" />
-      <h2 className="site-section__title">{title}</h2>
+    <div className="oa-co-form__submit">
       {children}
-      {reference && <p className="text-small text-muted">Your reference: {reference}</p>}
-      <div className="site-form__actions">
+      <p className="oa-co-form__note">
+        <Lock aria-hidden="true" /> {copy.text('forms.privacyNote')}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * The confirmation that replaces a submitted form: a tick, the heading (focused, so it is announced and keyboard users
+ * start from it), the message, the reference and two ways onward.
+ */
+export function FormSuccess({ title, reference, children }: { title: string; reference?: string; children?: ReactNode }) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => heading.current?.focus({ preventScroll: true }), []);
+  return (
+    <div className="oa-co-card oa-co-success" role="status" aria-live="polite">
+      <span className="oa-co-success__mark" aria-hidden="true">
+        <Check />
+      </span>
+      <h2 ref={heading} tabIndex={-1} className="oa-co-success__title">
+        {title}
+      </h2>
+      {children}
+      {reference && (
+        <p className="oa-co-success__ref">
+          Your reference: <strong>{reference}</strong>
+        </p>
+      )}
+      <div className="oa-co-success__actions">
         <ButtonLink to="/case-studies" variant="secondary">
           Browse case studies
         </ButtonLink>

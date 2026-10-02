@@ -1082,8 +1082,12 @@ function LessonBody({ slug, lessonSlug, lesson }: { slug: string; lessonSlug: st
 export function AcademyLessonPage() {
   const { slug = '', lessonSlug = '' } = useParams();
   const q = usePublicLesson(slug, lessonSlug);
+  // The course (for the outline beside the lesson) loads in parallel with the lesson, and the page renders once both
+  // have answered: rendering the lesson first pushed it down when the outline arrived (a large layout shift on phones,
+  // where the outline sits above the lesson). A course that fails to load only drops the outline.
+  const course = usePublicCourse(slug);
   useDocumentHead(headFrom(q.data?.seo, q.data?.jsonLd, 'article'));
-  if (q.isPending) return <PageLoading height={520} />;
+  if (q.isPending || course.isPending) return <PageLoading height={520} />;
   if (q.isError) {
     if ((q.error as { status?: number }).status === 404) return <NotFound />;
     return <PageError error={q.error} title="This lesson isn’t available right now" retry={() => void q.refetch()} />;

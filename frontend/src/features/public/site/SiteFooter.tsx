@@ -139,7 +139,7 @@ function ProductFooter({
         <div className="container site-footer__mini">
           <div className="site-footer__mini-brand">
             <Link to={homeUrl} className="public-header__brand site-header__product-brand" aria-label={`${name} home`}>
-              <Logo size={28} title="" />
+              <Logo size={28} title="" />{' '}
               <span className="site-header__wordmark">{product === 'academy' ? 'Academy' : 'Creators'}</span>
             </Link>
             <p className="site-footer__note">

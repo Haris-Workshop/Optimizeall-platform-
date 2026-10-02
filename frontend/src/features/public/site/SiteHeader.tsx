@@ -529,7 +529,7 @@ function AcademyHeader() {
       variant="academy"
       brand={
         <Link to="/learn" className="public-header__brand site-header__product-brand" aria-label="Optimize All Academy home">
-          <Logo size={30} title="" />
+          <Logo size={30} title="" />{' '}
           <span className="site-header__wordmark">Academy</span>
         </Link>
       }
@@ -588,7 +588,7 @@ function CreatorsHeader() {
       variant="creators"
       brand={
         <Link to="/creators" className="public-header__brand site-header__product-brand" aria-label="Optimize All Creators home">
-          <Logo size={30} title="" />
+          <Logo size={30} title="" />{' '}
           <span className="site-header__wordmark">Creators</span>
         </Link>
       }

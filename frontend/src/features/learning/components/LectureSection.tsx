@@ -212,7 +212,8 @@ export function LectureSection({ lecture, headingLevel = 2 }: LectureSectionProp
               type="button"
               className="lx-yt__facade"
               onClick={() => setYtStart(0)}
-              aria-label={`Play the video lecture: ${lecture.title}`}
+              // Includes the visible note, so the name contains the button's visible text (WCAG 2.5.3 Label in Name).
+              aria-label={`Play the video lecture: ${lecture.title}. Plays from YouTube (privacy-enhanced mode)`}
             >
               {thumb !== 'none' && (
                 <img

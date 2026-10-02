@@ -2212,10 +2212,14 @@ img.oa-co-member__portrait {
 }
 
 .oa-co-topic__count {
-  color: inherit;
+  /* A quieter tone than the label that still meets WCAG AA (4.5:1) at this small size; opacity would not. */
+  color: var(--color-text-subtle);
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
-  opacity: 0.6;
+}
+
+.oa-co-topic[aria-pressed='true'] .oa-co-topic__count {
+  color: inherit;
 }
 
 .oa-co-topic:focus-visible {

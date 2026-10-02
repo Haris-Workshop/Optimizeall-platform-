@@ -77,11 +77,28 @@ hard-coded, where each kind of content now lives, how editors change it, and wha
 | Help centre (`/faq`) | Eyebrow, headline, introduction, empty state, browser title | Portal texts → *Help centre* |
 | Creator portal home | Page introduction, verify-email and add-profile card titles, checklist title, recommendations/attention empty states, next-payout title and explanation | Portal texts → *Creator portal home* |
 | SEO | Titles/descriptions of every built-in page | Page texts (`*.seo.title`, `*.seo.description`); CMS entities keep their own SEO panel |
-| Navigation, footer, contact, social, announcement bar | (already dynamic) | Site settings |
+| Navigation, footer, contact, social, announcement bar | (already dynamic) | Site settings (plus brand, page layout and the Academy/Creators chrome since October 2026) |
 | Pricing, services, FAQ answers, testimonials, team, legal pages, about | (already dynamic) | CMS entities / CMS pages (legal pages now versioned) |
 | Account emails | Verification, password reset, "someone tried to register with your email" (Auth module) | Email templates → *Account emails* (plus a new "Google sign-in connected" security notice); each must keep its link |
 | Emails | Notification email layout ("Hi …", "Open in Optimize All", "— Optimize All") and every notification's wording; newsletter confirmation; consultation booked/cancelled/moved | Email templates |
 | Participant banners, announcements, FAQ, onboarding | (already dynamic) | Admin → Content |
+
+## Site structure (October 2026)
+
+A second pass made the remaining structure editable; the page-by-page map of where everything is edited is
+[ADMIN_CONTENT_GUIDE.md](ADMIN_CONTENT_GUIDE.md), which also lists what was still hard-coded and what deliberately stays
+in code.
+
+* **Site settings** gained *Brand* (logo, dark-background logo, favicon), *Page layout* (order and visibility of the home
+  and creators sections; the hero is fixed), *Academy & Creators* (their header menus, buttons, footer links and notes),
+  the footer's sibling-products and sign-in groups and the header's quiet link. Stored documents without them read the
+  defaults (`SiteSettingsService.Normalize`), which reproduce the site as it was; `GET /agency/website/settings` returns the
+  `defaults` for "Reset to default". The public `/public/site` carries `brand`, `layouts` and `products`.
+* **Page texts** gained the `link` type (a same-site path or an https URL; `//…`, `javascript:` and spaces are refused)
+  for button targets, and keys for the pricing labels, footer group titles, the creators sign-in label, the `/learn`
+  search snippet and a *Partners pages* group. The editor links each page group to its public page.
+* **SEO files** (robots.txt additions, sitemap groups/addresses/hints, llms.txt texts and sections) and per-item
+  "hide from sitemap" flags: docs/SEO_CRO.md § 9.8a.
 
 ## Deliberately kept in code
 

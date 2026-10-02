@@ -469,6 +469,38 @@ areas are protected by sign-in, and noindex is also sent as `X-Robots-Tag` on po
   SEO settings or the site's contact email, expires in 180 days), `/humans.txt`, `/site.webmanifest` (icons 192/512 +
   maskable), `/favicon.ico` (16/32/48), `favicon.svg`, `favicon-32.png`, `apple-touch-icon.png`, `og-default.png`.
 
+### 9.8a Editing robots.txt, the sitemaps and llms.txt (Agency → Website → SEO)
+
+The three files stay generated; editors add to them in the **robots.txt**, **Sitemaps** and **llms.txt** tabs of
+Agency → Website → SEO (`site.manage`; `/agency/website/seo?tab=robots|sitemaps|llms`). The choices live in the SEO
+settings document (`website_settings`, key `seo`) next to the crawler policy and share its concurrency stamp. API:
+`GET /api/v1/agency/website/seo/files`, `POST …/robots/preview`, `PUT …/robots`, `PUT …/sitemap`, `GET|POST …/sitemap/urls`,
+`PUT …/llms`, `GET …/llms/preview` (writes denied while impersonating). Every save is audited
+(`website.seo_robots_updated`, `website.seo_sitemap_updated`, `website.seo_llms_updated`) and served immediately: robots.txt
+and the sitemaps are generated per request (browser/CDN caching: robots 1 h, sitemaps 5 min), and the llms.txt memory cache
+key includes these settings.
+
+* **robots.txt** — *rules for every crawler that may crawl* (`Allow:`, `Disallow:`, `Crawl-delay:` lines appended to the
+  search, AI and `*` groups after the generated private-area rules, which cannot be removed), *extra lines* appended after
+  the generated groups (comments and groups for crawlers not in the catalog; `User-agent: *` and catalog agents are
+  refused, use the rules or the group toggle) and *extra sitemaps* (absolute URLs after the site's own index). Every line
+  is validated; the preview shows the file with warnings. A rule that closes the whole site (`Disallow: /` or `/*`) and
+  blocking the search-engine group both need an explicit, typed confirmation (`confirmDisallowAll`,
+  `confirmBlockSearch`). Production vs non-production noindex behaviour is unchanged (portal `X-Robots-Tag`, API noindex).
+* **Sitemaps** — the index and each group with its URL count, hidden count, files and last change; a group can be left out
+  of the index (its file answers 404; its pages stay indexable and in llms.txt); single addresses can be excluded (also
+  from llms.txt) or added (`extraPaths`, public paths only: portal, sign-in, personal and utility paths are refused);
+  `changefreq`/`priority` defaults per group (hints Google ignores). The address table lists every public URL with its
+  state: listed, *hidden by the page's own setting*, or *excluded*. Content carries its own **Hide from the sitemap**
+  switch (CMS pages, posts, services, case studies, industries, partners: SEO panel; landing pages: page builder, applies at
+  once; courses: Admin → Learning → course → Catalog placement, which also has a course **noindex** switch for the course
+  and its lessons). Nothing is pinged: search engines retired sitemap pings; submit `/sitemap.xml` once in Search Console
+  and Bing Webmaster Tools (and turn on IndexNow).
+* **llms.txt** — the one-line summary and the introduction (empty: generated; "Start from the generated text"), which
+  generated sections appear (key pages, services, industries, case studies, blog, blog topics, careers, creators,
+  partners, academy, optional), custom Markdown sections (before "Machine-readable") and the academy guide
+  (`/llms/academy.txt` answers 404 and is no longer linked when off). The preview shows the file as served.
+
 ### 9.9 IndexNow
 
 Off by default. When enabled in SEO settings, a key is generated and served at `/{key}.txt`, and `IndexNowJob`

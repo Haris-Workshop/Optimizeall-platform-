@@ -27,13 +27,20 @@ test.describe('sitemaps, robots.txt, llms.txt and well-known files', () => {
       expect(url).not.toMatch(
         /^https?:\/\/[^/]+\/(login|register|search|agency|admin|app|client|manage|review|finance)(\/|$|\?)/,
       );
-      const res = await request.get(url, { maxRedirects: 0 });
-      expect(res.status(), url).toBe(200);
-      const head = parseHead(await res.text());
-      expect(head.robots, url).toMatch(/^index, follow/);
-      expect(head.canonical, url).toBe(url);
-      expect(head.title, url).toBeTruthy();
     }
+    // Fetched a few at a time, like a crawler (every public page is rendered on the server).
+    const queue = [...urls];
+    const worker = async () => {
+      for (let url = queue.shift(); url; url = queue.shift()) {
+        const res = await request.get(url, { maxRedirects: 0 });
+        expect(res.status(), url).toBe(200);
+        const head = parseHead(await res.text());
+        expect(head.robots, url).toMatch(/^index, follow/);
+        expect(head.canonical, url).toBe(url);
+        expect(head.title, url).toBeTruthy();
+      }
+    };
+    await Promise.all(Array.from({ length: 6 }, worker));
   });
 
   test('the sitemap index is valid XML with lastmod, and image/video sitemaps use Google extensions', async ({

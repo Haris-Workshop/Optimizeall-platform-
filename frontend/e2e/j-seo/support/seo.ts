@@ -126,7 +126,8 @@ export function parseHead(html: string) {
     ogTitle: meta('og:title'),
     ogImage: meta('og:image'),
     jsonLdCount: (html.match(/<script type="application\/ld\+json"/g) ?? []).length,
-    h1: /<h1>([^<]*)<\/h1>/.exec(html)?.[1] ?? null,
+    // The h1 text without markup (the app renders attributes and inline elements inside it).
+    h1: /<h1(?:\s[^>]*)?>([\s\S]*?)<\/h1>/.exec(html)?.[1].replace(/<[^>]+>/g, '').trim() || null,
   };
 }
 

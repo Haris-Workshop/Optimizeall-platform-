@@ -55,7 +55,8 @@ test.describe('public pages without JavaScript', () => {
       await expect(page.locator('main')).toHaveCount(1);
       const text = (await page.locator('main').innerText()).trim();
       expect(text.length, 'readable main content').toBeGreaterThan(150);
-      expect(await page.locator('#root a[href="/services"]').count()).toBeGreaterThan(0);
+      // Crawlable links into the site (the creator programme's own header links home rather than to /services).
+      expect(await page.locator('#root :is(a[href="/services"], a[href="/"])').count()).toBeGreaterThan(0);
       if (SSR) expect(await page.locator('#root[data-oa-hydrate]').count(), 'server-rendered by the app').toBe(1);
       await expect(page.getByText('needs JavaScript to run')).toHaveCount(0);
 

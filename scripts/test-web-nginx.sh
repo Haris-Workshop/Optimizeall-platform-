@@ -20,7 +20,7 @@ cleanup() {
 trap cleanup EXIT
 
 free_port() { local p; for p in $(seq "$1" $(($1 + 200))); do port_in_use "$p" || { echo "$p"; return; }; done; die "no free port"; }
-api_port=$(free_port 18900); web_port=$(free_port $((api_port + 1)))
+api_port=$(free_port 18900); web_port=$(free_port $((api_port + 1))); ssr_port=$(free_port $((web_port + 1)))
 
 # A frontend directory with the real nginx configuration and a minimal build.
 mkdir -p "$work/frontend/dist/__shell" "$work/stub/tmp"
@@ -69,12 +69,21 @@ EOF
   done
   echo "    location = /_document/nobody-type { types { } default_type \"\"; return 500 'x'; }"
   echo "  }"
+  # Stub server renderer (frontend/server/ssr-server.mjs): renders /rendered itself, answers 503 when "the API is
+  # unreachable", and fails (502) for everything else, so nginx falls back to the API for those (@document_api).
+  echo "  server {"
+  echo "    listen 127.0.0.1:$ssr_port;"
+  echo "    default_type text/html;"
+  echo "    location = /_document/rendered { return 200 '<!doctype html><h1>Rendered by the renderer</h1>'; }"
+  echo "    location = /_document/ssr-api-down { default_type application/problem+json; return 503 '{\"status\":503}'; }"
+  echo "    location / { return 502; }"
+  echo "  }"
   echo "}"
 } > "$work/stub/nginx.conf"
 nginx -p "$work/stub" -c "$work/stub/nginx.conf" -e "$work/stub/error.log" &
 stub_pid=$!
 
-FRONTEND_DIR="$work/frontend" "$ROOT/scripts/serve-web-nginx.sh" "$web_port" "http://127.0.0.1:$api_port" "$work/web" > "$work/web.log" 2>&1 &
+SSR_PORT="$ssr_port" FRONTEND_DIR="$work/frontend" "$ROOT/scripts/serve-web-nginx.sh" "$web_port" "http://127.0.0.1:$api_port" "$work/web" > "$work/web.log" 2>&1 &
 web_pid=$!
 wait_for_url "http://127.0.0.1:$web_port/healthz" 30 "$web_pid" || { cat "$work/web.log"; die "web nginx did not start"; }
 wait_for_url "http://127.0.0.1:$api_port/_document/page" 30 "$stub_pid" || die "stub API did not start"
@@ -93,6 +102,9 @@ expect() {
 }
 
 expect /healthz 200 text/plain
+# Pages go through the server renderer; where it fails, nginx asks the API itself (every API case below).
+expect /rendered 200 text/html "Rendered by the renderer"
+expect /ssr-api-down 503 text/html SHELL
 expect / 200 text/html "API home"
 expect /page 200 text/html "API page"
 expect /missing 404 text/html "API not found"

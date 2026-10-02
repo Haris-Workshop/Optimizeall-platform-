@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from 'react';
-import { inViewport, onServerRenderedPage } from '@/lib/ssr';
+import { onServerRenderedPage } from '@/lib/ssr';
 
 /**
  * Motion for the marketing pages, CSS-first and dependency-free:
@@ -30,30 +30,45 @@ export function useReveal(root: RefObject<HTMLElement>) {
   const observer = useRef<IntersectionObserver | null>(null);
   const seen = useRef(new WeakSet<Element>());
   const scanned = useRef(false);
+  /** The first look at a server-rendered page (see below); elements are handed to `observer` when it is done. */
+  const firstLook = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
     const el = root.current;
     if (!el || !motionAllowed()) return;
-    // A server-rendered page was on screen before the app started: what is visible now stays as painted (no flash).
-    // Measured before anything changes classes, so reading the layout does not force a style recalculation.
-    if (onServerRenderedPage() && !scanned.current) {
-      const visible = Array.from(el.querySelectorAll(REVEAL_SELECTOR)).filter(inViewport);
-      for (const node of visible) node.classList.add('is-static');
-    }
-    scanned.current = true;
-    el.classList.add('oa-motion');
-    observer.current = new IntersectionObserver(
+    const io = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (!entry.isIntersecting) continue;
           entry.target.classList.add('is-revealed');
-          observer.current?.unobserve(entry.target);
+          io.unobserve(entry.target);
         }
       },
       { rootMargin: '0px 0px -8% 0px', threshold: 0.08 },
     );
+    observer.current = io;
+    if (onServerRenderedPage() && !scanned.current) {
+      // A server-rendered page was on screen before the app started: whatever is visible stays as it was painted (no
+      // flash). An observer tells which elements those are without forcing a layout (sections below the fold are not
+      // even laid out yet, content-visibility in site.css); only then are the others hidden until they scroll in.
+      const look = new IntersectionObserver((entries) => {
+        look.disconnect();
+        firstLook.current = null;
+        for (const entry of entries) {
+          if (entry.isIntersecting) entry.target.classList.add('is-static');
+          else io.observe(entry.target);
+        }
+        el.classList.add('oa-motion');
+      });
+      firstLook.current = look;
+    } else {
+      el.classList.add('oa-motion');
+    }
+    scanned.current = true;
     return () => {
-      observer.current?.disconnect();
+      firstLook.current?.disconnect();
+      firstLook.current = null;
+      io.disconnect();
       observer.current = null;
       // A remount (StrictMode, fast refresh) observes everything again with the new observer.
       seen.current = new WeakSet();
@@ -63,7 +78,7 @@ export function useReveal(root: RefObject<HTMLElement>) {
 
   useEffect(() => {
     const el = root.current;
-    const io = observer.current;
+    const io = firstLook.current ?? observer.current;
     if (!el || !io) return;
     el.querySelectorAll(REVEAL_SELECTOR).forEach((node) => {
       if (seen.current.has(node)) return;
@@ -107,16 +122,26 @@ export function CountUp({ value, className, suffix = '' }: { value: number; clas
 
   useEffect(() => {
     const el = ref.current;
-    // Server-rendered and already on screen: the final figure was painted; never reset it to zero.
-    if (!el || !motionAllowed() || value <= 0 || (onServerRenderedPage() && inViewport(el))) {
+    if (!el || !motionAllowed() || value <= 0) {
       setShown(value);
       return;
     }
     let frame = 0;
     let started = false;
-    setShown(0);
+    // Server-rendered: the final figure was painted. It is only reset (to count up later) once the observer has said it
+    // is off screen; one that is visible keeps its value.
+    let first = onServerRenderedPage();
+    if (!first) setShown(0);
     const io = new IntersectionObserver(
       ([entry]) => {
+        if (first) {
+          first = false;
+          if (entry.isIntersecting) {
+            io.disconnect();
+            return;
+          }
+          setShown(0);
+        }
         if (!entry.isIntersecting || started) return;
         started = true;
         io.disconnect();

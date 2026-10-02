@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
-import { inViewport, onServerRenderedPage } from '@/lib/ssr';
+import { onServerRenderedPage } from '@/lib/ssr';
 
 /**
  * Academy motion (docs/LEARNING.md § "Motion"): CSS/SVG + IntersectionObserver only, no animation library. Everything
@@ -25,12 +25,23 @@ export function useReveal<T extends HTMLElement>(key?: unknown): RefObject<T> {
       el?.setAttribute('data-reveal', 'in');
       return;
     }
-    // Server-rendered and already on screen: it was painted before the app started; keep it as it is (no flash).
-    if (onServerRenderedPage() && inViewport(el)) return;
-    // Already on screen at mount (above the fold): animate in right away, next frame.
-    el.setAttribute('data-reveal', 'pending');
+    // Server-rendered: it was painted before the app started. It is only hidden (to reveal later) once the observer has
+    // said it is off screen; on screen it stays as it is (no flash). Otherwise: already on screen at mount (above the
+    // fold) animates in right away, next frame.
+    let first = onServerRenderedPage();
+    if (!first) el.setAttribute('data-reveal', 'pending');
     const observer = new IntersectionObserver(
       (entries) => {
+        if (first) {
+          first = false;
+          if (entries.some((e) => e.isIntersecting)) {
+            observer.disconnect();
+            window.clearTimeout(timer);
+            return;
+          }
+          el.setAttribute('data-reveal', 'pending');
+          return;
+        }
         if (entries.some((e) => e.isIntersecting)) {
           el.setAttribute('data-reveal', 'in');
           observer.disconnect();

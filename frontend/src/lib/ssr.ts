@@ -54,9 +54,3 @@ export function markClientNavigation(): void {
 export function onServerRenderedPage(): boolean {
   return bootedFromServer && !navigated;
 }
-
-/** Whether an element is (partly) inside the viewport right now. */
-export function inViewport(el: Element): boolean {
-  const rect = el.getBoundingClientRect();
-  return rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth;
-}

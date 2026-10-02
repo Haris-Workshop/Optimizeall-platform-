@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from 'react';
 import { onServerRenderedPage } from '@/lib/ssr';
+import { siteNumber } from './format';
 
 /**
  * Motion for the marketing pages, CSS-first and dependency-free:
@@ -25,69 +26,84 @@ const REVEAL_SELECTOR = '.site-section__head, [data-reveal]';
 /**
  * Reveal-on-scroll for everything under `root`. Re-scans after every render (content that arrives from the API later
  * is picked up); each element is observed once and unobserved as soon as it is revealed.
+ *
+ * Only elements close to the screen ever change: one observer hides an element (`oa-pending`, marketing.css) when it
+ * comes within a screen's height of the viewport, a second one plays its entrance (`is-revealed`; stagger delays come
+ * from :nth-child) when it scrolls in. Nothing is toggled on the page's root, nothing is written into style attributes
+ * and the rest of a long page is left alone: any of these would make the browser recompute the style of thousands of
+ * elements at once on a large page, a long main-thread task right after hydration.
  */
 export function useReveal(root: RefObject<HTMLElement>) {
-  const observer = useRef<IntersectionObserver | null>(null);
+  /** Starts watching one element; null while motion is off. */
+  const watch = useRef<((node: Element) => void) | null>(null);
   const seen = useRef(new WeakSet<Element>());
   const scanned = useRef(false);
-  /** The first look at a server-rendered page (see below); elements are handed to `observer` when it is done. */
+  /** The first look at a server-rendered page (see below); elements are handed to `watch` when it is done. */
   const firstLook = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
     const el = root.current;
     if (!el || !motionAllowed()) return;
-    const io = new IntersectionObserver(
+    // Created first: in a frame where an element is both near and in view, it is hidden before it is revealed.
+    const near = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (!entry.isIntersecting) continue;
+          near.unobserve(entry.target);
+          if (!entry.target.classList.contains('is-revealed')) entry.target.classList.add('oa-pending');
+        }
+      },
+      { rootMargin: '100% 0px 100% 0px' },
+    );
+    const inView = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          inView.unobserve(entry.target);
+          near.unobserve(entry.target);
+          entry.target.classList.remove('oa-pending');
           entry.target.classList.add('is-revealed');
-          io.unobserve(entry.target);
         }
       },
       { rootMargin: '0px 0px -8% 0px', threshold: 0.08 },
     );
-    observer.current = io;
+    watch.current = (node) => {
+      near.observe(node);
+      inView.observe(node);
+    };
     if (onServerRenderedPage() && !scanned.current) {
       // A server-rendered page was on screen before the app started: whatever is visible stays as it was painted (no
       // flash). An observer tells which elements those are without forcing a layout (sections below the fold are not
-      // even laid out yet, content-visibility in site.css); only then are the others hidden until they scroll in.
+      // even laid out yet, content-visibility in site.css); only the others get an entrance.
       const look = new IntersectionObserver((entries) => {
         look.disconnect();
         firstLook.current = null;
-        for (const entry of entries) {
-          if (entry.isIntersecting) entry.target.classList.add('is-static');
-          else io.observe(entry.target);
-        }
-        el.classList.add('oa-motion');
+        for (const entry of entries) if (!entry.isIntersecting) watch.current?.(entry.target);
       });
       firstLook.current = look;
-    } else {
-      el.classList.add('oa-motion');
     }
     scanned.current = true;
     return () => {
       firstLook.current?.disconnect();
       firstLook.current = null;
-      io.disconnect();
-      observer.current = null;
-      // A remount (StrictMode, fast refresh) observes everything again with the new observer.
+      near.disconnect();
+      inView.disconnect();
+      watch.current = null;
+      // A remount (StrictMode, fast refresh) observes everything again with new observers; nothing stays hidden.
       seen.current = new WeakSet();
-      el.classList.remove('oa-motion');
+      el.querySelectorAll('.oa-pending').forEach((node) => node.classList.remove('oa-pending'));
     };
   }, [root]);
 
   useEffect(() => {
     const el = root.current;
-    const io = firstLook.current ?? observer.current;
-    if (!el || !io) return;
+    if (!el || !watch.current) return;
+    const look = firstLook.current;
     el.querySelectorAll(REVEAL_SELECTOR).forEach((node) => {
       if (seen.current.has(node)) return;
       seen.current.add(node);
-      if (node.classList.contains('is-static')) return;
-      // Stagger children: each gets its index so CSS can delay it.
-      if (node.getAttribute('data-reveal') === 'stagger')
-        Array.from(node.children).forEach((child, i) => (child as HTMLElement).style.setProperty('--i', String(Math.min(i, 8))));
-      io.observe(node);
+      if (look) look.observe(node);
+      else watch.current?.(node);
     });
   });
 }
@@ -118,7 +134,7 @@ const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 export function CountUp({ value, className, suffix = '' }: { value: number; className?: string; suffix?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
   const [shown, setShown] = useState<number>(value);
-  const format = (n: number) => n.toLocaleString('en-US') + suffix;
+  const format = (n: number) => siteNumber(n) + suffix;
 
   useEffect(() => {
     const el = ref.current;

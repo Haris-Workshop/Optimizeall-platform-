@@ -22,19 +22,40 @@
  * An animation (not a transition) with fill-mode `backwards`, so once it has played it leaves no trace: hover lifts and
  * other transitions on the same cards keep their own timing. */
 @media (prefers-reduced-motion: no-preference) {
-  /* .is-static: on screen when a server-rendered page hydrated (site/motion.tsx), so it stays as it was painted. */
-  .oa-motion :is(.site-section__head, [data-reveal]:not([data-reveal='stagger'])):not(.is-revealed, .is-static),
-  .oa-motion [data-reveal='stagger']:not(.is-revealed, .is-static) > * {
+  /* site/motion.tsx marks each element that waits for its entrance (never what a server-rendered page showed). */
+  :is(.site-section__head, [data-reveal]:not([data-reveal='stagger'])).oa-pending,
+  [data-reveal='stagger'].oa-pending > * {
     opacity: 0;
   }
 
-  .oa-motion :is(.site-section__head, [data-reveal]:not([data-reveal='stagger'])).is-revealed,
-  .oa-motion [data-reveal='stagger'].is-revealed > * {
+  :is(.site-section__head, [data-reveal]:not([data-reveal='stagger'])).is-revealed,
+  [data-reveal='stagger'].is-revealed > * {
     animation: oa-reveal 600ms var(--ease-standard) backwards;
   }
 
-  .oa-motion [data-reveal='stagger'].is-revealed > * {
-    animation-delay: calc(min(var(--i, 0), 6) * 60ms);
+  /* Stagger: 60ms per item, the seventh and later together. */
+  [data-reveal='stagger'].is-revealed > :nth-child(2) {
+    animation-delay: 60ms;
+  }
+
+  [data-reveal='stagger'].is-revealed > :nth-child(3) {
+    animation-delay: 120ms;
+  }
+
+  [data-reveal='stagger'].is-revealed > :nth-child(4) {
+    animation-delay: 180ms;
+  }
+
+  [data-reveal='stagger'].is-revealed > :nth-child(5) {
+    animation-delay: 240ms;
+  }
+
+  [data-reveal='stagger'].is-revealed > :nth-child(6) {
+    animation-delay: 300ms;
+  }
+
+  [data-reveal='stagger'].is-revealed > :nth-child(n + 7) {
+    animation-delay: 360ms;
   }
 }
 

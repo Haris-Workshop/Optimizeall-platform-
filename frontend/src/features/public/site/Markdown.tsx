@@ -155,6 +155,11 @@ function isSafeImage(src: string): boolean {
   return (isInternalHref(src) && src.startsWith('/api/v1/files/')) || (isExternalHref(src) && src.startsWith('https://'));
 }
 
+/** A file served as-is by the web server (e.g. /downloads/guide.pdf): a plain link, not an in-app route. */
+function isStaticFile(href: string): boolean {
+  return /\.(pdf|csv|xlsx|docx|zip)$/i.test(href.split(/[?#]/)[0]!);
+}
+
 function isSafeLink(href: string): boolean {
   return isInternalHref(href) || isExternalHref(href) || /^#[\w-]+$/.test(href) || /^mailto:[^\s@]+@[^\s@]+$/i.test(href);
 }
@@ -189,13 +194,13 @@ export function renderInline(text: string, keyPrefix = 'i', partnerLinks: readon
             <span className="visually-hidden"> (opens in a new tab)</span>
           </a>,
         );
-      else if (href.startsWith('/') && isInternalHref(href))
+      else if (href.startsWith('/') && isInternalHref(href) && !isStaticFile(href))
         out.push(
           <Link key={key} to={href} title={m[7]}>
             {label}
           </Link>,
         );
-      else if (href.startsWith('#') || href.startsWith('mailto:'))
+      else if (href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('/'))
         out.push(
           <a key={key} href={href} title={m[7]}>
             {label}

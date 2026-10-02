@@ -20,6 +20,14 @@ describe('Markdown (CMS content)', () => {
     expect(links.map((a) => a.getAttribute('href'))).toEqual(['https://example.com']);
   });
 
+  it('links downloadable files (PDF guides) with a plain anchor, not an in-app route', () => {
+    const { container } = renderMarkdown('[Cheat sheet (PDF)](/downloads/guide.pdf) and [a post](/blog/some-post)');
+    const [pdf, post] = Array.from(container.querySelectorAll('a'));
+    expect(pdf?.getAttribute('href')).toBe('/downloads/guide.pdf');
+    expect(pdf?.getAttribute('target')).toBeNull();
+    expect(post?.getAttribute('href')).toBe('/blog/some-post');
+  });
+
   it('closes a fenced block only on a bare fence, like the API sanitizer', () => {
     // The API keeps everything up to a bare ``` verbatim as code. If the renderer closed the block at "```js", the rest
     // would be rendered as prose although the server never sanitized it as prose.

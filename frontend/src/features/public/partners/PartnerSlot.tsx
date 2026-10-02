@@ -1,123 +1,22 @@
-import { ArrowUpRight } from 'lucide-react';
-import { useRef, type CSSProperties, type ReactNode } from 'react';
+import { type ReactNode, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { buttonClasses, type ButtonSize, type ButtonVariant } from '@/components/ui/buttonStyles';
-import { siteDate } from '../site/format';
 import { type PartnerCard, usePartnerPlacement, usePartners } from './api';
-import { SPONSORED_REL, visitHref } from './partnerLinks';
-import { slotKind, type PartnerListSlot, type PartnerSlotName, type PartnerUnitSlot } from './slots';
+import { PartnerAd, PartnerBand } from './PartnerCards';
+import { PartnerLogo, useNearViewport } from './PartnerParts';
+import { slotKind, slotVariant, type PartnerListSlot, type PartnerUnitSlot } from './slots';
 import { useImpression } from './tracking';
-import { partnerLogoSources } from './logoSources';
 import './partners.css';
 
-/**
- * An outbound link to a partner. Every such link is a partnership link, so it always carries `rel="sponsored noopener"`
- * and opens in a new tab (Google's link-spam policy); it goes through the click counter, which adds the UTM tags.
- * Renders nothing while the partner has no website.
- */
-export function SponsoredLink({
-  partner,
-  slot,
-  children,
-  variant,
-  size = 'md',
-  className,
-}: {
-  partner: Pick<PartnerCard, 'visitUrl' | 'name'>;
-  slot: PartnerSlotName;
-  children: ReactNode;
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  className?: string;
-}) {
-  const { pathname } = useLocation();
-  const href = visitHref(partner.visitUrl, slot, pathname);
-  if (!href) return null;
-  return (
-    <a href={href} rel={SPONSORED_REL} target="_blank" className={variant ? buttonClasses(variant, size, { className }) : className}>
-      {children}
-      <ArrowUpRight aria-hidden="true" width={16} height={16} />
-      <span className="visually-hidden"> (opens in a new tab)</span>
-    </a>
-  );
-}
-
-function accent(partner: PartnerCard): CSSProperties | undefined {
-  return partner.brandColor ? ({ '--partner-accent': partner.brandColor } as CSSProperties) : undefined;
-}
-
-export function PartnerLogo({ partner, size = 56 }: { partner: Pick<PartnerCard, 'logoUrl' | 'name'>; size?: number }) {
-  return (
-    <span className="partner-logo" style={{ width: size, height: size }}>
-      <img
-        src={partner.logoUrl}
-        {...partnerLogoSources(partner.logoUrl, size)}
-        alt={`${partner.name} logo`}
-        width={size}
-        height={size}
-        loading="lazy"
-        decoding="async"
-      />
-    </span>
-  );
-}
-
-export function PartnerOfferNote({ partner }: { partner: PartnerCard }) {
-  if (!partner.offer) return null;
-  return (
-    <p className="partner-offer">
-      <span>{partner.offer.text}</span>
-      {partner.offer.code && (
-        <>
-          {' '}
-          — code <code className="partner-offer__code">{partner.offer.code}</code>
-        </>
-      )}
-      {partner.offer.expiresAt && (
-        <span className="partner-offer__until"> (until {siteDate(partner.offer.expiresAt)})</span>
-      )}
-    </p>
-  );
-}
-
-/** One ad unit, labelled "Sponsored" (required disclosure). */
-export function PartnerAd({ partner, slot }: { partner: PartnerCard; slot: PartnerUnitSlot }) {
-  const ref = useRef<HTMLElement>(null);
-  const { pathname } = useLocation();
-  useImpression(ref, { partner: partner.slug, slot, path: pathname });
-  return (
-    <aside ref={ref} className="partner-unit" aria-label={`Sponsored: ${partner.name}`} data-partner-slot={slot} style={accent(partner)}>
-      <p className="partner-unit__disclosure">
-        <span className="partner-badge">Sponsored</span>
-        <span className="partner-unit__kind">Partner</span>
-      </p>
-      <div className="partner-unit__body">
-        <PartnerLogo partner={partner} />
-        <div className="partner-unit__text">
-          <p className="partner-unit__name">{partner.name}</p>
-          <p className="partner-unit__tagline">{partner.tagline}</p>
-          <p className="partner-unit__relationship">{partner.relationshipLabel}.</p>
-          <PartnerOfferNote partner={partner} />
-        </div>
-      </div>
-      <div className="partner-unit__actions">
-        <SponsoredLink partner={partner} slot={slot} variant="primary" size="sm">
-          Visit {partner.websiteHost}
-        </SponsoredLink>
-        <Link to={partner.profilePath} className={buttonClasses('ghost', 'sm')}>
-          About {partner.name}
-        </Link>
-      </div>
-    </aside>
-  );
-}
+// The building blocks live in PartnerParts.tsx and the cards in PartnerCards.tsx; re-exported for existing imports.
+export { PartnerLogo, PartnerOfferNote, SponsoredLink } from './PartnerParts';
+export { PartnerAd } from './PartnerCards';
 
 function StripLogo({ partner, slot }: { partner: PartnerCard; slot: PartnerListSlot }) {
   const ref = useRef<HTMLLIElement>(null);
   const { pathname } = useLocation();
   useImpression(ref, { partner: partner.slug, slot, path: pathname });
   return (
-    <li ref={ref} style={accent(partner)}>
+    <li ref={ref}>
       <Link to={partner.profilePath} className="partner-strip__item">
         <PartnerLogo partner={partner} size={48} />
         <span className="partner-strip__name">{partner.name}</span>
@@ -189,17 +88,30 @@ export function PartnerFooterLine({ partners }: { partners: PartnerCard[] }) {
   );
 }
 
+/**
+ * One ad unit. Below the fold it asks the API only when it is about to be scrolled into view, and until the answer is
+ * there it holds the card's room (class `partner-reserve--{variant}`), so nothing jumps when it arrives. The markup
+ * comes from the query data alone, so the server's HTML and the hydrating client's agree.
+ */
 function UnitSlot({ slot, keywords, categories }: { slot: PartnerUnitSlot; keywords: string[]; categories: string[] }) {
   const { pathname } = useLocation();
-  const { data } = usePartnerPlacement(slot, keywords, categories, pathname);
-  if (!data?.partner) return null;
-  return <PartnerAd partner={data.partner} slot={slot} />;
+  const holder = useRef<HTMLDivElement>(null);
+  const near = useNearViewport(holder);
+  const { data, isError } = usePartnerPlacement(slot, keywords, categories, pathname, near);
+  if (data?.partner) return <PartnerAd partner={data.partner} slot={slot} />;
+  if (isError || data) return null; // no partner for this slot and page: nothing to show
+  return <div ref={holder} className={`partner-reserve partner-reserve--${slotVariant(slot)}`} aria-hidden="true" />;
 }
 
 function ListSlot({ slot }: { slot: PartnerListSlot }) {
-  const { data } = usePartners();
+  const { data, isPending } = usePartners();
   const partners = (data?.partners ?? []).filter((p) => p.slots.includes(slot));
-  return slot === 'footer.partners' ? <PartnerFooterLine partners={partners} /> : <PartnerStrip partners={partners} slot={slot} />;
+  if (slot === 'footer.partners') return <PartnerFooterLine partners={partners} />;
+  if (slot === 'home.band') {
+    if (isPending) return <div className="partner-reserve partner-reserve--band" aria-hidden="true" />;
+    return <PartnerBand partners={partners} slot={slot} />;
+  }
+  return <PartnerStrip partners={partners} slot={slot} />;
 }
 
 export interface PartnerSlotProps {
@@ -213,8 +125,8 @@ export interface PartnerSlotProps {
 
 /**
  * A partner placement. List slots render every partner enabled for them; unit slots render at most one ad unit chosen by
- * the API from the page's keywords and categories (with rotation when nothing matches), labelled "Sponsored". Renders
- * nothing when no partner is enabled, and every outbound link is `rel="sponsored noopener"`.
+ * the API from the page's keywords and categories (with rotation when nothing matches, and the slot's frequency cap),
+ * labelled "Sponsored". Renders nothing when no partner is enabled, and every outbound link is `rel="sponsored noopener"`.
  *
  * @example <PartnerSlot slot="learn.course" keywords={course.tags} categories={[course.category]} />
  */

@@ -1,0 +1,479 @@
+/* The sponsored cards of the public site (PartnerCards.tsx): hero, kit, bar and the home band, plus the share row.
+ * Brand colours are classes (no inline styles): --pt is the partner's colour for text and borders (contrast-checked in
+ * light and dark), --pt-soft a faint wash of it. */
+
+.partner-theme--pci-ai {
+  --pt: light-dark(#14285a, #a9bcff);
+  --pt-soft: light-dark(#eef1fa, rgb(169 188 255 / 0.1));
+  --partner-accent: light-dark(#14285a, #a9bcff);
+}
+
+.partner-theme--certuvo {
+  --pt: light-dark(#1d4ed8, #96b6ff);
+  --pt-soft: light-dark(#edf3ff, rgb(150 182 255 / 0.1));
+  --partner-accent: light-dark(#1d4ed8, #96b6ff);
+}
+
+.partner-theme--default {
+  --pt: var(--color-primary);
+  --pt-soft: var(--color-primary-soft);
+  --partner-accent: var(--color-primary);
+}
+
+/* ---------------------------------------------------------------- logos by size class */
+
+.partner-mark {
+  width: 56px;
+  height: 56px;
+}
+
+.partner-mark--sm {
+  width: 44px;
+  height: 44px;
+}
+
+.partner-mark--lg {
+  width: 72px;
+  height: 72px;
+}
+
+/* ---------------------------------------------------------------- room held while a unit loads (no layout shift) */
+
+.partner-reserve {
+  margin-block: var(--space-8);
+  min-height: 800px;
+}
+
+.partner-reserve--hero {
+  min-height: 850px;
+}
+
+.partner-reserve--inline {
+  min-height: 300px;
+}
+
+.partner-reserve--bar {
+  min-height: 190px;
+  margin-block: var(--space-6);
+}
+
+.partner-reserve--band {
+  margin-block: 0;
+  min-height: 2250px;
+}
+
+@media (min-width: 720px) {
+  .partner-reserve {
+    min-height: 540px;
+  }
+
+  .partner-reserve--hero {
+    min-height: 510px;
+  }
+
+  .partner-reserve--inline {
+    min-height: 220px;
+  }
+
+  .partner-reserve--bar {
+    min-height: 80px;
+  }
+}
+
+@media (min-width: 960px) {
+  .partner-reserve--band {
+    min-height: 1060px;
+  }
+}
+
+/* ---------------------------------------------------------------- the card */
+
+.pcx {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  overflow: hidden;
+  margin-block: var(--space-8);
+  padding: clamp(1.25rem, 1rem + 1.2vw, 2rem);
+  border-radius: var(--radius-panel);
+  background: linear-gradient(165deg, var(--pt-soft, var(--color-surface-2)) 0%, var(--color-surface) 62%);
+  box-shadow:
+    0 0 0 1px light-dark(rgb(18 21 46 / 0.08), rgb(255 255 255 / 0.1)),
+    0 32px 64px -44px light-dark(rgb(31 38 89 / 0.5), rgb(0 0 0 / 0.85));
+}
+
+/* A soft glow of the partner's colour in the top corner and a hairline along the top edge. */
+.pcx::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(70% 60% at 100% 0%, color-mix(in srgb, var(--pt, var(--color-primary)) 20%, transparent), transparent 70%);
+  pointer-events: none;
+}
+
+.pcx::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--pt, var(--color-primary)), color-mix(in srgb, var(--pt, var(--color-primary)) 15%, transparent));
+}
+
+.site-prose .pcx p,
+.site-prose .pcx ul {
+  margin: 0;
+}
+
+.pcx p {
+  margin: 0;
+}
+
+.pcx__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.pcx__heading {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pcx__eyebrow {
+  color: var(--pt, var(--color-primary-soft-text));
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.pcx__title {
+  margin: 0;
+  color: var(--color-heading);
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.pcx__lead {
+  color: var(--color-text);
+  font-size: var(--text-body);
+  line-height: 1.6;
+  max-width: 62ch;
+}
+
+.pcx__list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pcx__list li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: var(--text-small);
+  line-height: 1.5;
+}
+
+.pcx__list svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--pt, var(--color-primary));
+}
+
+.pcx__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  padding-top: var(--space-1);
+}
+
+.pcx__share {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.pcx__disclosure {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+/* ---------------------------------------------------------------- hero */
+
+.pcx--hero {
+  gap: var(--space-5);
+  padding: clamp(1.5rem, 1.1rem + 2vw, 2.75rem);
+}
+
+.pcx--hero .pcx__title {
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2.125rem);
+}
+
+.pcx--hero .pcx__lead {
+  font-size: 1.0625rem;
+}
+
+@media (min-width: 900px) {
+  .pcx--hero[data-partner-slot="learn.hub"] .pcx__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-6);
+  }
+}
+
+/* ---------------------------------------------------------------- kit */
+
+.pcx--kit .pcx__list {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 720px) {
+  .pcx--kit .pcx__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-6);
+  }
+}
+
+/* ---------------------------------------------------------------- bar */
+
+.pcx--bar {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  margin-block: var(--space-6);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-card);
+}
+
+.pcx__bar-text {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.pcx__bar-line {
+  color: var(--color-text);
+  font-size: var(--text-small);
+  line-height: 1.45;
+}
+
+.pcx__bar-line strong {
+  color: var(--color-heading);
+}
+
+.pcx__bar-label {
+  margin-right: var(--space-2);
+  color: var(--pt, var(--color-primary-soft-text));
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.pcx__bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+@media (min-width: 720px) {
+  .pcx--bar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .pcx__bar-actions {
+    grid-column: auto;
+    justify-content: flex-end;
+  }
+}
+
+/* ---------------------------------------------------------------- home band */
+
+.partner-band {
+  padding-block: var(--space-12);
+}
+
+@media (min-width: 900px) {
+  .partner-band {
+    padding-block: var(--space-16);
+  }
+}
+
+.partner-band__head {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 46rem;
+  margin-bottom: var(--space-8);
+}
+
+.partner-band__head .eyebrow,
+.partner-band__head p {
+  margin: 0;
+}
+
+.partner-band__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  letter-spacing: var(--tracking-tight);
+}
+
+.partner-band__intro {
+  color: var(--color-text);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+.partner-band__disclosure {
+  margin-top: var(--space-1);
+}
+
+.partner-band__grid {
+  display: grid;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+}
+
+.partner-band__grid > li {
+  display: flex;
+}
+
+.partner-band__grid .pcx {
+  flex: 1;
+  margin: 0;
+  align-content: start;
+}
+
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  .partner-band__grid .pcx {
+    transition:
+      transform var(--duration-slow) var(--ease-standard),
+      box-shadow var(--duration-slow) var(--ease-standard);
+  }
+
+  .partner-band__grid .pcx:hover {
+    transform: translateY(-3px);
+  }
+}
+
+/* ---------------------------------------------------------------- share */
+
+.partner-share {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.partner-share__title {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.partner-share__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.partner-share__item,
+.partner-share__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-heading);
+  font: inherit;
+  font-size: var(--text-small);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background var(--duration-base) var(--ease-standard),
+    border-color var(--duration-base) var(--ease-standard);
+}
+
+.partner-share__item:hover,
+.partner-share__summary:hover {
+  border-color: var(--pt, var(--color-primary));
+  background: var(--color-surface-2);
+  color: var(--color-heading);
+}
+
+.partner-share__item:focus-visible,
+.partner-share__summary:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.partner-share__item--tell {
+  border-color: var(--pt, var(--color-border-strong));
+}
+
+.partner-share--menu {
+  display: block;
+}
+
+.partner-share--menu > .partner-share__summary {
+  list-style: none;
+  width: max-content;
+}
+
+.partner-share--menu > .partner-share__summary::-webkit-details-marker {
+  display: none;
+}
+
+.partner-share--menu[open] > .partner-share__list {
+  margin-top: var(--space-2);
+}
+
+.partner-unit__actions .partner-share--menu[open],
+.pcx__bar-actions .partner-share--menu[open] {
+  flex-basis: 100%;
+}
+
+/* ---------------------------------------------------------------- inside article prose
+ * `.site-prose a` styles every link as a text link; the cards' buttons and share pills keep their own look. */
+
+.site-prose :is(.partner-unit, .pcx) a:is(.ui-button, .partner-share__item, [rel~="sponsored"]) {
+  text-decoration: none;
+}
+
+.site-prose :is(.partner-unit, .pcx) a.ui-button,
+.site-prose :is(.partner-unit, .pcx) a.ui-button:hover {
+  color: var(--btn-fg);
+}
+
+.site-prose :is(.partner-unit, .pcx) a.partner-share__item,
+.site-prose :is(.partner-unit, .pcx) a.partner-share__item:hover {
+  color: var(--color-heading);
+}

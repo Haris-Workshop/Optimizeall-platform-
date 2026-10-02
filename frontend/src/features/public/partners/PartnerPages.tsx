@@ -10,6 +10,7 @@ import { useReveal } from '../site/motion';
 import { CoCta, CoHero, CoSection } from '../pages/companyKit';
 import { type PartnerCard, type PartnerOffering, type PartnerProfile, usePartner, usePartners } from './api';
 import { PartnerLogo, PartnerOfferNote, SponsoredLink } from './PartnerSlot';
+import { PartnerShare } from './PartnerShare';
 import { useImpression } from './tracking';
 import './partners.css';
 import { partnerLogoSources } from './logoSources';
@@ -65,6 +66,7 @@ function DirectoryCard({ partner }: { partner: PartnerCard }) {
           Visit {partner.websiteHost}
         </SponsoredLink>
       </div>
+      <PartnerShare partner={partner} layout="menu" />
     </article>
   );
 }
@@ -222,6 +224,7 @@ export function PartnerProfilePage() {
                 <ButtonLink to="/partners" variant="secondary" size="lg">
                   All partners
                 </ButtonLink>
+                <PartnerShare partner={{ slug: p.slug, name: p.name, tagline: p.tagline, profilePath: `/partners/${p.slug}` }} className="partner-hero-share" />
               </>
             }
             aside={

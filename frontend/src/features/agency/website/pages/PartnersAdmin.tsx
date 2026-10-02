@@ -91,6 +91,8 @@ export interface PartnerSlotOption {
   kind: 'List' | 'Unit' | 'Page';
   label: string;
   description: string;
+  /** How the placement looks: hero (large, once per page), kit (resource card), inline (compact card) or bar (slim line). */
+  variant?: 'hero' | 'kit' | 'inline' | 'bar';
 }
 
 type PartnerDraft = Omit<
@@ -314,7 +316,9 @@ export function PartnersAdminPage() {
               <legend>Placements</legend>
               <p className="text-small text-muted">
                 Where the partner may appear. Ad units show at most one partner per slot, chosen by the keywords and categories below, and are
-                always labelled “Sponsored”.
+                always labelled “Sponsored”. Only the home band and the academy hub are hero-size (one per page). Ordering follows the partner
+                order in the list; cap how often a placement shows (one page in N, or off) and edit the short links (/go/pciai, /go/certuvo)
+                under Page copy → Partner placements.
               </p>
               {slots.isError ? (
                 <ErrorState error={slots.error} onRetry={() => void slots.refetch()} />

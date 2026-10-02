@@ -450,6 +450,9 @@ export function HomePage() {
         </HomeSection>
       )}
 
+      {/* ------------------------------------------------------------ Partner band (the page's only hero-size placement) */}
+      <PartnerSlot slot="home.band" />
+
       {/* ------------------------------------------------------------ Sibling products */}
       <section className="oa-h-section oa-h-more" aria-labelledby={moreId}>
         <div className="container">

@@ -69,6 +69,7 @@ import { PublicCatalog } from '@/features/learning/components/CatalogBrowser';
 import { CategoryArt } from '@/features/learning/components/CategoryArt';
 import { BadgeImage, CategoryTag, categoryClass, CourseCard, LevelTag, LinkedInIcon } from '@/features/learning/components/CourseCard';
 import { LearnSlot } from '@/features/learning/components/LearnSlot';
+import { PartnerSlot } from '../partners/PartnerSlot';
 import { WorkWithUsCard } from '@/features/learning/components/WorkWithUsCard';
 import { LessonView } from '@/features/learning/components/LessonView';
 import { useCountUp } from '@/features/learning/components/Motion';
@@ -593,6 +594,15 @@ export function AcademyPage() {
           </div>
         </div>
       </section>
+
+      {/* The hub's one hero-size sponsored card, chosen for exam preparation and project controls. */}
+      <div className="container">
+        <PartnerSlot
+          slot="learn.hub"
+          keywords={['exam preparation', 'project controls', 'certification']}
+          categories={['certification', 'exam-prep', 'project-controls']}
+        />
+      </div>
 
       <AcademySection
         id="catalog"

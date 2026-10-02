@@ -84,9 +84,10 @@ export const usePartner = (slug: string) =>
     enabled: !!slug,
   });
 
-/** The ad unit for a slot on this page (at most one partner). */
-export const usePartnerPlacement = (slot: PartnerUnitSlot, keywords: string[], categories: string[], path: string) =>
+/** The ad unit for a slot on this page (at most one partner). `enabled` false holds the request (below-the-fold slots). */
+export const usePartnerPlacement = (slot: PartnerUnitSlot, keywords: string[], categories: string[], path: string, enabled = true) =>
   useQuery({
+    enabled,
     queryKey: partnerKeys.placement(slot, keywords, categories, path),
     queryFn: () =>
       api.get<PartnerPlacement>('/public/partners/placement', {

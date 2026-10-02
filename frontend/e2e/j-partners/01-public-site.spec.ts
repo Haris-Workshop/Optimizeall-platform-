@@ -57,7 +57,7 @@ test('/partners and the profile pages are indexable, content-rich and mark every
   await expect(page.getByRole('heading', { name: 'Related partners' })).toBeVisible();
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
     'content',
-    /\/partners\/pci-ai\.png$/,
+    /\/og\/partners\/pci-ai\.png\?v=[0-9a-f]{12}$/,
   );
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/partners\/pci-ai$/);
   const ld = (await page.locator('script[type="application/ld+json"]').allTextContents()).join('\n');

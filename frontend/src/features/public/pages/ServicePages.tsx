@@ -115,6 +115,11 @@ export function ServicesPage() {
           })}
         </div>
       </PublicQueryState>
+      {data && (
+        <div className="container">
+          <PartnerSlot slot="services.index" keywords={all.map((g) => g.name)} categories={all.map((g) => g.slug)} />
+        </div>
+      )}
 
       <AgencySection
         className="oa-a-approach"

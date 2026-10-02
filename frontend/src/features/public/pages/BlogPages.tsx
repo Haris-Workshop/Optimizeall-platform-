@@ -210,6 +210,10 @@ export function BlogPage() {
               </ul>
             </>
           )}
+          {/* One slim sponsored bar after the list on the hub and the category pages (not on tag filters or searches). */}
+          {data && items.length > 0 && !tag && !debounced && (
+            <PartnerSlot slot="blog.index" keywords={categoryInfo ? [categoryInfo.name] : []} categories={category ? [category] : []} />
+          )}
           {data && data.total > data.pageSize && (
             <Pagination
               page={data.page}

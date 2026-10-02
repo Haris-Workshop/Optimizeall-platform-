@@ -127,17 +127,17 @@ describe('Markdown in editorial content', () => {
 
 describe('ad units', () => {
   it('are labelled Sponsored and link out with rel="sponsored noopener" through the click counter', () => {
-    renderWithApp(<PartnerAd partner={pci} slot="blog.end" />, { route: '/blog/seo-tips', path: '/blog/:slug' });
+    renderWithApp(<PartnerAd partner={pci} slot="service.detail" />, { route: '/blog/seo-tips', path: '/blog/:slug' });
     const unit = screen.getByRole('complementary', { name: 'Sponsored: PCI AI' });
     expect(within(unit).getByText('Sponsored')).toBeInTheDocument();
     expect(within(unit).getByText('Optimize All is the official marketing partner of PCI AI.')).toBeInTheDocument();
     const out = within(unit).getByRole('link', { name: /Visit pciai.org/ });
     expect(out).toHaveAttribute('rel', 'sponsored noopener');
     expect(out).toHaveAttribute('target', '_blank');
-    expect(out).toHaveAttribute('href', '/api/v1/public/partners/pci-ai/visit?slot=blog.end&path=%2Fblog%2Fseo-tips');
+    expect(out).toHaveAttribute('href', '/api/v1/public/partners/pci-ai/visit?slot=service.detail&path=%2Fblog%2Fseo-tips');
     expect(within(unit).getByRole('link', { name: 'About PCI AI' })).toHaveAttribute('href', '/partners/pci-ai');
     // Counted once (no IntersectionObserver in jsdom → counted on mount).
-    expect(pendingImpressions()).toEqual([{ partner: 'pci-ai', slot: 'blog.end', path: '/blog/seo-tips' }]);
+    expect(pendingImpressions()).toEqual([{ partner: 'pci-ai', slot: 'service.detail', path: '/blog/seo-tips' }]);
   });
 
   it('hide every outbound link while the partner has no website', () => {

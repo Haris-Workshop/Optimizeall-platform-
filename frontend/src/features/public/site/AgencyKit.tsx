@@ -3,7 +3,7 @@ import { ArrowRight, ArrowUpRight, Check, Plus } from 'lucide-react';
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ButtonLink } from '@/components/ui';
-import { formatMoney } from '@/lib/format/money';
+import { siteMoney } from '@/features/public/site/format';
 import type { BillingPeriod, CaseStudyCard, FaqEntry, HomeStat, Metric, Price, PublicPackage, ServiceCard } from './api';
 import { Breadcrumbs, type Crumb } from './components';
 import { useSiteCopy } from './copy';
@@ -24,7 +24,7 @@ const SUFFIX: Record<BillingPeriod, string> = { OneTime: 'one-time', Monthly: '/
 
 /** "$1,500" (whole amounts drop ".00"; amounts with cents keep them). */
 export function money(amount: number, currency: string): string {
-  const text = formatMoney(amount, currency, { currencyDisplay: 'narrowSymbol' });
+  const text = siteMoney(amount, currency, { currencyDisplay: 'narrowSymbol' });
   return Number.isInteger(amount) ? text.replace(/[.,]00(?=\D*$)/, '') : text;
 }
 

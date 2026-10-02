@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
+import { inViewport, onServerRenderedPage } from '@/lib/ssr';
 
 /**
  * Academy motion (docs/LEARNING.md § "Motion"): CSS/SVG + IntersectionObserver only, no animation library. Everything
@@ -24,6 +25,8 @@ export function useReveal<T extends HTMLElement>(key?: unknown): RefObject<T> {
       el?.setAttribute('data-reveal', 'in');
       return;
     }
+    // Server-rendered and already on screen: it was painted before the app started; keep it as it is (no flash).
+    if (onServerRenderedPage() && inViewport(el)) return;
     // Already on screen at mount (above the fold): animate in right away, next frame.
     el.setAttribute('data-reveal', 'pending');
     const observer = new IntersectionObserver(
@@ -54,7 +57,8 @@ export function stagger(index: number): CSSProperties {
 /** Counts up to `value` once (for the hub's live numbers); immediate with reduced motion or in tests. */
 export function useCountUp(value: number, durationMs = 900): number {
   const [shown, setShown] = useState(value);
-  const from = useRef(0);
+  // On a server-rendered page the figure was painted at its value: count from there, not from zero.
+  const from = useRef(onServerRenderedPage() ? value : 0);
   useEffect(() => {
     if (prefersReducedMotion() || typeof requestAnimationFrame === 'undefined' || value <= 0) {
       setShown(value);

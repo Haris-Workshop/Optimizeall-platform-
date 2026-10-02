@@ -54,9 +54,11 @@ test.describe.serial('video block', () => {
   }) => {
     const page = await noJsPage(browser);
     expect((await page.goto(`/${slug}`))!.status()).toBe(200);
-    const video = page.locator('#oa-ssr video');
+    // The app's player rendered on the server, or the API's plain copy (#oa-ssr) while the renderer is down.
+    const video = page.locator('#root video');
+    await expect(video).toHaveCount(1);
     await expect(video).toHaveAttribute('preload', 'none');
-    await expect(video).toHaveAttribute('poster', `${BASE}/media/videos/marketing-audit.jpg`);
+    await expect(video).toHaveAttribute('poster', new RegExp(`^(${BASE})?/media/videos/marketing-audit\\.jpg$`));
     await expect(video.locator('track[kind="captions"][srclang="en"]')).toHaveCount(1);
     await expect(video.locator('source[type="video/mp4"]')).toHaveCount(1);
     const head = await readHead(page);

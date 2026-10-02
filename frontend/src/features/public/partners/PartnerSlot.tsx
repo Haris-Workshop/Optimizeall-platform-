@@ -2,6 +2,7 @@ import { ArrowUpRight } from 'lucide-react';
 import { useRef, type CSSProperties, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { buttonClasses, type ButtonSize, type ButtonVariant } from '@/components/ui/buttonStyles';
+import { siteDate } from '../site/format';
 import { type PartnerCard, usePartnerPlacement, usePartners } from './api';
 import { SPONSORED_REL, visitHref } from './partnerLinks';
 import { slotKind, type PartnerListSlot, type PartnerSlotName, type PartnerUnitSlot } from './slots';
@@ -73,7 +74,7 @@ export function PartnerOfferNote({ partner }: { partner: PartnerCard }) {
         </>
       )}
       {partner.offer.expiresAt && (
-        <span className="partner-offer__until"> (until {new Date(partner.offer.expiresAt).toLocaleDateString()})</span>
+        <span className="partner-offer__until"> (until {siteDate(partner.offer.expiresAt)})</span>
       )}
     </p>
   );

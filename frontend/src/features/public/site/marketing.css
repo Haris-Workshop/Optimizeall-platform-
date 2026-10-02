@@ -22,8 +22,9 @@
  * An animation (not a transition) with fill-mode `backwards`, so once it has played it leaves no trace: hover lifts and
  * other transitions on the same cards keep their own timing. */
 @media (prefers-reduced-motion: no-preference) {
-  .oa-motion :is(.site-section__head, [data-reveal]:not([data-reveal='stagger'])):not(.is-revealed),
-  .oa-motion [data-reveal='stagger']:not(.is-revealed) > * {
+  /* .is-static: on screen when a server-rendered page hydrated (site/motion.tsx), so it stays as it was painted. */
+  .oa-motion :is(.site-section__head, [data-reveal]:not([data-reveal='stagger'])):not(.is-revealed, .is-static),
+  .oa-motion [data-reveal='stagger']:not(.is-revealed, .is-static) > * {
     opacity: 0;
   }
 

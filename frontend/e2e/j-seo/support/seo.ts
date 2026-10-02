@@ -11,6 +11,12 @@ export const BASE = (
   'http://localhost:4173'
 ).replace(/\/$/, '');
 
+/**
+ * Whether public website pages are expected to arrive rendered by the app on the server (src/entry-server.tsx): both
+ * web servers do it when the build has the server renderer (npm run build). E2E_SSR=0 checks a build or server without.
+ */
+export const SSR = process.env.E2E_SSR !== '0';
+
 /** Built-in public pages that must be indexable (Baseline + Demo seed). */
 export const PUBLIC_PAGES = [
   '/',

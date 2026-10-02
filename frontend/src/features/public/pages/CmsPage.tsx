@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom';
 import { NotFound } from '@/features/public/NotFound';
 import { isApiError } from '@/lib/api/errors';
-import { formatDate } from '@/lib/format/dates';
+import { siteDate } from '@/features/public/site/format';
 import { usePage } from '../site/api';
 import { Blocks } from '../site/Blocks';
 import { PageHero, PublicQueryState } from '../site/components';
@@ -33,7 +33,7 @@ export function CmsPage({ slug: fixedSlug }: { slug?: string }) {
               actions={
                 page.kind === 'Legal' ? (
                   <p className="site-legal__updated">
-                    Last updated <time dateTime={page.updatedAt}>{formatDate(page.updatedAt)}</time>
+                    Last updated <time dateTime={page.updatedAt}>{siteDate(page.updatedAt)}</time>
                   </p>
                 ) : undefined
               }
@@ -51,7 +51,7 @@ export function CmsPage({ slug: fixedSlug }: { slug?: string }) {
           />
           {page.kind === 'Legal' && startsWithHero && (
             <p className="container site-narrow site-legal__updated site-legal__updated--end">
-              Last updated <time dateTime={page.updatedAt}>{formatDate(page.updatedAt)}</time>
+              Last updated <time dateTime={page.updatedAt}>{siteDate(page.updatedAt)}</time>
             </p>
           )}
         </article>

@@ -7,6 +7,7 @@ import {
   noJsPage,
   parseHead,
   readHead,
+  SSR,
 } from './support/seo';
 
 /**
@@ -46,12 +47,16 @@ test.describe('public pages without JavaScript', () => {
       head.jsonLd.forEach((node, i) => expectValidJsonLd(node, `${path} JSON-LD #${i}`));
       if (path !== '/') expect(head.jsonLd.map((n) => n['@type'])).toContain('BreadcrumbList');
 
-      // Visible content: one h1, body copy, links into the site, and no "needs JavaScript" wall.
+      // Visible content: one h1, body copy, links into the site, and no "needs JavaScript" wall. Public website pages
+      // arrive as the designed page rendered by the app on the server (#root[data-oa-hydrate]); other pages, or any
+      // page while the renderer is down, as the API's plain copy (#oa-ssr). Either way it is complete without scripts.
       await expect(page.locator('h1')).toHaveCount(1);
       await expect(page.locator('h1')).toBeVisible();
-      const text = (await page.locator('#oa-ssr main').innerText()).trim();
+      await expect(page.locator('main')).toHaveCount(1);
+      const text = (await page.locator('main').innerText()).trim();
       expect(text.length, 'readable main content').toBeGreaterThan(150);
-      expect(await page.locator('#oa-ssr a[href="/services"]').count()).toBeGreaterThan(0);
+      expect(await page.locator('#root a[href="/services"]').count()).toBeGreaterThan(0);
+      if (SSR) expect(await page.locator('#root[data-oa-hydrate]').count(), 'server-rendered by the app').toBe(1);
       await expect(page.getByText('needs JavaScript to run')).toHaveCount(0);
 
       expect(titles.has(head.title), `${path} repeats the title of ${titles.get(head.title)}`).toBe(false);

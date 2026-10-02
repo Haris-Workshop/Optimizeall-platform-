@@ -23,6 +23,18 @@ const NO_REFRESH_PATHS = [
   '/auth/2fa/enroll/confirm',
 ];
 
+// ---------- Transport ----------
+
+/** How requests reach the API: the browser's fetch, or the server renderer's (src/entry-server.tsx: absolute API URL and the visitor's forwarded headers). */
+export type Transport = (url: string, init: RequestInit) => Promise<Response>;
+
+let transport: Transport | null = null;
+
+/** Server-side rendering only: routes every API request through `next` (null restores the browser's fetch). */
+export function setTransport(next: Transport | null): void {
+  transport = next;
+}
+
 // ---------- Access token (memory only — never persisted) ----------
 
 let accessToken: string | null = null;
@@ -167,7 +179,7 @@ async function doFetch(
   if (token) headers.Authorization = `Bearer ${token}`;
 
   try {
-    return await fetch(resolveUrl(path, options.query), {
+    return await (transport ?? fetch)(resolveUrl(path, options.query), {
       method,
       headers,
       body,

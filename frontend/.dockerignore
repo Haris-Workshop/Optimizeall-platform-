@@ -12,3 +12,4 @@ blob-report/
 .env.*.local
 Dockerfile
 .dockerignore
+dist-ssr/

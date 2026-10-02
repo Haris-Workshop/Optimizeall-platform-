@@ -5,6 +5,7 @@ import { Alert, Button, EmptyState, FormField, Skeleton, Textarea } from '@/comp
 import { api } from '@/lib/api/client';
 import { isApiError } from '@/lib/api/errors';
 import { browserTimeZone } from '@/lib/format/dates';
+import { useHydrated } from '@/lib/ssr';
 import { type Slots, useServices } from '../site/api';
 import { useSiteCopy } from '../site/copy';
 import { useDocumentHead } from '../site/head';
@@ -30,9 +31,16 @@ export function groupSlotsByDay(slots: string[], timeZone: string): { key: strin
  * (the time, then the visitor's details) with a live summary of the chosen call beside it.
  */
 export function BookConsultationPage() {
-  const timeZone = browserTimeZone();
+  // Times are shown in the visitor's own time zone, which only the browser knows: the server renders the page with
+  // the slot picker loading, and the slots load once the page has hydrated.
+  const hydrated = useHydrated();
+  const timeZone = hydrated ? browserTimeZone() : 'UTC';
   const services = useServices();
-  const slotsQuery = useQuery({ queryKey: ['public', 'slots'], queryFn: () => api.get<Slots>('/public/consultations/slots', { query: { days: 21 } }) });
+  const slotsQuery = useQuery({
+    queryKey: ['public', 'slots'],
+    queryFn: () => api.get<Slots>('/public/consultations/slots', { query: { days: 21 } }),
+    enabled: hydrated,
+  });
   const form = useLeadForm<object>('/public/consultations');
   const [day, setDay] = useState<string | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
@@ -127,7 +135,7 @@ export function BookConsultationPage() {
               {copy.text('booking.time.title')}
               <span className="oa-co-part__hint">(times shown in {timeZone})</span>
             </h2>
-            {slotsQuery.isLoading ? (
+            {slotsQuery.isPending ? (
               <Skeleton height={160} />
             ) : days.length === 0 ? (
               <EmptyState compact title={copy.text('booking.empty.title')} headingLevel={3} description={copy.text('booking.empty.description')} />

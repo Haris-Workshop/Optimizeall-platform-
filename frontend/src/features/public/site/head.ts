@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { pageOrigin } from '@/lib/ssr';
 import { useSite, type JsonLd, type PublicSeo } from './api';
 import { chromeVariant, DEFAULT_TITLES, TITLE_TEMPLATES } from './variant';
 
@@ -98,7 +99,7 @@ function setCanonical(href: string | null) {
 export function absoluteUrl(url: string | null | undefined, siteUrl?: string | null): string | null {
   if (!url) return null;
   if (/^https?:\/\//i.test(url)) return url;
-  const base = (siteUrl || window.location.origin).replace(/\/+$/, '');
+  const base = (siteUrl || pageOrigin()).replace(/\/+$/, '');
   return url.startsWith('/') ? base + url : `${base}/${url}`;
 }
 

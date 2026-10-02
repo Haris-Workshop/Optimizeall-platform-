@@ -3,7 +3,7 @@ import { ArrowRight, ArrowUpRight, Check } from 'lucide-react';
 import { useId, useRef, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ButtonLink, Skeleton } from '@/components/ui';
-import { formatDate } from '@/lib/format/dates';
+import { siteDate } from '@/features/public/site/format';
 import type { CaseStudyCard, HomeStat, Metric, PostCard, PricingTeaser } from '../site/api';
 import { useHome } from '../site/api';
 import { useSiteCopy } from '../site/copy';
@@ -152,7 +152,7 @@ function InsightCard({ post, index }: { post: PostCard; index: number }) {
         </h3>
         <p className="oa-h-post__excerpt">{post.excerpt}</p>
         <p className="oa-h-post__meta">
-          {post.publishedAt && <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>}
+          {post.publishedAt && <time dateTime={post.publishedAt}>{siteDate(post.publishedAt)}</time>}
           {post.publishedAt && ' · '}
           {post.readingMinutes} min read
         </p>

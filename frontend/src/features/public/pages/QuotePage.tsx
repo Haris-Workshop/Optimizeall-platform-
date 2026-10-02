@@ -2,7 +2,7 @@ import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Checkbox, FormField, RadioGroup, Select, Textarea } from '@/components/ui';
-import { formatMoney } from '@/lib/format/money';
+import { siteMoney } from '@/features/public/site/format';
 import { usePricing, useServices } from '../site/api';
 import { PERIOD_SUFFIX } from '../site/components';
 import { useSiteCopy } from '../site/copy';
@@ -157,7 +157,7 @@ export function QuotePage() {
                             description={
                               p.isCustomQuote || p.price === null
                                 ? 'Custom quote'
-                                : `${formatMoney(p.price, p.currency, { currencyDisplay: 'narrowSymbol' })} ${PERIOD_SUFFIX[p.billingPeriod]}`
+                                : `${siteMoney(p.price, p.currency, { currencyDisplay: 'narrowSymbol' })} ${PERIOD_SUFFIX[p.billingPeriod]}`
                             }
                             checked={packageIds.includes(p.id)}
                             onChange={(e) => setPackageIds((ids) => (e.target.checked ? [...ids, p.id] : ids.filter((x) => x !== p.id)))}

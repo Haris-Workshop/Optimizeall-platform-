@@ -3133,19 +3133,23 @@ img.oa-co-member__portrait {
   max-width: 34rem;
 }
 
-.oa-co-toc details > summary {
+/* Contents: a disclosure above the article on narrow screens (collapsed until opened), an always-open list in the side
+ * rail on wide screens. Pure CSS per width, so server-rendered and hydrated markup look the same. */
+.oa-co-toc__toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  list-style: none;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
 }
 
-.oa-co-toc details > summary::-webkit-details-marker {
-  display: none;
-}
-
-.oa-co-toc details > summary::after {
+.oa-co-toc__toggle::after {
   content: '';
   width: 8px;
   height: 8px;
@@ -3156,22 +3160,35 @@ img.oa-co-member__portrait {
   transition: transform var(--duration-fast) var(--ease-standard);
 }
 
-.oa-co-toc details[open] > summary::after {
+.oa-co-toc[data-open] .oa-co-toc__toggle::after {
   transform: rotate(-135deg);
 }
 
-.oa-co-toc summary .oa-co-railtitle {
+.oa-co-toc__toggle .oa-co-railtitle {
   margin: 0;
 }
 
-.oa-co-toc details[open] > summary {
+.oa-co-toc[data-open] .oa-co-toc__toggle {
   margin-bottom: var(--space-3);
 }
 
-.oa-co-toc summary:focus-visible {
+.oa-co-toc__toggle:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 4px;
   border-radius: 4px;
+}
+
+@media (max-width: 1099px) {
+  .oa-co-toc__title,
+  .oa-co-toc:not([data-open]) ol {
+    display: none;
+  }
+}
+
+@media (min-width: 1100px) {
+  .oa-co-toc__toggle {
+    display: none;
+  }
 }
 
 .oa-co-share__copy {

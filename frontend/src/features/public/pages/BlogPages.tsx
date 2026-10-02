@@ -3,9 +3,10 @@ import { ArrowLeft, CalendarDays, Clock3, Link2, Rss, Search, X } from 'lucide-r
 import { useEffect, useId, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Input, Pagination, Skeleton } from '@/components/ui';
-import { formatDate } from '@/lib/format/dates';
+import { siteDate } from '@/features/public/site/format';
 import { useDebouncedValue } from '@/lib/hooks/useDebouncedValue';
 import { isExternalHref } from '@/lib/safeHref';
+import { useHydrated } from '@/lib/ssr';
 import { type PostCard, type PublicPost, useBlog, usePost, useSite } from '../site/api';
 import { useSiteCopy } from '../site/copy';
 import { PublicQueryState } from '../site/components';
@@ -48,7 +49,7 @@ export function PostTile({ post, headingLevel = 2, lead = false, label }: { post
         <p className="oa-co-kicker">
           {category && <span className="oa-co-kicker__cat">{category}</span>}
           {category && post.publishedAt && <span className="oa-co-kicker__sep" aria-hidden="true" />}
-          {post.publishedAt && <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>}
+          {post.publishedAt && <time dateTime={post.publishedAt}>{siteDate(post.publishedAt)}</time>}
         </p>
         <H className="oa-co-tile__title">
           <Link to={`/blog/${post.slug}`} className="oa-co-stretch">
@@ -259,7 +260,7 @@ function Byline({ post }: { post: PublicPost }) {
       {post.publishedAt && (
         <span>
           <CalendarDays aria-hidden="true" />
-          <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
+          <time dateTime={post.publishedAt}>{siteDate(post.publishedAt)}</time>
         </span>
       )}
       <span>
@@ -278,7 +279,9 @@ function ShareLinks({ post, url, className }: { post: PublicPost; url: string; c
     { label: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}` },
     { label: 'Email', href: `mailto:?subject=${encodeURIComponent(post.title)}&body=${encodeURIComponent(url)}` },
   ];
-  const canCopy = typeof navigator !== 'undefined' && !!navigator.clipboard && !!url;
+  // Browser support is known only after hydration (the server renders the list without the button).
+  const hydrated = useHydrated();
+  const canCopy = hydrated && !!navigator.clipboard && !!url;
   return (
     <div className={clsx('oa-co-share', className)}>
       <p className="oa-co-railtitle">{copy.text('blog.detail.shareTitle')}</p>
@@ -317,30 +320,33 @@ function ShareLinks({ post, url, className }: { post: PublicPost; url: string; c
 function TableOfContents({ headings }: { headings: { id: string; text: string; level: number }[] }) {
   const copy = useSiteCopy();
   const titleId = useId();
+  const listId = useId();
   const active = useActiveHeading(headings.map((h) => h.id));
-  const [open, setOpen] = useState(() => typeof window === 'undefined' || !window.matchMedia || window.matchMedia('(min-width: 1100px)').matches);
+  // Narrow screens (the contents sit above the article): collapsed until opened. Wide screens (a side rail): always
+  // open, by CSS — so the server-rendered markup is right at every width and nothing moves when the page hydrates.
+  const [open, setOpen] = useState(false);
   const onClick = (e: MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
     scrollToAnchor(id);
   };
+  const title = copy.text('blog.detail.tocTitle');
   return (
-    <nav className="oa-co-toc" aria-labelledby={titleId}>
-      <details open={open} onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
-        <summary>
-          <span id={titleId} className="oa-co-railtitle">
-            {copy.text('blog.detail.tocTitle')}
-          </span>
-        </summary>
-        <ol>
-          {headings.map((h) => (
-            <li key={h.id} className={h.level > 2 ? 'is-sub' : undefined}>
-              <a href={`#${h.id}`} aria-current={active === h.id ? 'location' : undefined} onClick={(e) => onClick(e, h.id)}>
-                {h.text}
-              </a>
-            </li>
-          ))}
-        </ol>
-      </details>
+    <nav className="oa-co-toc" aria-labelledby={titleId} data-open={open ? '' : undefined}>
+      <p id={titleId} className="oa-co-railtitle oa-co-toc__title">
+        {title}
+      </p>
+      <button type="button" className="oa-co-toc__toggle" aria-expanded={open} aria-controls={listId} onClick={() => setOpen((o) => !o)}>
+        <span className="oa-co-railtitle">{title}</span>
+      </button>
+      <ol id={listId}>
+        {headings.map((h) => (
+          <li key={h.id} className={h.level > 2 ? 'is-sub' : undefined}>
+            <a href={`#${h.id}`} aria-current={active === h.id ? 'location' : undefined} onClick={(e) => onClick(e, h.id)}>
+              {h.text}
+            </a>
+          </li>
+        ))}
+      </ol>
     </nav>
   );
 }

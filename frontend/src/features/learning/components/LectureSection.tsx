@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from 'react';
+import { pageOrigin } from '@/lib/ssr';
 import { formatClock, type LectureChapter, type LessonLecture } from '../api';
 
 const SPEEDS = [0.75, 1, 1.25, 1.5, 2] as const;
@@ -170,7 +171,7 @@ export function LectureSection({ lecture, headingLevel = 2 }: LectureSectionProp
   };
 
   const current = chapters[active];
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const origin = pageOrigin();
 
   return (
     <section className={clsx('lx-lecture', produced ? 'is-produced' : 'is-soon')} aria-labelledby={titleId}>

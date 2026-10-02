@@ -4,8 +4,7 @@ import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ButtonLink, EmptyState, ErrorState, Skeleton, SkeletonText } from '@/components/ui';
 import { isApiError } from '@/lib/api/errors';
-import { formatDate } from '@/lib/format/dates';
-import { formatMoney } from '@/lib/format/money';
+import { siteDate, siteMoney } from '@/features/public/site/format';
 import type {
   BillingPeriod,
   CaseStudyCard as CaseStudyCardData,
@@ -33,7 +32,7 @@ export const PERIOD_SUFFIX: Record<BillingPeriod, string> = {
  * with cents keep them. Formatting stays with formatMoney (currency, locale, minor units).
  */
 function marketingPrice(amount: number, currency: string): string {
-  const text = formatMoney(amount, currency, { currencyDisplay: 'narrowSymbol' });
+  const text = siteMoney(amount, currency, { currencyDisplay: 'narrowSymbol' });
   return Number.isInteger(amount) ? text.replace(/[.,]00(?=\D*$)/, '') : text;
 }
 
@@ -243,7 +242,7 @@ export function PostCard({ post, headingLevel = 3 }: { post: PostCardData; headi
       </H>
       <p className="site-card__text">{post.excerpt}</p>
       <p className="site-card__meta">
-        {post.publishedAt && <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>}
+        {post.publishedAt && <time dateTime={post.publishedAt}>{siteDate(post.publishedAt)}</time>}
         {' · '}
         {post.readingMinutes} min read
         {post.authorName && <> · {post.authorName}</>}
@@ -309,10 +308,14 @@ export function Stars({ rating }: { rating: number | null }) {
  */
 export function TestimonialCarousel({ items, label = 'Client testimonials' }: { items: Testimonial[]; label?: string }) {
   const [index, setIndex] = useState(0);
-  const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const [playing, setPlaying] = useState(!reduced && items.length > 1);
+  const [playing, setPlaying] = useState(items.length > 1);
   const [hovering, setHovering] = useState(false);
   const count = items.length;
+
+  // Reduced motion: no auto-advance. Checked after mount, so the first render matches the server-rendered page.
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) setPlaying(false);
+  }, []);
 
   useEffect(() => {
     if (!playing || hovering || count < 2) return;
@@ -435,5 +438,5 @@ export function PublicQueryState({ error, isLoading, notFoundTitle, children }: 
 }
 
 export function formatPublished(date: string | null) {
-  return date ? formatDate(date) : null;
+  return date ? siteDate(date) : null;
 }

@@ -16,7 +16,8 @@ function AnnouncementBar() {
   const { data: site } = useSite();
   const bar = site?.announcement;
   const key = bar?.text ? `oa.announcement.${bar.text.length}.${bar.text.slice(0, 24)}` : '';
-  const [dismissed, setDismissed] = useState(() => (key ? safeStorage.get(key) === '1' : false));
+  // Read after mount: the server-rendered page (and its hydration) always includes an enabled bar.
+  const [dismissed, setDismissed] = useState(false);
   useEffect(() => setDismissed(key ? safeStorage.get(key) === '1' : false), [key]);
   if (!bar?.enabled || !bar.text || dismissed) return null;
   return (

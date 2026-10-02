@@ -31,6 +31,10 @@ if [ -n "${API_HOSTPORT:-}" ]; then
   export API_UPSTREAM="http://${API_HOSTPORT}"
 fi
 
+# The server renderer for pages (server/ssr-server.mjs, started by 40-optimizeall-ssr.sh on 127.0.0.1:$SSR_PORT).
+export SSR_PORT="${SSR_PORT:-3000}"
+export OA_SSR_PROXY="http://127.0.0.1:${SSR_PORT}"
+
 if [ -n "${REAL_IP_FROM:-}" ]; then
   {
     for cidr in $REAL_IP_FROM; do

@@ -6,7 +6,7 @@ import { Alert, Button, FormField, Input, Skeleton, Textarea } from '@/component
 import { buttonClasses } from '@/components/ui/buttonStyles';
 import { api } from '@/lib/api/client';
 import { errorMessage } from '@/lib/api/errors';
-import { formatMoney } from '@/lib/format/money';
+import { siteMoney } from '@/features/public/site/format';
 import { isExternalHref } from '@/lib/safeHref';
 import { type EmploymentType, type JobCard, type PublicJob, type TeamMember, useJob, useJobs, useSite, useTeam, type WorkplaceType } from '../site/api';
 import { useSiteCopy } from '../site/copy';
@@ -304,7 +304,7 @@ export function CareersPage() {
 function salaryText(job: PublicJob): string | null {
   const s = job.salary;
   if (!s) return null;
-  const fmt = (n: number) => formatMoney(n, s.currency, { currencyDisplay: 'narrowSymbol' }).replace(/\.00$/, '');
+  const fmt = (n: number) => siteMoney(n, s.currency, { currencyDisplay: 'narrowSymbol' }).replace(/\.00$/, '');
   const range = s.min !== null && s.max !== null ? `${fmt(s.min)} – ${fmt(s.max)}` : s.min !== null ? `From ${fmt(s.min)}` : s.max !== null ? `Up to ${fmt(s.max)}` : null;
   return range ? `${range} per ${s.period.toLowerCase()}` : null;
 }

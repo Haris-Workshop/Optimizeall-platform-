@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from 'react';
+import { inViewport, onServerRenderedPage } from '@/lib/ssr';
 
 /**
  * Motion for the marketing pages, CSS-first and dependency-free:
@@ -28,6 +29,7 @@ const REVEAL_SELECTOR = '.site-section__head, [data-reveal]';
 export function useReveal(root: RefObject<HTMLElement>) {
   const observer = useRef<IntersectionObserver | null>(null);
   const seen = useRef(new WeakSet<Element>());
+  const scanned = useRef(false);
 
   useEffect(() => {
     const el = root.current;
@@ -56,9 +58,16 @@ export function useReveal(root: RefObject<HTMLElement>) {
     const el = root.current;
     const io = observer.current;
     if (!el || !io) return;
+    // A server-rendered page was on screen before the app started: what is visible now stays as painted (no flash).
+    const keepVisible = onServerRenderedPage() && !scanned.current;
+    scanned.current = true;
     el.querySelectorAll(REVEAL_SELECTOR).forEach((node) => {
       if (seen.current.has(node)) return;
       seen.current.add(node);
+      if (keepVisible && inViewport(node)) {
+        node.classList.add('is-static');
+        return;
+      }
       // Stagger children: each gets its index so CSS can delay it.
       if (node.getAttribute('data-reveal') === 'stagger')
         Array.from(node.children).forEach((child, i) => (child as HTMLElement).style.setProperty('--i', String(Math.min(i, 8))));
@@ -97,7 +106,8 @@ export function CountUp({ value, className, suffix = '' }: { value: number; clas
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || !motionAllowed() || value <= 0) {
+    // Server-rendered and already on screen: the final figure was painted; never reset it to zero.
+    if (!el || !motionAllowed() || value <= 0 || (onServerRenderedPage() && inViewport(el))) {
       setShown(value);
       return;
     }

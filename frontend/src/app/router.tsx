@@ -60,6 +60,13 @@ const pagesPublicRoutes: RouteObject[] = [
 /** The design-system showcase ships in development and in builds with VITE_SHOW_DESIGN_SYSTEM=true (staging). */
 export const showDesignSystem = import.meta.env.DEV || import.meta.env.VITE_SHOW_DESIGN_SYSTEM === 'true';
 
+/** Marks a route (and its children) as rendered on the server: src/entry-server.tsx renders only these. */
+function serverRendered(route: RouteObject): RouteObject {
+  const marked = { ...route, handle: { ...(route.handle as object | undefined), ssr: true } } as RouteObject;
+  if (route.children) marked.children = route.children.map(serverRendered);
+  return marked;
+}
+
 function RootRoute() {
   return (
     <AuthProvider>
@@ -112,8 +119,9 @@ export const routes: RouteObject[] = [
       {
         element: <PublicLayout />,
         children: [
-          // Public agency website (home, services, blog, careers, forms, CMS pages…): features/public/routes.tsx.
-          ...publicRoutes,
+          // Public agency website (home, services, blog, careers, forms, CMS pages…): features/public/routes.tsx. These
+          // are rendered on the server too (src/entry-server.tsx) and hydrated in the browser.
+          ...publicRoutes.map(serverRendered),
           // Invitation links (backend MarketingUrls.InvitationLink) and shareable public campaign pages.
           { path: 'join/:code', element: <JoinPage /> },
           { path: 'c/:slug', element: <CampaignLandingPage /> },

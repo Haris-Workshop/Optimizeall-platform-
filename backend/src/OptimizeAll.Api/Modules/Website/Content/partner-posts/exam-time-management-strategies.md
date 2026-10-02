@@ -125,7 +125,7 @@ Our printable [certification exam day checklist (PDF)](/downloads/certification-
 
 ## Tools that help
 
-Timed mocks are essential for pacing practice. [Certuvo](https://certuvo.com) offers mock exams for CIA, CISA, CMA, CPA, CFA, PMP, NCLEX and PCI AI's certifications, with its AI Coach switched off so you rehearse real conditions; see our [Certuvo partner page](/partners/certuvo). Optimize All's free course [Professional Certification Exam Success](/learn/professional-certification-exam-success) covers exam strategy and pacing.
+Timed mocks are essential for pacing practice. [Certuvo](https://certuvo.com) offers exam preparation for CIA, CISA, CMA, CPA, CFA, PMP, NCLEX and PCI AI's certifications, and its AI Coach is switched off during mock exams so you rehearse real conditions; see our [Certuvo partner page](/partners/certuvo). Optimize All's free course [Professional Certification Exam Success](/learn/professional-certification-exam-success) covers exam strategy and pacing.
 
 ## Pacing in shorter exams
 

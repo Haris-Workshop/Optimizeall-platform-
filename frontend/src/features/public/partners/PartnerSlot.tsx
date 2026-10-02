@@ -6,6 +6,7 @@ import { type PartnerCard, usePartnerPlacement, usePartners } from './api';
 import { SPONSORED_REL, visitHref } from './partnerLinks';
 import { slotKind, type PartnerListSlot, type PartnerSlotName, type PartnerUnitSlot } from './slots';
 import { useImpression } from './tracking';
+import { partnerLogoSources } from './logoSources';
 import './partners.css';
 
 /**
@@ -47,7 +48,15 @@ function accent(partner: PartnerCard): CSSProperties | undefined {
 export function PartnerLogo({ partner, size = 56 }: { partner: Pick<PartnerCard, 'logoUrl' | 'name'>; size?: number }) {
   return (
     <span className="partner-logo" style={{ width: size, height: size }}>
-      <img src={partner.logoUrl} alt={`${partner.name} logo`} width={size} height={size} loading="lazy" decoding="async" />
+      <img
+        src={partner.logoUrl}
+        {...partnerLogoSources(partner.logoUrl, size)}
+        alt={`${partner.name} logo`}
+        width={size}
+        height={size}
+        loading="lazy"
+        decoding="async"
+      />
     </span>
   );
 }

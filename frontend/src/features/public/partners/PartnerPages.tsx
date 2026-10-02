@@ -12,6 +12,7 @@ import { type PartnerCard, type PartnerOffering, type PartnerProfile, usePartner
 import { PartnerLogo, PartnerOfferNote, SponsoredLink } from './PartnerSlot';
 import { useImpression } from './tracking';
 import './partners.css';
+import { partnerLogoSources } from './logoSources';
 
 /**
  * The partner directory (/partners) and each partner's profile (/partners/:slug), in the company pages' visual
@@ -74,7 +75,7 @@ function LogoConstellation({ partners }: { partners: PartnerCard[] }) {
     <div className="oa-co-glass partner-hero-logos" aria-hidden="true">
       {partners.slice(0, 4).map((p) => (
         <span key={p.slug} className="partner-hero-logos__item" style={accent(p.brandColor)}>
-          <img src={p.logoUrl} alt="" width={96} height={96} loading="lazy" decoding="async" />
+          <img src={p.logoUrl} {...partnerLogoSources(p.logoUrl, 96)} alt="" width={96} height={96} loading="lazy" decoding="async" />
         </span>
       ))}
     </div>

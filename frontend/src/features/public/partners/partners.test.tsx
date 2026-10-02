@@ -10,6 +10,9 @@ import { applyPartnerLink, matchPartnerLink, type PartnerLinkRule, visitHref } f
 import { PartnerProfilePage, PartnersPage } from './PartnerPages';
 import { PartnerAd, PartnerSlot, SponsoredLink } from './PartnerSlot';
 import { PARTNER_SLOTS } from './slots';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { PARTNER_LOGO_RENDITIONS, partnerLogoSources } from './logoSources';
 import { flushImpressions, pendingImpressions, recordImpression, resetImpressionTracking } from './tracking';
 
 const rules: PartnerLinkRule[] = [
@@ -261,5 +264,22 @@ describe('impression tracking', () => {
     expect(init.keepalive).toBe(true);
     expect(JSON.parse(String(init.body)).items).toHaveLength(2);
     expect(pendingImpressions()).toHaveLength(0);
+  });
+});
+
+describe('partner logo renditions', () => {
+  it('lists only built-in logos whose original and WebP renditions ship in public/', () => {
+    for (const [original, base] of Object.entries(PARTNER_LOGO_RENDITIONS)) {
+      for (const file of [original, `${base}-128.webp`, `${base}-256.webp`])
+        expect(existsSync(resolve(__dirname, '../../../../public', file.slice(1))), file).toBe(true);
+    }
+  });
+
+  it('offers WebP sources for built-in logos and leaves other logos alone', () => {
+    expect(partnerLogoSources('/partners/pci-ai.png', 56)).toEqual({
+      srcSet: '/partners/pci-ai-128.webp 128w, /partners/pci-ai-256.webp 256w',
+      sizes: '56px',
+    });
+    expect(partnerLogoSources('/api/v1/files/abc', 56)).toEqual({});
   });
 });

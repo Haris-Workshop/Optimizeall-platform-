@@ -8,7 +8,9 @@ on:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # A full run takes ~1 h. Cancelling it on every push meant that, with frequent pushes, no run ever finished.
+  # A run in progress now completes; GitHub keeps only the newest waiting run behind it.
+  cancel-in-progress: false
 
 permissions:
   contents: read

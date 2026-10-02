@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -59,6 +61,15 @@ public sealed class ContractFixture : IAsyncLifetime
     /// <summary>Owner of client B (for the reverse tenancy direction).</summary>
     public Caller ClientOwnerB { get; private set; } = null!;
 
+    /// <summary>
+    /// Exceptions that escaped the host's whole pipeline (see <see cref="ServerFailureLog"/>). When one is thrown after the
+    /// response started (a late middleware step, a <c>Response.OnCompleted</c> callback such as the request scope's
+    /// disposal), TestServer aborts the response body, and the client sees a transport error only if it had not finished
+    /// reading yet; this log records it either way.
+    /// </summary>
+    public ServerFailureLog ServerFailures { get; } = new();
+
+    private IDisposable? _serverFailures;
     private string _passwordHash = string.Empty;
     private readonly SemaphoreSlim _mint = new(1, 1);
 
@@ -68,6 +79,8 @@ public sealed class ContractFixture : IAsyncLifetime
         Host = Api.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) =>
             config.AddInMemoryCollection(new Dictionary<string, string?> { ["Database:Seed:1"] = "Demo" })));
         await Host.StartAsync(); // migrations (already applied) + Baseline + Demo
+        _serverFailures = Host.Services.GetRequiredService<DiagnosticListener>()
+            .Subscribe(ServerFailures, name => name == ServerFailureLog.EventName);
         Http = Host.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false, AllowAutoRedirect = false });
         Http.Timeout = TimeSpan.FromMinutes(3);
         Http.DefaultRequestHeaders.Add("X-Requested-With", "tests");
@@ -93,6 +106,7 @@ public sealed class ContractFixture : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
+        _serverFailures?.Dispose();
         Http?.Dispose();
         if (Host is not null) await Host.DisposeAsync();
         await Api.DisposeAsync();
@@ -177,6 +191,44 @@ public sealed class ContractFixture : IAsyncLifetime
     }
 }
 
+/// <summary>
+/// Records the host's <c>Microsoft.AspNetCore.Hosting.UnhandledException</c> diagnostic events: every exception that escaped
+/// the request pipeline (including the exception handler), whether or not the response had started.
+/// </summary>
+public sealed class ServerFailureLog : IObserver<KeyValuePair<string, object?>>
+{
+    public const string EventName = "Microsoft.AspNetCore.Hosting.UnhandledException";
+
+    private readonly ConcurrentQueue<string> _items = new();
+
+    public IReadOnlyList<string> Drain()
+    {
+        var list = new List<string>();
+        while (_items.TryDequeue(out var item)) list.Add(item);
+        return list;
+    }
+
+    public void OnNext(KeyValuePair<string, object?> value)
+    {
+        if (value.Key != EventName || value.Value is null) return;
+        var payload = value.Value.GetType();
+        var context = payload.GetProperty("httpContext")?.GetValue(value.Value) as HttpContext;
+        var exception = payload.GetProperty("exception")?.GetValue(value.Value) as Exception;
+        var request = context is null ? "(no request)" : $"{context.Request.Method} {context.Request.Path}{context.Request.QueryString}";
+        var started = context?.Response.HasStarted == true ? $"after the response started ({context.Response.StatusCode})" : "before the response started";
+        _items.Enqueue($"{request}: [server] unhandled {started}: " +
+                       (exception is null ? "(no exception)" : Findings.ClientFailure(exception)["[client] ".Length..]));
+    }
+
+    public void OnCompleted()
+    {
+    }
+
+    public void OnError(Exception error)
+    {
+    }
+}
+
 [CollectionDefinition(Name)]
 public sealed class ContractCollection : ICollectionFixture<ContractFixture>
 {
@@ -202,6 +254,27 @@ public sealed class Findings
         if (sorted.Count == 0) return;
         throw new Xunit.Sdk.XunitException(
             $"{sorted.Count} {what} finding(s) over {checkedCount} checks:\n" + string.Join('\n', sorted.Take(400)));
+    }
+
+    /// <summary>
+    /// A request that failed on the client side, with its whole exception chain. Under TestServer the innermost exception of
+    /// a transport error is the server's own exception object (the one that aborted the response), so its type, message and
+    /// first stack frames name the server code that failed.
+    /// </summary>
+    public static string ClientFailure(Exception ex)
+    {
+        var chain = new List<string>();
+        var innermost = ex;
+        for (var e = ex; e is not null; e = e.InnerException)
+        {
+            chain.Add($"{e.GetType().Name}: {(e.Message.Length == 0 ? "(no message)" : e.Message)}");
+            innermost = e;
+        }
+        var frames = (innermost.StackTrace ?? string.Empty)
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(f => !f.StartsWith("---", StringComparison.Ordinal))
+            .Take(20);
+        return $"[client] {string.Join(" ---> ", chain)}" + (frames.Any() ? " | " + string.Join(" | ", frames) : string.Empty);
     }
 
     public static async Task ForEachAsync<T>(IEnumerable<T> items, int parallelism, Func<T, Task> body)

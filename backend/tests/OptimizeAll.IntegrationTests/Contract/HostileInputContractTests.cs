@@ -9,7 +9,9 @@ namespace OptimizeAll.IntegrationTests.ApiContract;
 /// with a success or a 4xx RFC 7807 problem carrying <c>code</c> and <c>traceId</c>: never a 5xx, never internals, unknown
 /// ids are never a success, malformed JSON/types/enums/dates are 400, unsupported media types 415, oversized pages clamped
 /// or 400. The body/form cases run twice for endpoints with record ids: against unknown ids (the lookup answers 404) and
-/// against existing demo records, so the handler logic behind the lookup sees the hostile values as well.
+/// against existing demo records, so the handler logic behind the lookup sees the hostile values as well. Exceptions that
+/// escape the host's pipeline are findings too, also when they come after the response started and the client had already
+/// read it (<see cref="ContractFixture.ServerFailures"/>); a client-side transport error names the server exception behind it.
 /// </summary>
 [Collection(ContractCollection.Name)]
 public sealed partial class HostileInputContractTests(ContractFixture fx, ITestOutputHelper output)
@@ -22,6 +24,7 @@ public sealed partial class HostileInputContractTests(ContractFixture fx, ITestO
     public async Task Every_endpoint_rejects_hostile_input_with_a_problem_and_never_fails_with_a_500()
     {
         var findings = new Findings();
+        fx.ServerFailures.Drain(); // only this test's requests
         var stopwatch = Stopwatch.StartNew();
         var anyTenant = await fx.WithDbAsync(db => IdIndex.LoadAsync(db, perType: 1));
         var tenantA = await fx.WithDbAsync(db => IdIndex.LoadAsync(db, fx.ClientA, perType: 1));
@@ -48,7 +51,7 @@ public sealed partial class HostileInputContractTests(ContractFixture fx, ITestO
             }
             catch (Exception ex)
             {
-                findings.Add($"{endpoint.Key} [{@case.Name}] as {caller?.Name ?? "anonymous"}: [client] {ex.GetType().Name}: {ex.Message}");
+                findings.Add($"{endpoint.Key} [{@case.Name}] as {caller?.Name ?? "anonymous"}: {Findings.ClientFailure(ex)}");
                 return;
             }
             statuses.AddOrUpdate((@case.Name.StartsWith("existing ids", StringComparison.Ordinal), outcome.Status), 1, (_, n) => n + 1);
@@ -64,6 +67,7 @@ public sealed partial class HostileInputContractTests(ContractFixture fx, ITestO
         foreach (var existing in new[] { false, true })
             output.WriteLine((existing ? "existing ids: " : "unknown ids:  ") + string.Join(", ",
                 statuses.Where(s => s.Key.Existing == existing).OrderBy(s => s.Key.Status).Select(s => $"{s.Key.Status}x{s.Value}")));
+        foreach (var failure in fx.ServerFailures.Drain()) findings.Add(failure);
         findings.AssertEmpty("hostile-input", work.Count);
     }
 }

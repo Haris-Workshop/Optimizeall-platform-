@@ -67,8 +67,10 @@ def run_batch(cfg: Config, args, lectures: list[str]) -> dict:
             ldir = LectureDir(cfg, key)
             write_json(ldir.plan, plan)
             fingerprint = "|".join(sc["ttsKey"] for sc in plan["scenes"]) + f"|{plan['lectureTitle']}"
-            if st.get("fingerprint") == fingerprint and st.get("stage") in ("assembled", "uploaded") and not (
-                    args.upload and st.get("stage") != "uploaded"):
+            # A new slide design re-renders an assembled lecture; an uploaded one keeps its video (no duplicate upload).
+            design = render.stage_hash()
+            current = st.get("stage") == "uploaded" or (st.get("stage") == "assembled" and st.get("design") == design)
+            if st.get("fingerprint") == fingerprint and current and not (args.upload and st.get("stage") != "uploaded"):
                 summary["skipped"] += 1
                 continue
             if st.get("fingerprint") != fingerprint:
@@ -112,7 +114,7 @@ def run_batch(cfg: Config, args, lectures: list[str]) -> dict:
             t0 = time.time()
             render.render_lecture(cfg, plan, ldir, workers=args.workers)
             rep = assemble_mod.assemble(cfg, plan, ldir, out_dir=args.out)
-            st.update({"stage": "assembled", "renderSeconds": round(time.time() - t0, 1), "video": rep["video"],
+            st.update({"stage": "assembled", "design": design, "renderSeconds": round(time.time() - t0, 1), "video": rep["video"],
                        "credits": nar.get("credits")})
             summary["credits"] += nar.get("credits") or 0
             write_json(state_path, state)

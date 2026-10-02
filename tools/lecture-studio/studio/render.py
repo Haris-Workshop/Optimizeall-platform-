@@ -218,7 +218,8 @@ def still_time(sc: dict) -> float:
     return round(min(d - 0.6, max(3.2, last + 2.0)), 3)
 
 
-def _stage_hash() -> str:
+def stage_hash() -> str:
+    """Version of the slide design (the renderer files): a change re-renders every scene."""
     h = hashlib.sha256()
     for name in ("stage.html", "stage.css", "stage.js", "render.mjs"):
         h.update((RENDERER / name).read_bytes())
@@ -227,7 +228,7 @@ def _stage_hash() -> str:
 
 def _item_hash(scene: dict, cfg: Config) -> str:
     payload = {k: v for k, v in scene.items() if k not in ("start", "audioFile")}
-    blob = json.dumps(payload, sort_keys=True).encode() + _stage_hash().encode() + f"{cfg.width}x{cfg.height}@{cfg.fps}".encode()
+    blob = json.dumps(payload, sort_keys=True).encode() + stage_hash().encode() + f"{cfg.width}x{cfg.height}@{cfg.fps}".encode()
     return hashlib.sha256(blob).hexdigest()[:20]
 
 

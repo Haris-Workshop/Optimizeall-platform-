@@ -144,11 +144,17 @@ jobs:
 
   # ----------------------------------------------------------------------------------------------------
   e2e:
-    name: End-to-end (Playwright, Chromium)
+    name: End-to-end (Playwright, Chromium, ${{ matrix.group }})
     needs: [backend, frontend]
     runs-on: ubuntu-latest
-    # ~20 suites run one after another (a11y ~10 min, crawl ~12+ min) plus the browser install: 40 min no longer fits.
-    timeout-minutes: 90
+    # The ~22 suites took 74+ min in one job (a11y ~10 min, crawl ~11 min, j-content ~7 min, plus a browser install that
+    # took 11 min on a slow apt mirror) and no longer fitted 90 minutes. They run as five parallel groups of ~15-20 min of
+    # tests each; every step below runs in one group only (`if: matrix.group == ...`), in the same order as before.
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [journeys, audits, content, business, seo]
+    timeout-minutes: 45
     services:
       mysql:
         image: mysql:8.0
@@ -197,9 +203,11 @@ jobs:
           name: frontend-dist
           path: frontend/dist
 
-      - name: Cache Playwright browsers
+      # restore + save rather than actions/cache: its post-job save is skipped when a suite fails, so after a failed run
+      # the next one downloaded the browsers again.
+      - name: Restore Playwright browsers
         id: pw-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
@@ -213,7 +221,16 @@ jobs:
             npx playwright install --with-deps chromium
           fi
 
+      # One group saves (the key is the same for all of them), right after the install, whatever the suites do later.
+      - name: Save Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true' && matrix.group == 'journeys'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.pw-cache.outputs.cache-primary-key }}
+
       - name: Smoke suite (mocked API, vite preview on :4174)
+        if: matrix.group == 'journeys'
         working-directory: frontend
         env:
           E2E_BASE_URL: http://localhost:4174
@@ -234,6 +251,7 @@ jobs:
       # Baseline seed only, file-mode email + dev mailbox, jobs off, bootstrap admin), `vite preview` on :4173
       # proxying to it, E2E_SUITE=journeys on the desktop and mobile projects, teardown and Playwright's exit code.
       - name: Full-stack journeys (scripts/e2e-journeys.sh)
+        if: matrix.group == 'journeys'
         env:
           DB_HOST: 127.0.0.1
           DB_PORT: "3306"
@@ -246,6 +264,7 @@ jobs:
       # Agency platform journeys (public website, CRM → proposal → invoice, delivery/email/social approvals, landing
       # pages, authorization, phone layouts) against the Demo seed's accounts, on a throwaway SQLite database.
       - name: Agency journeys (scripts/e2e-journeys.sh, E2E_SUITE=agency, SQLite)
+        if: matrix.group == 'journeys'
         env:
           E2E_SUITE: agency
           E2E_DB_PROVIDER: sqlite
@@ -256,6 +275,7 @@ jobs:
       # Newest platform features (test users and "log in as" with the non-production test sign-in, custom roles,
       # payments hub, editing across areas, Google sign-in off, phone layouts) against the Demo seed, on SQLite.
       - name: Platform journeys (scripts/e2e-journeys.sh, E2E_SUITE=platform, SQLite)
+        if: matrix.group == 'journeys'
         env:
           E2E_SUITE: platform
           E2E_DB_PROVIDER: sqlite
@@ -268,6 +288,7 @@ jobs:
       # timesheets, messages, meetings, reports, briefs, feedback, dashboard numbers, and the negatives (tenancy, duties,
       # conflicts, double clicks, interrupted uploads, file limits, expired session). Demo seed, SQLite.
       - name: Client delivery journey (scripts/e2e-journeys.sh, E2E_SUITE=j-delivery, SQLite)
+        if: matrix.group == 'journeys'
         env:
           E2E_SUITE: j-delivery
           E2E_DB_PROVIDER: sqlite
@@ -279,6 +300,7 @@ jobs:
       # proposal → acceptance → client account → contract → recurring invoice → client payment report → paid, with its
       # spam/replay/permission/tenancy/concurrency negatives. Demo seed, SQLite.
       - name: Lead-to-cash journey (scripts/e2e-journeys.sh, E2E_SUITE=j-lead-to-cash, SQLite)
+        if: matrix.group == 'journeys'
         env:
           E2E_SUITE: j-lead-to-cash
           E2E_DB_PROVIDER: sqlite
@@ -289,6 +311,7 @@ jobs:
       # The platform-administration journey end to end (users, suspensions, built-in and custom roles with guardrails,
       # test accounts and "log in as", audit, settings, content, jobs, global search and negatives), Demo seed, SQLite.
       - name: Admin journey (scripts/e2e-journeys.sh, E2E_SUITE=j-admin, SQLite)
+        if: matrix.group == 'journeys'
         env:
           E2E_SUITE: j-admin
           E2E_DB_PROVIDER: sqlite
@@ -299,6 +322,7 @@ jobs:
       # The academy and learning journey end to end (public academy, lessons, knowledge checks, exam fail/retake/pass,
       # certificate PDF, verification, LinkedIn links, admin revocation), Demo seed, SQLite.
       - name: Learning journey (scripts/e2e-journeys.sh, E2E_SUITE=j-learning, SQLite)
+        if: matrix.group == 'journeys'
         env:
           E2E_SUITE: j-learning
           E2E_DB_PROVIDER: sqlite
@@ -309,6 +333,7 @@ jobs:
       # Accessibility & responsive audit (docs/ACCESSIBILITY.md): every portal's representative pages at 360/768/1280 px
       # with axe (WCAG 2.2 A/AA, light and dark contrast) and no horizontal scroll, plus keyboard/focus behaviour.
       - name: Accessibility audit (scripts/e2e-journeys.sh, E2E_SUITE=a11y, SQLite)
+        if: matrix.group == 'audits'
         env:
           E2E_SUITE: a11y
           E2E_DB_PROVIDER: sqlite
@@ -320,6 +345,7 @@ jobs:
       # and cancelled) and the public website's header/footer links and sitemap: no console errors, failed API calls,
       # error boundaries or pages without an h1. Read-only, on the Demo seed and SQLite.
       - name: Crawl every page per role (scripts/e2e-journeys.sh, E2E_SUITE=crawl, SQLite)
+        if: matrix.group == 'content'
         env:
           E2E_SUITE: crawl
           E2E_DB_PROVIDER: sqlite
@@ -333,6 +359,7 @@ jobs:
       # notifications and preferences, support, session refresh/expiry, password change, sign-out; plus a phone pass.
       # The staff side is driven through the API. Baseline seed, SQLite.
       - name: Participant lifecycle (scripts/e2e-journeys.sh, E2E_SUITE=j-participant, SQLite)
+        if: matrix.group == 'audits'
         env:
           E2E_SUITE: j-participant
           E2E_DB_PROVIDER: sqlite
@@ -344,6 +371,7 @@ jobs:
       # publish/schedule, lifecycle, duplicate, invitation + landing page, A/B experiment, review queue races, live
       # checks, appeals, stats, analytics and the negatives (budget, caps, archived, 403s, 409s). Baseline + Demo, SQLite.
       - name: Campaign manager + reviewer journey (scripts/e2e-journeys.sh, E2E_SUITE=j-campaigns, SQLite)
+        if: matrix.group == 'audits'
         env:
           E2E_SUITE: j-campaigns
           E2E_DB_PROVIDER: sqlite
@@ -356,6 +384,7 @@ jobs:
       # manual payments, failed → re-queued, reconciliation, the payments hub's incoming flows and the negative paths
       # (idempotency, stale stamps, overpayment, 403s, impersonation, expired session). Demo seed, SQLite.
       - name: Finance journey (scripts/e2e-journeys.sh, E2E_SUITE=j-finance, SQLite)
+        if: matrix.group == 'audits'
         env:
           E2E_SUITE: j-finance
           E2E_DB_PROVIDER: sqlite
@@ -367,6 +396,7 @@ jobs:
       # pricing, case studies/testimonials/team, the blog workflow, site settings, head tags/JSON-LD/robots/sitemap,
       # landing pages and forms (publish, A/B, analytics, CSV export) and the permission negatives. Baseline + Demo, SQLite.
       - name: Site content + SEO + landing pages journey (scripts/e2e-journeys.sh, E2E_SUITE=j-content, SQLite)
+        if: matrix.group == 'content'
         env:
           E2E_SUITE: j-content
           E2E_DB_PROVIDER: sqlite
@@ -380,6 +410,7 @@ jobs:
       # accounts, CSV spend import, budgets and client-facing ad reports, plus permissions, tenancy, impersonation,
       # conflicts and double clicks. Baseline + Demo, SQLite.
       - name: Social + ads journey (scripts/e2e-journeys.sh, E2E_SUITE=j-social, SQLite)
+        if: matrix.group == 'business'
         env:
           E2E_SUITE: j-social
           E2E_DB_PROVIDER: sqlite
@@ -391,6 +422,7 @@ jobs:
       # invoices in 0/2/3-decimal currencies (JPY, PKR, KWD), and 60 identical projects paged through the list plus
       # wildcard/quote/backslash/emoji search. Demo seed, SQLite.
       - name: Edge-case suite (scripts/e2e-journeys.sh, E2E_SUITE=j-edge, SQLite)
+        if: matrix.group == 'business'
         env:
           E2E_SUITE: j-edge
           E2E_DB_PROVIDER: sqlite
@@ -402,6 +434,7 @@ jobs:
       # sitemap), a sponsored unit on a blog post, rel="sponsored noopener" on every outbound partner link, the click
       # redirect with UTM tags, and the Website → Partners editor and report. Demo seed, SQLite.
       - name: Partners journey (scripts/e2e-journeys.sh, E2E_SUITE=j-partners, SQLite)
+        if: matrix.group == 'business'
         env:
           E2E_SUITE: j-partners
           E2E_DB_PROVIDER: sqlite
@@ -415,6 +448,7 @@ jobs:
       # tracking, signed provider webhooks, public unsubscribe/preferences/confirm pages, reports and permissions.
       # Demo seed, SQLite.
       - name: Email marketing journey (scripts/e2e-journeys.sh, E2E_SUITE=j-email, SQLite)
+        if: matrix.group == 'business'
         env:
           E2E_SUITE: j-email
           E2E_DB_PROVIDER: sqlite
@@ -426,6 +460,7 @@ jobs:
       # refresh-token rotation, cross-tab sign-out, open redirects, portal guards, impersonation, headers, IDOR/XSS and
       # rate limits. Demo seed, SQLite.
       - name: Authentication & security (scripts/e2e-journeys.sh, E2E_SUITE=j-auth, SQLite)
+        if: matrix.group == 'business'
         env:
           E2E_SUITE: j-auth
           E2E_DB_PROVIDER: sqlite
@@ -438,6 +473,7 @@ jobs:
       # ledger rate source, a new card version (old earnings unchanged), four-eyes on a large raise and the deal's
       # expiry. Baseline + Demo, SQLite.
       - name: Person-level rates journey (scripts/e2e-journeys.sh, E2E_SUITE=j-rates, SQLite)
+        if: matrix.group == 'business'
         env:
           E2E_SUITE: j-rates
           E2E_DB_PROVIDER: sqlite
@@ -450,12 +486,15 @@ jobs:
       # 404/301/noindex, the app booting over the server HTML, the video block and Core Web Vitals. It runs twice: with
       # `vite preview` (seoShell plugin) and with the production nginx configuration (SSI shell includes).
       - name: Install nginx (production web server configuration for j-seo)
+        if: matrix.group == 'seo'
         run: sudo apt-get update && sudo apt-get install -y nginx-light || sudo apt-get install -y nginx
 
       - name: nginx serves pages as HTML whatever the API answers (stub API; scripts/test-web-nginx.sh)
+        if: matrix.group == 'seo'
         run: scripts/test-web-nginx.sh
 
       - name: Technical SEO journey (scripts/e2e-journeys.sh, E2E_SUITE=j-seo, SQLite, vite preview)
+        if: matrix.group == 'seo'
         env:
           E2E_SUITE: j-seo
           E2E_DB_PROVIDER: sqlite
@@ -464,6 +503,7 @@ jobs:
         run: scripts/e2e-journeys.sh
 
       - name: Technical SEO journey (scripts/e2e-journeys.sh, E2E_SUITE=j-seo, SQLite, production nginx)
+        if: matrix.group == 'seo'
         env:
           E2E_SUITE: j-seo
           E2E_DB_PROVIDER: sqlite
@@ -476,6 +516,7 @@ jobs:
       # a participant's reported sale → review → ledger commission with its payout source, the brand's sales report
       # matching/flagging and a refund reversing the commission. Baseline + Demo, SQLite.
       - name: Discount-code sales journey (scripts/e2e-journeys.sh, E2E_SUITE=j-codes, SQLite)
+        if: matrix.group == 'business'
         env:
           E2E_SUITE: j-codes
           E2E_DB_PROVIDER: sqlite
@@ -487,7 +528,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.group }}
           path: |
             frontend/playwright-report
             frontend/test-results
@@ -498,53 +539,11 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-server-logs
+          name: e2e-server-logs-${{ matrix.group }}
           path: |
-            ${{ runner.temp }}/e2e/api.log
-            ${{ runner.temp }}/e2e/web.log
-            ${{ runner.temp }}/e2e-agency/api.log
-            ${{ runner.temp }}/e2e-agency/web.log
-            ${{ runner.temp }}/e2e-platform/api.log
-            ${{ runner.temp }}/e2e-platform/web.log
-            ${{ runner.temp }}/e2e-j-delivery/api.log
-            ${{ runner.temp }}/e2e-j-delivery/web.log
-            ${{ runner.temp }}/e2e-j-admin/api.log
-            ${{ runner.temp }}/e2e-j-admin/web.log
-            ${{ runner.temp }}/e2e-j-learning/api.log
-            ${{ runner.temp }}/e2e-j-learning/web.log
-            ${{ runner.temp }}/e2e-a11y/api.log
-            ${{ runner.temp }}/e2e-a11y/web.log
-            ${{ runner.temp }}/e2e-crawl/api.log
-            ${{ runner.temp }}/e2e-crawl/web.log
-            ${{ runner.temp }}/e2e-j-participant/api.log
-            ${{ runner.temp }}/e2e-j-participant/web.log
-            ${{ runner.temp }}/e2e-j-campaigns/api.log
-            ${{ runner.temp }}/e2e-j-campaigns/web.log
-            ${{ runner.temp }}/e2e-j-finance/api.log
-            ${{ runner.temp }}/e2e-j-finance/web.log
-            ${{ runner.temp }}/e2e-j-edge/api.log
-            ${{ runner.temp }}/e2e-j-edge/web.log
-            ${{ runner.temp }}/e2e-lead-to-cash/api.log
-            ${{ runner.temp }}/e2e-lead-to-cash/web.log
-            ${{ runner.temp }}/e2e-j-content/api.log
-            ${{ runner.temp }}/e2e-j-content/web.log
-            ${{ runner.temp }}/e2e-j-social/api.log
-            ${{ runner.temp }}/e2e-j-social/web.log
-            ${{ runner.temp }}/e2e-j-email/api.log
-            ${{ runner.temp }}/e2e-j-email/web.log
-            ${{ runner.temp }}/e2e-j-auth/api.log
-            ${{ runner.temp }}/e2e-j-auth/web.log
-            ${{ runner.temp }}/e2e-j-rates/api.log
-            ${{ runner.temp }}/e2e-j-rates/web.log
-            ${{ runner.temp }}/e2e-j-seo/api.log
-            ${{ runner.temp }}/e2e-j-seo/web.log
-            ${{ runner.temp }}/e2e-j-seo-nginx/api.log
-            ${{ runner.temp }}/e2e-j-seo-nginx/web.log
-            ${{ runner.temp }}/e2e-j-seo-nginx/nginx/error.log
-            ${{ runner.temp }}/e2e-j-partners/api.log
-            ${{ runner.temp }}/e2e-j-partners/web.log
-            ${{ runner.temp }}/e2e-j-codes/api.log
-            ${{ runner.temp }}/e2e-j-codes/web.log
+            ${{ runner.temp }}/e2e*/api.log
+            ${{ runner.temp }}/e2e*/web.log
+            ${{ runner.temp }}/e2e*/nginx/error.log
             ${{ runner.temp }}/web-smoke.log
           retention-days: 7
           if-no-files-found: ignore

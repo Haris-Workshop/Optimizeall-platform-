@@ -180,9 +180,12 @@ if [ "$E2E_WEB_SERVER" = nginx ]; then
   log "Starting nginx (production configuration) on :$E2E_WEB_PORT (API → :$E2E_API_PORT)"
   web_pid="$(start_bg e2e-web "$WEB_LOG" "$ROOT/scripts/serve-web-nginx.sh" "$E2E_WEB_PORT" "http://127.0.0.1:$E2E_API_PORT" "$E2E_WORK_DIR/nginx")"
 else
-  log "Starting vite preview on :$E2E_WEB_PORT (proxy → :$E2E_API_PORT)"
+  log "Starting vite preview on 127.0.0.1:$E2E_WEB_PORT (proxy → :$E2E_API_PORT)"
+  # 127.0.0.1, not "localhost": Node binds a host name to its first address only, which is ::1 where /etc/hosts lists
+  # it (GitHub's runners), and j-auth's cross-site checks open the app at http://127.0.0.1:$E2E_WEB_PORT. Browsers and
+  # curl still reach it as localhost (they fall back to IPv4), as with E2E_WEB_SERVER=nginx, which listens on 127.0.0.1.
   web_pid="$(cd "$FRONTEND_DIR" && VITE_API_PROXY_TARGET="http://127.0.0.1:$E2E_API_PORT" \
-    start_bg e2e-web "$WEB_LOG" npx vite preview --port "$E2E_WEB_PORT" --strictPort --host localhost)"
+    start_bg e2e-web "$WEB_LOG" npx vite preview --port "$E2E_WEB_PORT" --strictPort --host 127.0.0.1)"
 fi
 
 wait_for_url "http://localhost:$E2E_API_PORT/health/ready" 300 "$api_pid" \
@@ -193,12 +196,15 @@ wait_for_url "http://localhost:$E2E_WEB_PORT/" 60 "$web_pid" \
 ok "Web ready"
 
 # ------------------------------------------------------------------ playwright
+# The specs call the API directly at 127.0.0.1, the address the web server proxies from, so the API (whose rate limits
+# are per client address) sees one client either way. With "localhost" Node connects over ::1 where /etc/hosts lists it,
+# and j-auth's rate-limit check exhausted the ::1 budget while the sign-in form went through on 127.0.0.1's.
 log "Running Playwright suite $E2E_SUITE"
 set +e
 (cd "$FRONTEND_DIR" && \
   E2E_SUITE="$E2E_SUITE" E2E_DB_PROVIDER="$E2E_DB_PROVIDER" \
   PLAYWRIGHT_BASE_URL="http://localhost:$E2E_WEB_PORT" E2E_BASE_URL="http://localhost:$E2E_WEB_PORT" \
-  E2E_API_URL="http://localhost:$E2E_API_PORT" E2E_MAIL_DIR="$MAIL_DIR" E2E_STUB_PORT="$E2E_STUB_PORT" \
+  E2E_API_URL="http://127.0.0.1:$E2E_API_PORT" E2E_MAIL_DIR="$MAIL_DIR" E2E_STUB_PORT="$E2E_STUB_PORT" \
   E2E_ADMIN_EMAIL="$ADMIN_EMAIL" E2E_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
   E2E_DB_NAME="$E2E_DB_NAME" E2E_DB_HOST="$DB_HOST" E2E_DB_PORT="$DB_PORT" \
   E2E_DB_USER="$DB_USER" E2E_DB_PASSWORD="$DB_PASSWORD" \

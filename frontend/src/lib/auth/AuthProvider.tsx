@@ -40,9 +40,15 @@ interface SessionState {
  * Must render inside the router (it navigates on expiry).
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<SessionState>({ status: 'loading', user: null, expiresAt: null });
-  const navigate = useNavigate();
+  // A browser page load with no session to restore (see the bootstrap below) starts anonymous: the page renders the
+  // same as while loading (only 'authenticated' changes what is shown), and nothing re-renders once the app is live.
   const location = useLocation();
+  const [state, setState] = useState<SessionState>(() =>
+    typeof window !== 'undefined' && !shouldRestoreSession(location.pathname)
+      ? { status: 'anonymous', user: null, expiresAt: null }
+      : { status: 'loading', user: null, expiresAt: null },
+  );
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const statusRef = useRef<AuthStatus>(state.status);
@@ -61,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     if (!shouldRestoreSession(locationRef.current.pathname)) {
-      setState({ status: 'anonymous', user: null, expiresAt: null });
+      setState((prev) => (prev.status === 'loading' ? { status: 'anonymous', user: null, expiresAt: null } : prev));
       return;
     }
     refreshSession()

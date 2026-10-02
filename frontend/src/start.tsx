@@ -3,7 +3,7 @@ import { startTransition, StrictMode } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { matchRoutes } from 'react-router-dom';
 import { App } from './App';
-import { routes } from './app/router';
+import { serverRenderedRouteTree } from './app/router';
 import { SSR_STATE_ID } from './app/ssrDocument';
 import { createQueryClient } from './lib/api/query';
 
@@ -17,7 +17,7 @@ async function hydrateServerPage(container: HTMLElement) {
   const queryClient = createQueryClient();
   const stateScript = document.getElementById(SSR_STATE_ID);
   if (stateScript?.textContent) hydrate(queryClient, JSON.parse(stateScript.textContent) as DehydratedState);
-  const matches = matchRoutes(routes, window.location) ?? [];
+  const matches = matchRoutes(serverRenderedRouteTree(), window.location) ?? [];
   await Promise.all(
     matches.map(async ({ route }) => {
       if (typeof route.lazy !== 'function') return;

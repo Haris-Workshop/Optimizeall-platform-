@@ -3,24 +3,31 @@ import { useMemo, useRef, type IframeHTMLAttributes } from 'react';
 /** Attribute that holds an element's inline style in the frame's markup until it is applied (see {@link prepareHtml}). */
 const STYLE_ATTR = 'data-oa-style';
 
+/** A start tag (attribute values may contain `>` inside quotes). */
+const START_TAG = /<[a-zA-Z][^\s/>]*(?:\s+[^\s"'>/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*\s*\/?>/g;
+/** One attribute of a start tag: leading space, name, optional `= value`. */
+const ATTRIBUTE = /(\s+)([^\s"'>/=]+)(\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?/g;
+
 /**
  * An HTML document (an email) with its styles taken out of the markup: `style` attributes become {@link STYLE_ATTR}
- * and the `<style>` elements' CSS is returned separately. Parsing with DOMParser is inert (no requests, no scripts, no
- * CSP checks).
+ * and the `<style>` elements' CSS is returned separately. Plain string rewriting: parsing the email in the app's
+ * document (DOMParser, `<template>`) would already apply — and refuse — its styles under the app's CSP.
  */
 export function prepareHtml(html: string): { html: string; css: string } {
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  for (const el of doc.querySelectorAll('[style]')) {
-    el.setAttribute(STYLE_ATTR, el.getAttribute('style') ?? '');
-    el.removeAttribute('style');
-  }
-  const css = [...doc.querySelectorAll('style')].map((style) => {
-    style.remove();
-    return style.textContent ?? '';
-  });
-  // Stylesheets from other hosts (web fonts) are not allowed by the CSP either: dropped rather than refused.
-  for (const link of doc.querySelectorAll('link[rel~="stylesheet"]')) link.remove();
-  return { html: `<!doctype html>\n${doc.documentElement.outerHTML}`, css: css.join('\n') };
+  const css: string[] = [];
+  const out = html
+    .replace(/<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi, (_m, text: string) => {
+      css.push(text);
+      return '';
+    })
+    // Stylesheets from other hosts (web fonts) are not allowed by the CSP either: dropped rather than refused.
+    .replace(/<link\b[^>]*\brel\s*=\s*["']?[^"'>]*\bstylesheet\b[^>]*>/gi, '')
+    .replace(START_TAG, (tag) =>
+      tag.replace(ATTRIBUTE, (attr, space: string, name: string, value?: string) =>
+        name.toLowerCase() === 'style' ? `${space}${STYLE_ATTR}${value ?? ''}` : attr,
+      ),
+    );
+  return { html: out, css: css.join('\n') };
 }
 
 /** Applies the styles {@link prepareHtml} took out, through the CSSOM (allowed by the CSP), once the frame has loaded. */

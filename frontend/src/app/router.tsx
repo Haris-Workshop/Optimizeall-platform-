@@ -1,4 +1,6 @@
-import { createBrowserRouter, Outlet, ScrollRestoration, type RouteObject } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { createBrowserRouter, Outlet, ScrollRestoration, useLocation, type RouteObject } from 'react-router-dom';
+import { onServerRenderedPage } from '@/lib/ssr';
 import { NotFound } from '@/features/public/NotFound';
 import { RouteErrorPage } from '@/features/public/RouteErrorPage';
 import { publicRoutes } from '@/features/public/routes';
@@ -67,10 +69,25 @@ function serverRendered(route: RouteObject): RouteObject {
   return marked;
 }
 
+/**
+ * Scroll restoration, except on the page the server rendered: that page was on screen (and could be scrolled) before
+ * the app started, and restoring would jump the visitor back to the top when it hydrates. It is enabled from the first
+ * client-side navigation on.
+ */
+function AppScrollRestoration() {
+  const location = useLocation();
+  const initialKey = useRef(location.key);
+  const [enabled, setEnabled] = useState(() => typeof document !== 'undefined' && !onServerRenderedPage());
+  useEffect(() => {
+    if (!enabled && location.key !== initialKey.current) setEnabled(true);
+  }, [enabled, location.key]);
+  return enabled ? <ScrollRestoration /> : null;
+}
+
 function RootRoute() {
   return (
     <AuthProvider>
-      <ScrollRestoration />
+      <AppScrollRestoration />
       <Outlet />
     </AuthProvider>
   );

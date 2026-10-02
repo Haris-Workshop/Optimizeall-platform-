@@ -516,8 +516,13 @@ and a "Page N of M." description.
 * Route-level code splitting (`lazyPage()` / lazy public routes); vendor chunks `react` and `query`; hashed assets
   `immutable` for a year; HTML `no-cache`; gzip for HTML, CSS, JS, JSON, XML, RSS/Atom, Markdown, JSON-LD, SVG and
   icons (Brotli needs an nginx module the stock image lacks); `/media/` cached 7 days; social cards immutable.
-* Server rendering costs 5–30 ms per page (p50 7 ms, p95 28 ms across all 911 public URLs in the 2026-09 audit), so
-  rendered HTML is not cached server-side: every response is current. Sitemaps are cached 5 minutes, robots.txt and
+* The API's document costs 5–30 ms per page (p50 7 ms, p95 28 ms across all 911 public URLs in the 2026-09 audit); the
+  app's server render adds its data requests plus one or two React renders (typically 30–100 ms on a busy machine; the
+  queries a URL needed last time start before the first pass). Rendered HTML is not cached: every response is current.
+* First paint (docs §9.1): HTML + render-blocking CSS + fonts only. The app's JavaScript is fetched after the browser
+  reports the first contentful paint and evaluated in steps (libraries, routes, app); hydration runs as a transition.
+  Sections below a page's first one use `content-visibility: auto`. Hero headings and leads (the LCP candidates) are
+  never animated from transparent. Sitemaps are cached 5 minutes, robots.txt and
   llms files an hour (ETag + 304).
 * Fonts are self-hosted (`@fontsource-variable/inter`, `font-display: swap`) — no third-party preconnect is needed.
 * The server-rendered head preloads the page's LCP image (`<link rel="preload" as="image" fetchpriority="high">`),

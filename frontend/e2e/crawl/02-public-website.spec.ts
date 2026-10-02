@@ -65,6 +65,8 @@ test('every header and footer link opens a real page', async ({ page }) => {
   for (const path of internal) {
     // Portal links (sign in, dashboards) belong to the portal crawl; /login is enough here.
     if (/^\/(admin|finance|agency|manage|review|app|client)(\/|$)/.test(path)) continue;
+    // Machine-readable files the footer links (sitemap.xml, llms.txt) are not pages; the j-seo suite checks them.
+    if (/\.[a-z0-9]+$/i.test(path)) continue;
     visited.push(path);
     await audit(page, watcher, path);
   }

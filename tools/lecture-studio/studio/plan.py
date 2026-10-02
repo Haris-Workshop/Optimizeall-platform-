@@ -250,6 +250,7 @@ def build_plan(ref: LectureRef, cfg: Config) -> dict:
         "module": {"index": ref.module_index + 1, "title": ref.module.get("title", "")},
         "lesson": {"slug": ref.lesson_slug, "title": lesson.get("title", ref.lesson_slug), "number": lesson_number},
         "lectureTitle": ref.title,
+        "lectureNumber": ref.lecture_number,
         "engine": cfg.tts_engine,
         "voice": voice_info,
         "model": model,

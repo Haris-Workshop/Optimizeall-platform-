@@ -9,7 +9,7 @@ course pack JSON ──plan──▶ plan.json ──narrate──▶ cached TTS
                                                   (sha256 keyed)      (Playwright,               poster.png (1280×720)
                                                                         frame-accurate)          captions.vtt
                                                                                                  youtube.json
-                                                                        ──upload──▶ YouTube + lecture-src-patch.json
+                                                       ──publish──▶ YouTube + lecture.src in the pack + youtube-uploads.md
 ```
 
 Output per lecture: 1920×1080, 30 fps, H.264 High (yuv420p, BT.709) + AAC 48 kHz stereo 192 kb/s, integrated
@@ -22,7 +22,8 @@ next lesson"), amber progress bar, chapter lower-thirds, sidecar WebVTT captions
 * Node 20+ and Chromium for Playwright (this box: `/opt/pw-browsers`, picked up automatically)
 * `npm ci` in this folder (Playwright 1.56.1 + Inter, Inter Tight, JetBrains Mono from Fontsource; git-ignored)
 
-Tests: `python3 -m unittest discover -s tests -t .` (plan rules, caption/sentence timing, metadata, YouTube request
+Tests: `python3 -m unittest discover -s tests -t .` (or `python3 -m unittest discover -s tools/lecture-studio/tests`
+from the repo root) (plan rules, caption/sentence timing, metadata, YouTube request
 building with a fake HTTP layer, narration cache/ingest — no network, no credits).
 
 ## Commands (run from `tools/lecture-studio`)
@@ -39,13 +40,15 @@ building with a fake HTTP layer, narration cache/ingest — no network, no credi
 | `python3 -m studio narrate collect <key>` / `ledger` | Durations + credits per lecture / totals across the cache. |
 | `python3 -m studio render <key> [--stills] [--only s02,s05] [--burn-captions]` | Renders `intro`, every scene and `outro` into segments (reused when unchanged). |
 | `python3 -m studio assemble <key> [--out DIR]` | Final MP4, poster, VTT, `youtube.json`, `report.json`. |
-| `python3 -m studio upload <dir> [--dry-run]` | YouTube upload of an assembled lecture (see below). |
+| `python3 -m studio publish [--course SLUG]... [--dry-run] [--max-quota 10000]` | Publishes every assembled lecture to YouTube, resumable and quota-aware, then writes the video URLs into the course packs (see below). |
+| `python3 -m studio publish --apply-embeds` | Only writes the recorded video URLs into the course packs (no network). |
+| `python3 -m studio upload <dir> [--dry-run]` | Same steps for one assembled lecture directory. |
 | `python3 -m studio run <keys or course slugs> [--all-v2] [--upload --stream] [--dry-run] [--narrate-backend api]` | Resumable batch orchestrator. |
 
 Config: defaults in `studio/config.py`; override with `studio.config.json` (see `studio.config.example.json`) or
 `LECTURE_STUDIO_CATALOG`, `LECTURE_STUDIO_WORK`, `LECTURE_STUDIO_SITE`. The work dir (`.work/` by default) holds the
-TTS cache, per-lecture plans/timelines/segments/outputs, `run-state.json`, `run.log.jsonl`, the YouTube ledger
-and `lecture-src-patch.json`. Nothing in it is committed.
+TTS cache, per-lecture plans/timelines/segments/outputs, `run-state.json`, `run.log.jsonl` and the YouTube ledger
+`youtube-ledger.json`. Nothing in it is committed (the publish log `youtube-uploads.md` lives in this folder and is).
 
 ## Production workflow
 
@@ -64,8 +67,8 @@ and `lecture-src-patch.json`. Nothing in it is committed.
    The cache key is `sha256(voice + model + exact TTS text)`: editing one scene re-narrates only that scene.
 4. **Render + assemble**: `render <key> --stills && assemble <key> --out <dir>` (or `run <key>`).
 5. **Review**: watch the MP4 (or the stills), check `report.json` (loudness, duration, cue count).
-6. **Publish**: `upload <out dir>` → then hand `lecture-src-patch.json` (`lecture.src` = watch URL,
-   `publishedAt`) to the catalog owner; the studio never edits course JSON.
+6. **Publish**: `publish` (all assembled lectures) or `upload <out dir>` (one). Both write `lecture.src` (watch URL)
+   and `publishedAt` into the course pack JSON and update `youtube-uploads.md`; commit both.
 
 ### Batch/streaming mode
 
@@ -207,26 +210,71 @@ folder (the exact path is in the error message).
   parallelises per lecture across machines. `--preview` stills take ~10 s per lecture.
 * **Size**: ≈ 5.5 MB per minute (CRF 19): 24 MB and 37 MB for the pilot lectures. Keep streaming mode on for batches (disk here is small).
 
-## YouTube upload
+## YouTube publishing
 
-Environment only: `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN` and `YOUTUBE_CHANNEL_ID` (the channel every upload must go to; the uploader calls `channels.list(mine=true)` first and refuses to upload anything if the authenticated channel is a different one or the variable is missing; copy the id from that call's output, because O/0 look-alikes are easy to mistype) (OAuth refresh token of the
-channel owner with scopes `youtube.upload` and `youtube.force-ssl`). Steps per lecture, each recorded in the ledger
-(`youtube-ledger.json`, keyed by `course/lesson`) so reruns resume and never upload twice:
-resumable `videos.insert` (8 MiB chunks, 308/Range resume, exponential backoff on 5xx/rate limits, never retries
-`quotaExceeded`) → `thumbnails.set` → `captions.insert` (VTT) → playlist per course (found or created once, cached)
-→ `playlistItems.insert` → patch entry `{src, publishedAt}` in `lecture-src-patch.json`.
-Default metadata: privacy **unlisted** until the owner confirms public, `selfDeclaredMadeForKids: false`,
-category 27 (Education), `containsSyntheticMedia: true` + an AI-narration line in the description.
+Environment only: `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN` (OAuth refresh token of the
+channel owner with scopes `youtube.upload` and `youtube.force-ssl`; `force-ssl` is what `captions.insert` needs) and
+`YOUTUBE_CHANNEL_ID` (the channel every upload must go to). Nothing secret is printed, logged or written.
 
-**Quota — verify against the official page before the first batch** (developers.google.com is blocked from this
-environment; the figures below come from 2026 third-party summaries of Google's docs):
-default project quota is 10,000 units/day; `captions.insert` = 400, `thumbnails.set` = 50,
-`playlistItems.insert` = 50, `playlists.insert` = 50, list calls = 1; `videos.insert` reportedly moved to its own
-bucket in June 2026 (≈ 1 unit per call, 100 uploads/day by default; before that it cost 1,600 then ~100 units).
-Our per-lecture cost is therefore ≈ 500 general units ⇒ **≈ 20 lectures/day** on a default project (captions
-dominate) — the 491 current lectures take ~25 days unless a quota extension is granted (audit form).
-**Also**: videos uploaded through an *unverified* API project are locked to private until the project passes
-Google's API compliance audit — apply for the audit before the first real batch.
+**Next session — the exact commands** (from `tools/lecture-studio`, same config/work dir as the render):
+
+```bash
+python3 -m studio --config <cfg> publish --dry-run     # plan + estimated quota, no network, writes nothing
+python3 -m studio --config <cfg> publish               # publish; rerun the same command to resume
+git add youtube-uploads.md ../../backend/src/OptimizeAll.Api/Modules/Learning/Catalog/*.json   # then commit
+```
+
+(`<cfg>` = the `studio.config.json` whose `work_dir` holds the assembled lectures; `--course SLUG` (repeatable) limits
+and orders the courses, e.g. `--course prompt-engineering-foundations` first.) The command exits with status 2 when it
+stopped early; the final JSON summary says why and which lecture is next.
+
+**What `publish` does.** Courses in catalogue order (pack files sorted by slug, as the API loads them), lectures in
+lecture order; only lectures with an assembled output (`out/video.mp4` + `out/youtube.json`) are published, the others
+are counted as `notAssembled`. First the channel guard: `channels.list(mine=true)` must return exactly
+`YOUTUBE_CHANNEL_ID` or nothing is sent. Then, per lecture, each finished step is saved to the ledger immediately:
+
+1. **Duplicate check**: the channel's uploads (uploads playlist, `playlistItems.list`, 1 unit per 50 videos, read once
+   per run). A video with exactly the same title is adopted as `skipped-duplicate` and never uploaded again; a lecture
+   that already has a `videoId` in the ledger is never uploaded again either.
+2. Resumable `videos.insert` (8 MiB chunks, resume after a crash from the saved session) with: title
+   `Course: Lecture N, Topic` (N = position among the course's lectures, Topic = lesson title, ≤ 100 characters: the
+   course title is cut at `:`/`(` first, then the topic gets an ellipsis); description = hook, lesson + course links,
+   chapters from `00:00` (each ≥ 10 s), AI-voice disclosure line, `#OptimizeAll #OnlineLearning #<Course>`;
+   category 27, `defaultLanguage`/`defaultAudioLanguage` `en`, `selfDeclaredMadeForKids: false`,
+   `containsSyntheticMedia: true`, privacy **unlisted** (only `unlisted`/`private` are ever sent; `public` is refused
+   in code). Title and description are rebuilt at publish time from the pack + the lecture's `plan.json`/`timeline.json`.
+3. **Status read-back** (`videos.list part=status`): the privacy YouTube actually applied, `uploadStatus` and any
+   rejection/failure reason are recorded. If YouTube made it private (e.g. an unverified API project) it is reported
+   in `privateVideos`, noted in the log and not embedded; nothing works around it.
+4. `thumbnails.set` (poster.png) and `captions.insert` (captions.vtt, English). A 403 (channel not verified for custom
+   thumbnails, token without `force-ssl`, ...) is recorded as `refused` with the reason, reported, and the step is not
+   tried again for the rest of the run (later lectures record `refused` without a call); uploads continue. A later run
+   leaves refused steps alone unless you pass `--retry-refused`.
+5. **Course playlist** (named after the course, unlisted): reused if the channel has one with that title, else created
+   once; the video goes in at position N−1 (after the earlier lectures already in it), never twice.
+6. **Embed**: at the end (and with `publish --apply-embeds` alone) the watch URL is written to `lesson.lecture.src`
+   and the upload date to `lecture.publishedAt` in the course pack JSON (formatting kept; a lecture whose `src`
+   already points at another video is reported as a conflict and left alone). The lesson page embeds it through
+   youtube-nocookie.com (unlisted videos embed fine). `--no-embeds` skips this.
+
+**Stops and resume.** The run stops at once on `quotaExceeded`/`dailyLimitExceeded`/`uploadLimitExceeded`, on an auth
+failure (401, `invalid_grant`, missing credentials), on a channel mismatch, on the same error on two consecutive lectures,
+and before starting a lecture whose estimate does not fit the remaining daily budget (`--max-quota`, default 10,000
+units per Pacific day, shared by all runs of that day through the ledger). Another failing lecture is recorded with its
+error and the run goes on. Rerun the same command to resume: finished lectures cost nothing, a half-finished one
+continues at its first unfinished step (an interrupted upload resumes its session), then the next lecture.
+
+**Quota estimate** (the client's unit table, `studio/youtube.py:QUOTA`): `videos.insert` 1,600 + `captions.insert`
+400 + `thumbnails.set` 50 + `playlistItems.insert` 50 + `videos.list` 1 = **2,101 units per lecture** (+50 once per new
+playlist, plus a few 1-unit listings per run), so **4 lectures per day** on the default 10,000-unit project. Google
+has changed these figures before (third-party summaries from 2026 say `videos.insert` moved to its own bucket): check
+the Cloud console quota page; `--max-quota` only bounds this tool's own estimate. Videos uploaded through an
+*unverified* API project are locked to private until Google's API compliance audit; the read-back reports it.
+
+**Records.** `youtube-ledger.json` (work dir, not committed; holds the resumable session URL while an upload is in
+flight) and `youtube-uploads.md` (this folder, committed): one row per lecture in course/lecture order with course,
+lecture number, title, video ID, playlist ID, privacy as reported, captions/thumbnail (yes, no, refused, pending),
+upload time and notes. No secrets and no session URLs go into the log.
 
 ## Known limitations
 

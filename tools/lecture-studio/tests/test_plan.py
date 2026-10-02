@@ -1,6 +1,11 @@
 import copy
 import unittest
 
+import sys as _sys
+from pathlib import Path as _Path
+
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))  # also runnable via discover from the repo root
+
 from studio.config import VOICE_DANIEL, VOICE_JACOB, VOICE_VANESSA, Config
 from studio.packs import apply_pronunciations, extract_code_blocks, find_lecture, split_sentences
 from studio.plan import build_plan, chapter_title, choose_template, parse_on_screen, tts_cache_key

@@ -5,9 +5,14 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import sys as _sys
+from pathlib import Path as _Path
+
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))  # also runnable via discover from the repo root
+
 from studio import youtube
 from studio.config import Config
-from studio.youtube import Resp, YouTube, YouTubeError, upload_lecture_dir
+from studio.youtube import Resp, YouTube, YouTubeError
 
 
 class FakeHttp:
@@ -132,7 +137,7 @@ class ChannelGuardTests(unittest.TestCase):
         yt.verify_channel()
         yt.verify_channel()  # remembered: no second request
         self.assertEqual([c["url"] for c in yt.http.calls if "channels" in c["url"]], ["https://www.googleapis.com/youtube/v3/channels"])
-        self.assertEqual(yt.http.calls[-1]["params"], {"part": "id,snippet", "mine": "true"})
+        self.assertEqual(yt.http.calls[-1]["params"], {"part": "id,snippet,contentDetails", "mine": "true"})
 
     def test_a_mismatch_names_both_ids_and_is_never_cached_as_success(self):
         yt = client([channels_ok(channel="UCsomeoneElse"), channels_ok(channel="UCsomeoneElse")])
@@ -153,59 +158,47 @@ class ChannelGuardTests(unittest.TestCase):
         self.assertIn("YOUTUBE_CHANNEL_ID", str(ctx.exception))
         self.assertEqual(yt.http.calls, [])
 
-    def test_an_upload_to_the_wrong_channel_sends_no_video_bytes(self):
-        with tempfile.TemporaryDirectory() as d:
-            d = Path(d)
-            out = d / "out"
-            out.mkdir()
-            (out / "video.mp4").write_bytes(b"v" * 100)
-            (out / "youtube.json").write_text(json.dumps(META))
-            yt = client([channels_ok(channel="UCwrong")])
-            with self.assertRaises(YouTubeError):
-                upload_lecture_dir(Config(work_dir=d / "work"), out, yt=yt)
-            urls = [c["url"] for c in yt.http.calls]
-            self.assertFalse(any("upload/youtube" in u for u in urls), urls)
-            self.assertFalse((d / "work" / "youtube-ledger.json").exists() and "VID" in (d / "work" / "youtube-ledger.json").read_text())
 
+class ListingTests(unittest.TestCase):
+    def test_uploads_are_listed_page_by_page_from_the_uploads_playlist(self):
+        ch = ("GET https://www.googleapis.com/youtube/v3/channels", j(200, {"items": [
+            {"id": CHANNEL, "snippet": {"title": "x"}, "contentDetails": {"relatedPlaylists": {"uploads": "UUabc"}}}]}))
+        page = lambda items, nxt=None: ("GET https://www.googleapis.com/youtube/v3/playlistItems", j(200, dict(
+            {"items": [{"id": f"I{v}", "snippet": {"title": t, "resourceId": {"videoId": v}}} for v, t in items]},
+            **({"nextPageToken": nxt} if nxt else {}))))
+        yt = client([ch, page([("V1", "One")], "p2"), page([("V2", "Two")])])
+        got = yt.channel_uploads()
+        self.assertEqual([(v["videoId"], v["title"]) for v in got], [("V1", "One"), ("V2", "Two")])
+        calls = [c for c in yt.http.calls if "playlistItems" in c["url"]]
+        self.assertEqual(calls[0]["params"], {"part": "snippet", "playlistId": "UUabc", "maxResults": "50"})
+        self.assertEqual(calls[1]["params"]["pageToken"], "p2")
+        self.assertEqual(yt.quota_used, 3)
 
-class LedgerTests(unittest.TestCase):
-    def test_publish_is_idempotent_and_writes_patch(self):
+    def test_video_status(self):
+        yt = client([("GET https://www.googleapis.com/youtube/v3/videos", j(200, {"items": [{"status": {"privacyStatus": "private", "uploadStatus": "rejected", "rejectionReason": "duplicate"}}]})),
+                     ("GET https://www.googleapis.com/youtube/v3/videos", j(200, {"items": []}))])
+        self.assertEqual(yt.video_status("V")["rejectionReason"], "duplicate")
+        self.assertIsNone(yt.video_status("gone"))
+
+    def test_oauth_errors_keep_their_reason(self):
+        e = youtube._error(Resp(400, {}, json.dumps({"error": "invalid_grant", "error_description": "Token has been expired or revoked."}).encode()), "OAuth")
+        self.assertEqual(e.reason, "invalid_grant")
+        self.assertIn("expired or revoked", str(e))
+
+    def test_a_refused_call_is_counted(self):
+        yt = client([("POST https://www.googleapis.com/upload/youtube/v3/thumbnails/set", j(403, {"error": {"errors": [{"reason": "forbidden"}]}}))])
         with tempfile.TemporaryDirectory() as d:
-            d = Path(d)
-            out = d / "out"
-            out.mkdir()
-            (out / "video.mp4").write_bytes(b"v" * 100)
-            (out / "poster.png").write_bytes(b"\x89PNG")
-            (out / "captions.vtt").write_text("WEBVTT\n")
-            (out / "youtube.json").write_text(json.dumps(META))
-            cfg = Config(work_dir=d / "work")
-            yt = client([
-                channels_ok(),
-                ("POST https://www.googleapis.com/upload/youtube/v3/videos", Resp(200, {"location": "https://up/s"}, b"")),
-                ("PUT https://up/s", j(201, {"id": "VID9"})),
-                ("POST https://www.googleapis.com/upload/youtube/v3/thumbnails/set", j(200, {})),
-                ("POST https://www.googleapis.com/upload/youtube/v3/captions", j(200, {"id": "CAP1"})),
-                ("GET https://www.googleapis.com/youtube/v3/playlists", j(200, {"items": [{"id": "PLX", "snippet": {"title": "Other"}}]})),
-                ("POST https://www.googleapis.com/youtube/v3/playlists", j(200, {"id": "PL1"})),
-                ("POST https://www.googleapis.com/youtube/v3/playlistItems", j(200, {"id": "PLI1"})),
-            ])
-            res = upload_lecture_dir(cfg, out, yt=yt)
-            self.assertEqual(res["url"], "https://www.youtube.com/watch?v=VID9")
-            self.assertEqual(res["quotaUsed"], 1 + 400 + 50 + 1 + 50 + 50)
-            thumb = next(c for c in yt.http.calls if "thumbnails" in c["url"])
-            self.assertEqual(thumb["params"], {"videoId": "VID9", "uploadType": "media"})
-            self.assertEqual(thumb["headers"]["content-type"], "image/png")
-            patch = json.loads((cfg.work_dir / "lecture-src-patch.json").read_text())
-            self.assertEqual(patch["lectures"]["demo/lesson"]["src"], "https://www.youtube.com/watch?v=VID9")
-            self.assertRegex(patch["lectures"]["demo/lesson"]["publishedAt"], r"^\d{4}-\d{2}-\d{2}$")
-            ledger = (cfg.work_dir / "youtube-ledger.json").read_text()
-            self.assertNotIn("ya29", ledger)  # no tokens persisted
-            # second run: nothing left to do, zero API calls besides none
-            yt2 = client([])
-            res2 = upload_lecture_dir(cfg, out, yt=yt2)
-            self.assertEqual(res2["videoId"], "VID9")
-            self.assertEqual(yt2.http.calls, [])
-            self.assertEqual(upload_lecture_dir(cfg, out, dry_run=True)["todo"], [])
+            p = Path(d) / "t.png"
+            p.write_bytes(b"x")
+            with self.assertRaises(YouTubeError) as ctx:
+                yt.set_thumbnail("V", p)
+        self.assertEqual((ctx.exception.status, ctx.exception.reason, yt.quota_used), (403, "forbidden", 50))
+
+    def test_youtube_ids(self):
+        self.assertEqual(youtube.youtube_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=3"), "dQw4w9WgXcQ")
+        self.assertEqual(youtube.youtube_id("https://youtu.be/dQw4w9WgXcQ"), "dQw4w9WgXcQ")
+        self.assertIsNone(youtube.youtube_id("https://www.youtube.com/embed/dQw4w9WgXcQ"))
+        self.assertIsNone(youtube.youtube_id("http://youtu.be/dQw4w9WgXcQ"))
 
 
 if __name__ == "__main__":

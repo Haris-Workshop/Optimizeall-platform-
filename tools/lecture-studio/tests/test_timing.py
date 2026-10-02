@@ -1,5 +1,10 @@
 import unittest
 
+import sys as _sys
+from pathlib import Path as _Path
+
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))  # also runnable via discover from the repo root
+
 from studio import captions, metadata, timeline as tl
 from studio.config import Config
 from studio.packs import find_lecture, split_caption_chunks
@@ -90,14 +95,14 @@ class MetadataTests(unittest.TestCase):
         self.assertGreaterEqual(len(ch), 3)
         ends = [c[0] for c in ch[1:]] + [tlm["outro"]["start"]]
         self.assertTrue(all(e - s >= 10 for (s, _), e in zip(ch, ends)))
-        self.assertEqual(metadata.fmt_chapter(75.9), "1:15")
+        self.assertEqual(metadata.fmt_chapter(75.9), "01:15")
         self.assertEqual(metadata.fmt_chapter(3725), "1:02:05")
 
     def test_build(self):
         meta = metadata.build(self.cfg, self.plan, fake_timeline(self.plan), PACK, credits=123.4)
         sn = meta["snippet"]
         self.assertLessEqual(len(sn["title"]), 100)
-        self.assertIn("\n0:00 Introduction\n", sn["description"])
+        self.assertIn("\n00:00 Introduction\n", sn["description"])
         self.assertIn(self.plan["lessonUrl"], sn["description"])
         self.assertEqual(sn["categoryId"], "27")
         self.assertEqual(meta["status"]["privacyStatus"], "unlisted")
@@ -106,10 +111,13 @@ class MetadataTests(unittest.TestCase):
         tag_chars = sum(len(t) + (2 if " " in t else 0) + 1 for t in sn["tags"])
         self.assertLessEqual(tag_chars, 500)
 
+    def test_title_is_course_lecture_number_and_topic(self):
+        self.assertEqual(metadata.youtube_title(self.plan), "Demo Course: Testing the Studio: Lecture 1, Budget allocation: marginal returns")
+
     def test_long_title_is_shortened(self):
-        plan = dict(self.plan, lectureTitle="L" * 80, course=dict(self.plan["course"], title="Course: with a very long subtitle here"))
-        self.assertLessEqual(len(metadata.youtube_title(plan)), 100)
-        self.assertEqual(metadata.youtube_title(plan), "L" * 80 + " | Course")
+        plan = dict(self.plan, lesson=dict(self.plan["lesson"], title="L" * 70),
+                    course=dict(self.plan["course"], title="Course: with a very long subtitle here"))
+        self.assertEqual(metadata.youtube_title(plan), "Course: Lecture 1, " + "L" * 70)
 
 
 if __name__ == "__main__":

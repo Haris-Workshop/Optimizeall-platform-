@@ -16,6 +16,12 @@ class LectureRef:
     lesson: dict
     module_index: int  # 0-based
     lesson_index: int  # 0-based, across the whole course
+    lecture_index: int = 0  # 0-based position among the course's lectures (the order iter_lectures yields)
+
+    @property
+    def lecture_number(self) -> int:
+        """1-based lecture number within the course ("Lecture N" in the YouTube title, playlist position N-1)."""
+        return self.lecture_index + 1
 
     @property
     def key(self) -> str:
@@ -38,11 +44,12 @@ def load_pack(catalog_dir: Path, course_slug: str) -> dict:
 
 def iter_lectures(pack: dict):
     """Yield LectureRef for every lesson that has a lecture block, in course order."""
-    n = 0
+    n = k = 0
     for mi, module in enumerate(pack.get("modules", [])):
         for lesson in module.get("lessons", []):
             if lesson.get("lecture") and lesson["lecture"].get("scenes"):
-                yield LectureRef(pack["slug"], lesson["slug"], pack, module, lesson, mi, n)
+                yield LectureRef(pack["slug"], lesson["slug"], pack, module, lesson, mi, n, k)
+                k += 1
             n += 1
 
 

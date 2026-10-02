@@ -110,10 +110,26 @@ def cmd_assemble(args):
 
 
 def cmd_upload(args):
-    from . import youtube
+    from . import publish
 
     cfg = _cfg(args)
-    _print(youtube.upload_lecture_dir(cfg, Path(args.dir), dry_run=args.dry_run, ledger=Path(args.ledger) if args.ledger else None))
+    _print(publish.upload_lecture_dir(cfg, Path(args.dir), dry_run=args.dry_run, ledger=Path(args.ledger) if args.ledger else None))
+
+
+def cmd_publish(args):
+    from . import publish
+
+    cfg = _cfg(args)
+    pub = publish.Publisher(cfg, ledger_path=Path(args.ledger) if args.ledger else None, max_quota=args.max_quota,
+                            retry_refused=args.retry_refused)
+    if args.apply_embeds:  # no network: write the recorded videos into the course packs
+        keys = [i.key for i in publish.collect(cfg, args.course)] if args.course else None
+        _print(publish.apply_embeds(cfg, pub.ledger, keys=keys, dry_run=args.dry_run))
+        return
+    summary = pub.run(publish.collect(cfg, args.course), dry_run=args.dry_run, embeds=not args.no_embeds)
+    _print(summary)
+    if summary.get("stoppedReason") and not args.dry_run:
+        sys.exit(2)
 
 
 def cmd_run(args):
@@ -172,6 +188,16 @@ def main(argv=None):
     sp.add_argument("--ledger")
     sp.add_argument("--dry-run", action="store_true")
     sp.set_defaults(fn=cmd_upload)
+
+    sp = sub.add_parser("publish", help="publish every assembled lecture to YouTube (resumable, quota-aware, deduplicated)")
+    sp.add_argument("--course", action="append", help="only this course slug (repeatable; default: whole catalogue)")
+    sp.add_argument("--dry-run", action="store_true", help="print the plan and estimated quota; no network, nothing written")
+    sp.add_argument("--max-quota", type=int, default=10000, help="daily unit budget (Pacific day) shared by runs (default 10000)")
+    sp.add_argument("--apply-embeds", action="store_true", help="only write recorded video URLs into the course packs (no network)")
+    sp.add_argument("--no-embeds", action="store_true", help="do not write lecture.src into the course packs after publishing")
+    sp.add_argument("--retry-refused", action="store_true", help="try refused thumbnail/captions steps again (e.g. after verification)")
+    sp.add_argument("--ledger")
+    sp.set_defaults(fn=cmd_publish)
 
     sp = sub.add_parser("run", help="batch orchestrator (plan -> narrate -> render -> assemble -> upload)")
     sp.add_argument("lectures", nargs="*", help="course/lesson keys or course slugs (all lectures of the course)")

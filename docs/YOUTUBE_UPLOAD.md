@@ -180,8 +180,10 @@ and the course's upload rows), `POST /courses/{course}/lessons/{lesson}/youtube`
 ## 10. Relationship to `tools/lecture-studio`
 
 [`tools/lecture-studio`](../tools/lecture-studio/README.md) is the offline producer that renders lectures and has its
-own YouTube uploader (resumable upload, thumbnail, captions, playlist, ledger `youtube-ledger.json`, patch file
-`lecture-src-patch.json`). It is a **separate path to the same channel** with the same variable names and its own
-playlist cache; the two share neither ledger nor database. Do not upload the same lesson with both: pick one per
+own YouTube publisher (`python3 -m studio publish`: resumable upload, thumbnail, captions, course playlist, ledger
+`youtube-ledger.json`, committed log `tools/lecture-studio/youtube-uploads.md`; it writes the watch URL into
+`lesson.lecture.src` + `publishedAt` of the course pack JSON). It is a **separate path to the same channel** with the
+same variable names; it reuses a course playlist with the course title and skips any lecture whose exact title is
+already on the channel, but the two share neither ledger nor database. Do not upload the same lesson with both: pick one per
 lesson (offline batch for the bulk catalog, the admin upload for individual replacements), and remember they draw from
 the **same project quota**.

@@ -1,4 +1,5 @@
-"""`upload`: YouTube Data API v3 publisher (resumable upload, thumbnail, captions, playlist), idempotent via a ledger.
+"""YouTube Data API v3 client: resumable upload, thumbnail, captions, playlists, channel listings (see publish.py for the
+ledger-driven, resumable, quota-aware publisher that uses it).
 
 Credentials come ONLY from the environment: YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN
 (an OAuth 2.0 refresh token for the channel owner with the https://www.googleapis.com/auth/youtube.upload and
@@ -11,22 +12,25 @@ from __future__ import annotations
 import json
 import os
 import random
+import re
 import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-
-from .config import Config
-from .workspace import read_json, write_json
+from urllib.parse import parse_qsl, urlsplit
 
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 API = "https://www.googleapis.com/youtube/v3"
 UPLOAD_API = "https://www.googleapis.com/upload/youtube/v3"
 CHUNK = 8 * 1024 * 1024  # must be a multiple of 256 KiB
 RETRY_STATUS = {500, 502, 503, 504}
-# Quota units per call (general bucket). videos.insert is billed separately (see README for the current rules).
-QUOTA = {"channels.list": 1, "captions.insert": 400, "thumbnails.set": 50, "playlistItems.insert": 50, "playlists.insert": 50,
-         "playlists.list": 1, "videos.list": 1}
+# Quota units per call: the client's own estimate of what a run costs (Google's published costs; videos.insert is
+# counted at the documented 1,600 units so a daily budget is never overrun even if the call is billed that way).
+QUOTA = {"channels.list": 1, "videos.insert": 1600, "captions.insert": 400, "thumbnails.set": 50, "playlistItems.insert": 50,
+         "playlists.insert": 50, "playlists.list": 1, "playlistItems.list": 1, "videos.list": 1}
+QUOTA_REASONS = ("quotaExceeded", "dailyLimitExceeded", "uploadLimitExceeded")
+# Only these two are ever sent: the publisher refuses "public" outright (the owner flips videos to public by hand).
+ALLOWED_PRIVACY = ("unlisted", "private")
 
 
 class YouTubeError(RuntimeError):
@@ -67,13 +71,24 @@ def _redact(text: str) -> str:
 def _error(resp: Resp, what: str) -> YouTubeError:
     reason = None
     try:
-        err = resp.json().get("error", {})
-        errs = err.get("errors") or [{}]
-        reason = errs[0].get("reason") or err.get("status")
-        msg = err.get("message") or ""
+        body = resp.json()
+        err = body.get("error", {})
+        if isinstance(err, str):  # OAuth endpoint: {"error": "invalid_grant", "error_description": "..."}
+            reason, msg = err, body.get("error_description") or ""
+        else:
+            errs = err.get("errors") or [{}]
+            reason = errs[0].get("reason") or err.get("status")
+            msg = err.get("message") or ""
     except Exception:
         msg = resp.body[:300].decode("utf-8", "replace")
     return YouTubeError(_redact(f"{what} failed: HTTP {resp.status} {reason or ''} {msg}".strip()), resp.status, reason)
+
+
+def check_privacy(privacy: str) -> str:
+    if privacy not in ALLOWED_PRIVACY:
+        raise YouTubeError(f"privacy {privacy!r} refused: the studio only publishes 'unlisted' or 'private' "
+                           "(make a video public by hand in YouTube Studio once the owner approves it)")
+    return privacy
 
 
 class YouTube:
@@ -90,6 +105,7 @@ class YouTube:
         self._token = None
         self._token_exp = 0.0
         self.quota_used = 0
+        self.uploads_playlist_id: str | None = None
 
     # ------------------------------------------------------------------ auth
     def token(self) -> str:
@@ -118,7 +134,8 @@ class YouTube:
         expected = (self.channel_id or "").strip()
         if not expected:
             raise YouTubeError("missing environment variables: YOUTUBE_CHANNEL_ID (the channel every upload must go to)")
-        items = self.call("GET", f"{API}/channels", what="channels.list", params={"part": "id,snippet", "mine": "true"}).json().get("items", [])
+        items = self.call("GET", f"{API}/channels", what="channels.list",
+                          params={"part": "id,snippet,contentDetails", "mine": "true"}).json().get("items", [])
         if len(items) != 1:
             raise YouTubeError(f"the credentials manage {len(items)} channels; expected exactly one ({expected}). Nothing was uploaded")
         found = items[0].get("id", "")
@@ -127,6 +144,7 @@ class YouTube:
             raise YouTubeError(
                 f"channel mismatch: the credentials belong to '{title}' ({found}) but YOUTUBE_CHANNEL_ID is {expected}. "
                 "Nothing was uploaded. YouTube channel ids mix the letter O and the digit 0: copy the id from the channels.list output")
+        self.uploads_playlist_id = ((items[0].get("contentDetails") or {}).get("relatedPlaylists") or {}).get("uploads")
         self._channel_verified = True
 
     def _auth(self, extra=None) -> dict:
@@ -146,16 +164,18 @@ class YouTube:
                 self._token = None  # expired token: refresh once
                 continue
             err = _error(resp, what)
-            if err.reason in ("quotaExceeded", "dailyLimitExceeded", "uploadLimitExceeded"):
+            if err.reason in QUOTA_REASONS:
                 raise err  # retrying cannot help until the quota resets (midnight Pacific time)
             retriable = resp.status in RETRY_STATUS or err.reason in ("rateLimitExceeded", "userRateLimitExceeded", "backendError")
             if not retriable or attempt == self.max_retries:
+                self.quota_used += QUOTA.get(what, 0)  # a refused call is billed too: count it (conservative)
                 raise err
             self.sleep(min(64, 2 ** attempt) + random.random())
         raise YouTubeError(f"{what}: retries exhausted")
 
     # ------------------------------------------------------------------ resumable upload
     def start_upload(self, meta: dict, size: int) -> str:
+        check_privacy(meta["status"]["privacyStatus"])
         body = json.dumps({"snippet": meta["snippet"], "status": meta["status"]}).encode("utf-8")
         resp = self.call(
             "POST", f"{UPLOAD_API}/videos", what="videos.insert",
@@ -238,21 +258,48 @@ class YouTube:
                          params={"uploadType": "multipart", "part": "snippet"}, headers={"content-type": ctype}, data=body)
         return resp.json().get("id", "")
 
-    def find_playlist(self, title: str) -> str | None:
+    def _pages(self, url: str, what: str, params: dict):
         page = None
         while True:
-            params = {"part": "snippet", "mine": "true", "maxResults": "50"}
+            q = dict(params, maxResults="50")
             if page:
-                params["pageToken"] = page
-            data = self.call("GET", f"{API}/playlists", what="playlists.list", params=params).json()
-            for it in data.get("items", []):
-                if it["snippet"]["title"] == title:
-                    return it["id"]
+                q["pageToken"] = page
+            data = self.call("GET", url, what=what, params=q).json()
+            yield from data.get("items", [])
             page = data.get("nextPageToken")
             if not page:
-                return None
+                return
+
+    def list_playlists(self) -> dict[str, str]:
+        """{title: playlist id} of the channel's playlists (any privacy; the first one wins on a duplicate title)."""
+        out: dict[str, str] = {}
+        for it in self._pages(f"{API}/playlists", "playlists.list", {"part": "snippet", "mine": "true"}):
+            out.setdefault(it["snippet"]["title"], it["id"])
+        return out
+
+    def list_playlist_items(self, playlist_id: str) -> list[dict]:
+        """[{itemId, videoId, title, publishedAt, position}] of a playlist (1 unit per page of 50)."""
+        out = []
+        for it in self._pages(f"{API}/playlistItems", "playlistItems.list", {"part": "snippet", "playlistId": playlist_id}):
+            sn = it.get("snippet") or {}
+            out.append({"itemId": it.get("id"), "videoId": (sn.get("resourceId") or {}).get("videoId"), "title": sn.get("title", ""),
+                        "publishedAt": sn.get("publishedAt"), "position": sn.get("position")})
+        return out
+
+    def channel_uploads(self) -> list[dict]:
+        """Every video on the channel (its "uploads" playlist, private and unlisted included for the owner)."""
+        self.verify_channel()
+        if not self.uploads_playlist_id:
+            raise YouTubeError("channels.list returned no uploads playlist for the channel")
+        return self.list_playlist_items(self.uploads_playlist_id)
+
+    def video_status(self, video_id: str) -> dict | None:
+        """The video's status as YouTube reports it (privacyStatus, uploadStatus, rejectionReason...), None if not found."""
+        items = self.call("GET", f"{API}/videos", what="videos.list", params={"part": "status", "id": video_id}).json().get("items", [])
+        return (items[0].get("status") or {}) if items else None
 
     def create_playlist(self, title: str, description: str, privacy: str) -> str:
+        check_privacy(privacy)
         body = json.dumps({"snippet": {"title": title[:150], "description": description[:5000]}, "status": {"privacyStatus": privacy}})
         resp = self.call("POST", f"{API}/playlists", what="playlists.insert", params={"part": "snippet,status"},
                          headers={"content-type": "application/json"}, data=body.encode())
@@ -267,81 +314,22 @@ class YouTube:
         return resp.json().get("id", "")
 
 
-# ---------------------------------------------------------------------- ledger-driven publish
-
-def default_ledger(cfg: Config) -> Path:
-    return cfg.work_dir / "youtube-ledger.json"
+_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
 
 
-def upload_lecture_dir(cfg: Config, d: Path, *, dry_run: bool = False, ledger: Path | None = None,
-                       yt: YouTube | None = None, patch_file: Path | None = None) -> dict:
-    """Publish one assembled lecture (video.mp4, poster, captions.vtt, youtube.json). Idempotent per lecture key:
-    each finished step is recorded in the ledger, so a rerun resumes and never uploads a video twice."""
-    meta = json.loads((d / "youtube.json").read_text(encoding="utf-8"))
-    key = meta["key"]
-    files = meta.get("files", {})
-    video = d / files.get("video", "video.mp4")
-    thumb = d / files.get("thumbnail", "poster.png")
-    vtt = d / files.get("captions", "captions.vtt")
-    ledger = ledger or default_ledger(cfg)
-    book = read_json(ledger, {"lectures": {}, "playlists": {}}) or {"lectures": {}, "playlists": {}}
-    entry = book["lectures"].setdefault(key, {})
-    plan = ["video" if not entry.get("videoId") else None,
-            "thumbnail" if not entry.get("thumbnail") else None,
-            "captions" if not entry.get("captionId") else None,
-            "playlist" if not entry.get("playlistItemId") else None]
-    todo = [p for p in plan if p]
-    if dry_run:
-        return {"key": key, "dryRun": True, "todo": todo, "title": meta["snippet"]["title"],
-                "estimatedGeneralQuota": (400 if "captions" in todo else 0) + (50 if "thumbnail" in todo else 0) + (50 if "playlist" in todo else 0)}
-    yt = yt or YouTube()
-    if todo:
-        yt.verify_channel()  # before any byte is sent (a finished lecture needs no call at all)
-
-    def save():
-        write_json(ledger, book)
-
-    if not entry.get("videoId"):
-        size = video.stat().st_size
-        session = entry.get("uploadSession")
-        offset = 0
-        if session:
-            offset, done = yt.upload_status(session, size)
-            if done:
-                entry["videoId"] = done["id"]
-            elif offset < 0:
-                session = None
-        if not entry.get("videoId"):
-            if not session:
-                session = yt.start_upload(meta, size)
-                entry["uploadSession"] = session  # resumable for ~1 week if we crash mid-upload
-                save()
-            res = yt.upload_file(session, video, offset=max(0, offset))
-            entry["videoId"] = res["id"]
-            entry["uploadStatus"] = (res.get("status") or {}).get("uploadStatus")
-        entry.pop("uploadSession", None)
-        entry["uploadedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        save()
-    vid = entry["videoId"]
-    if not entry.get("thumbnail") and thumb.exists():
-        yt.set_thumbnail(vid, thumb)
-        entry["thumbnail"] = True
-        save()
-    if not entry.get("captionId") and vtt.exists():
-        entry["captionId"] = yt.insert_captions(vid, vtt, meta["captions"]["language"], meta["captions"]["name"])
-        save()
-    if not entry.get("playlistItemId"):
-        title = meta["playlist"]["title"]
-        pid = book["playlists"].get(title) or yt.find_playlist(title)
-        if not pid:
-            pid = yt.create_playlist(title, meta["playlist"]["description"], meta["status"]["privacyStatus"])
-        book["playlists"][title] = pid
-        entry["playlistItemId"] = yt.add_to_playlist(pid, vid)
-        save()
-    # Patch for the coordinator (never written into the course JSON directly).
-    patch_file = patch_file or (cfg.work_dir / "lecture-src-patch.json")
-    patch = read_json(patch_file, {"lectures": {}}) or {"lectures": {}}
-    patch["lectures"][key] = {"src": f"https://www.youtube.com/watch?v={vid}", "publishedAt": entry["uploadedAt"][:10],
-                              "durationSeconds": meta.get("durationSeconds")}
-    write_json(patch_file, patch)
-    return {"key": key, "videoId": vid, "url": f"https://www.youtube.com/watch?v={vid}", "quotaUsed": yt.quota_used}
+def youtube_id(url: str | None) -> str | None:
+    """The video id of an accepted lecture URL (same forms as the backend's YouTube.IdFrom), else None."""
+    if not url:
+        return None
+    u = urlsplit(url)
+    if u.scheme != "https":
+        return None
+    host, path = u.hostname or "", u.path.rstrip("/")
+    vid = None
+    if host in ("www.youtube.com", "youtube.com", "m.youtube.com") and path == "/watch":
+        vid = next((v for k, v in parse_qsl(u.query) if k == "v"), None)
+    elif host == "youtu.be" and path.count("/") == 1:
+        vid = path[1:]
+    elif host in ("www.youtube-nocookie.com", "youtube-nocookie.com") and path.startswith("/embed/") and path.count("/") == 2:
+        vid = path[len("/embed/"):]
+    return vid if vid and _ID.match(vid) else None

@@ -122,7 +122,7 @@ def run_batch(cfg: Config, args, lectures: list[str]) -> dict:
             if args.stream:
                 shutil.rmtree(ldir.segments, ignore_errors=True)
             if args.upload:
-                from .youtube import upload_lecture_dir
+                from .publish import upload_lecture_dir
 
                 res = upload_lecture_dir(cfg, ldir.out)
                 st.update({"stage": "uploaded", "videoId": res["videoId"]})

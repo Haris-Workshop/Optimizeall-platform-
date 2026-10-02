@@ -15,14 +15,15 @@ VOICE_ENGINES = {"elevenlabs": "ElevenLabs", "chatterbox": "Chatterbox by Resemb
 
 
 def fmt_chapter(seconds: float) -> str:
+    """Chapter timestamp: "00:00", "01:15", "1:02:05" (YouTube needs the first chapter at 00:00)."""
     s = int(seconds)
     h, rem = divmod(s, 3600)
     m, sec = divmod(rem, 60)
-    return f"{h}:{m:02d}:{sec:02d}" if h else f"{m}:{sec:02d}"
+    return f"{h}:{m:02d}:{sec:02d}" if h else f"{m:02d}:{sec:02d}"
 
 
 def chapters(timeline: dict, min_len: float = 10.0) -> list[tuple[float, str]]:
-    """YouTube chapters: first at 0:00, each ≥ 10 s, consecutive duplicates merged."""
+    """YouTube chapters: first at 00:00, each ≥ 10 s, consecutive duplicates merged."""
     items: list[tuple[float, str]] = []
     for i, sc in enumerate(timeline["scenes"]):
         start = 0.0 if i == 0 else sc["start"]
@@ -37,20 +38,42 @@ def chapters(timeline: dict, min_len: float = 10.0) -> list[tuple[float, str]]:
         if merged and nxt - start < min_len:
             continue  # too short: fold into the previous chapter
         merged.append((start, title))
+    while len(merged) > 1 and merged[1][0] - merged[0][0] < min_len:
+        merged.pop(1)  # the 00:00 chapter must be long enough too: fold the next one into it
     return merged
 
 
+def _clean(text: str) -> str:
+    return " ".join(re.sub(r"[<>]", "", str(text)).split())  # YouTube rejects < and > in titles
+
+
+def short_course_title(course: str) -> str:
+    """The course title cut at its first ':' or '(' ("Prompt Engineering: Foundations" -> "Prompt Engineering")."""
+    return re.split(r"[:(]", course)[0].strip() or course
+
+
 def youtube_title(plan: dict) -> str:
-    lesson = plan["lectureTitle"]
-    course = plan["course"]["title"]
-    full = f"{lesson} | {course}"
-    if len(full) <= TITLE_MAX:
-        return full
-    short_course = re.split(r"[:(]", course)[0].strip()
-    full = f"{lesson} | {short_course}"
-    if len(full) <= TITLE_MAX:
-        return full
-    return lesson if len(lesson) <= TITLE_MAX else lesson[: TITLE_MAX - 1].rstrip() + "…"
+    """"Course: Lecture N, Topic" (N = 1-based lecture number in the course, Topic = lesson title), at most 100
+    characters: the course title is shortened at ':' or '(' first, then the topic is cut with an ellipsis."""
+    course = _clean(plan["course"]["title"])
+    number = plan.get("lectureNumber") or plan["lesson"]["number"]
+    topic = _clean(plan["lesson"].get("title") or plan["lectureTitle"])
+    for c in (course, short_course_title(course)):
+        full = f"{c}: Lecture {number}, {topic}"
+        if len(full) <= TITLE_MAX:
+            return full
+    prefix = f"{short_course_title(course)}: Lecture {number}, "
+    room = TITLE_MAX - len(prefix) - 1
+    if room < 10:  # absurdly long course title: cut the whole string instead
+        return full[: TITLE_MAX - 1].rstrip() + "…"
+    return prefix + topic[:room].rstrip(" ,;:-–—") + "…"
+
+
+def course_hashtag(course: str) -> str:
+    """#CamelCase of the (short) course title, letters and digits only (YouTube hashtags have no spaces/punctuation)."""
+    words = re.findall(r"[A-Za-z0-9]+", short_course_title(course))
+    tag = "".join(w if w.isupper() else w[:1].upper() + w[1:] for w in words)[:40]
+    return f"#{tag}" if tag and not tag.isdigit() else ""
 
 
 def tags_for(plan: dict, pack: dict) -> list[str]:
@@ -80,6 +103,7 @@ def build(cfg: Config, plan: dict, timeline: dict, pack: dict, *, credits: float
     ch_lines = [f"{fmt_chapter(t)} {title}" for t, title in chapters(timeline)]
     lesson_url = plan["lessonUrl"]
     course_url = lesson_url.rsplit("/", 1)[0]
+    hashtags = " ".join(t for t in ("#OptimizeAll", "#OnlineLearning", course_hashtag(plan["course"]["title"])) if t)
     desc = "\n".join(
         [
             hook,
@@ -90,11 +114,11 @@ def build(cfg: Config, plan: dict, timeline: dict, pack: dict, *, credits: float
             "Chapters",
             *ch_lines,
             "",
-            f"Module {plan['module']['index']}: {plan['module']['title']} · Lesson {plan['lesson']['number']}",
+            f"Module {plan['module']['index']}: {plan['module']['title']} · Lecture {plan.get('lectureNumber') or plan['lesson']['number']}",
             f"Narration uses an AI voice ({VOICE_ENGINES.get(plan.get('engine') or 'elevenlabs', 'AI')}); "
             "script written and reviewed by Optimize All Academy.",
             "",
-            "#OptimizeAll #OnlineLearning",
+            hashtags,
         ]
     )
     if len(desc) > DESC_MAX:

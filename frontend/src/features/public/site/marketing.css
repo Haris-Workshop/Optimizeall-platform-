@@ -1,5 +1,6 @@
 /* =====================================================================================================================
- * Marketing pages: home, /academy, About (2026-09 "two pillars" redesign).
+ * Marketing pages: /learn, /academy, About and the pillar pages (2026-09 "two pillars" redesign; the home page has
+ * its own stylesheet, home.css).
  * Motion rules: transform/opacity (and SVG stroke) only; looping animations run only while their element carries
  * `is-inview`; nothing animates, and nothing starts hidden, when the visitor prefers reduced motion. Reveal-on-scroll
  * hides content only under `.oa-motion`, which motion.tsx adds after mount (so the server HTML is never hidden).
@@ -137,10 +138,6 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: var(--space-12);
   }
-}
-
-.oa-home .site-home-hero .site-hero__title {
-  font-size: clamp(2.375rem, 1.5rem + 3.3vw, 4rem);
 }
 
 .oa-hero__aside::before {
@@ -1280,10 +1277,6 @@
   list-style: none;
 }
 
-.oa-timeline--agency {
-  --oa-tl-accent: var(--primary-400);
-}
-
 @media (min-width: 900px) {
   .oa-timeline {
     grid-template-columns: repeat(var(--n), minmax(0, 1fr));
@@ -1664,139 +1657,6 @@
   }
 }
 
-/* ---------- Agency pillar ---------- */
-.oa-agency {
-  position: relative;
-  isolation: isolate;
-}
-
-.oa-agency__inner {
-  display: grid;
-  gap: var(--space-10);
-  align-items: center;
-}
-
-@media (min-width: 1024px) {
-  .oa-agency__inner {
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-    gap: var(--space-16);
-  }
-}
-
-.oa-agency__copy .eyebrow {
-  margin-bottom: var(--space-3);
-}
-
-/* Bento: service lines; the first two tiles are wide on desktop. */
-.oa-bento {
-  display: grid;
-  gap: var(--space-4);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-@media (min-width: 640px) {
-  .oa-bento {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-5);
-  }
-}
-
-@media (min-width: 1024px) {
-  .oa-bento {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-
-  .oa-bento > * {
-    grid-column: span 2;
-  }
-
-  .oa-bento > :nth-child(1),
-  .oa-bento > :nth-child(2) {
-    grid-column: span 3;
-  }
-
-  /* No orphans: after the two wide tiles the rest run in threes; a lone last tile spans the row, a last pair halves it. */
-  .oa-bento > :nth-child(3n):last-child {
-    grid-column: 1 / -1;
-  }
-
-  .oa-bento > :nth-child(3n + 1):last-child:not(:nth-child(1)),
-  .oa-bento > :nth-child(3n):nth-last-child(2) {
-    grid-column: span 3;
-  }
-}
-
-.oa-bento__item {
-  min-width: 0;
-}
-
-.oa-bento__card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  height: 100%;
-  padding: var(--space-5);
-  overflow: hidden;
-  border-radius: var(--radius-card);
-  background:
-    radial-gradient(220px circle at var(--mx, -200px) var(--my, -200px), color-mix(in srgb, var(--color-accent) 14%, transparent), transparent 70%),
-    var(--color-surface);
-  box-shadow: var(--shadow-card);
-  transition:
-    transform var(--duration-base) var(--ease-standard),
-    box-shadow var(--duration-base) var(--ease-standard);
-}
-
-@media (min-width: 640px) {
-  .oa-bento__card {
-    padding: var(--space-6);
-  }
-}
-
-.oa-bento > :nth-child(-n + 2) .oa-bento__card {
-  background:
-    radial-gradient(220px circle at var(--mx, -200px) var(--my, -200px), color-mix(in srgb, var(--color-accent) 16%, transparent), transparent 70%),
-    radial-gradient(70% 90% at 100% 0%, color-mix(in srgb, var(--primary-400) 10%, transparent), transparent 70%),
-    var(--color-surface);
-}
-
-@media (hover: hover) {
-  .oa-bento__card:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-card-hover);
-  }
-}
-
-.oa-bento__card:has(.site-card__link:focus-visible) {
-  box-shadow: var(--shadow-card-hover), var(--shadow-focus);
-}
-
-.oa-bento__title {
-  font-family: var(--font-display);
-  font-size: var(--text-h3);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-tight);
-}
-
-.oa-bento__title .site-card__link {
-  color: var(--color-heading);
-}
-
-.oa-bento__text {
-  color: var(--color-text-muted);
-  line-height: 1.55;
-}
-
-.oa-bento .site-chips {
-  position: relative;
-  z-index: 1;
-  margin-top: auto;
-  padding-top: var(--space-2);
-}
-
 /* ---------- Trust ---------- */
 .oa-trust__grid {
   display: grid;
@@ -1865,97 +1725,6 @@
 
 .oa-trust__links a:hover {
   text-decoration-color: currentColor;
-}
-
-/* ---------- "More from Optimize All" band (home): the Academy and Creators, one quiet card each ---------- */
-.oa-more__title {
-  margin: 0 0 var(--space-4);
-  color: var(--color-text-muted);
-  font-family: var(--font-sans);
-  font-size: var(--text-small);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-}
-
-.oa-more__cards {
-  display: grid;
-  gap: var(--space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-@media (min-width: 640px) {
-  .oa-more__cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-.oa-more__card {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  grid-template-areas:
-    'icon kicker arrow'
-    'icon label arrow';
-  align-items: center;
-  column-gap: var(--space-4);
-  padding: var(--space-4) var(--space-5);
-  border-radius: var(--radius-card);
-  background: var(--color-surface-2);
-  box-shadow: inset 0 0 0 1px var(--color-border);
-  color: var(--color-heading);
-  text-decoration: none;
-  transition:
-    transform var(--duration-base) var(--ease-standard),
-    box-shadow var(--duration-base) var(--ease-standard);
-}
-
-.oa-more__card:hover {
-  transform: translateY(-2px);
-  box-shadow: inset 0 0 0 1px var(--color-border-strong);
-  text-decoration: none;
-}
-
-.oa-more__card:focus-visible {
-  outline: 3px solid var(--color-focus);
-  outline-offset: 3px;
-}
-
-.oa-more__card > svg:first-child {
-  grid-area: icon;
-  width: 24px;
-  height: 24px;
-  color: var(--color-primary-soft-text);
-}
-
-.oa-more__kicker {
-  grid-area: kicker;
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-}
-
-.oa-more__label {
-  grid-area: label;
-  font-family: var(--font-display);
-  font-size: 1.0625rem;
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-tight);
-}
-
-.oa-more__arrow {
-  grid-area: arrow;
-  width: 18px;
-  height: 18px;
-  transition: transform var(--duration-base) var(--ease-standard);
-}
-
-.oa-more__card:hover .oa-more__arrow {
-  transform: translateX(4px);
 }
 
 /* ---------- Pillars visual (About) ---------- */
@@ -2118,7 +1887,6 @@
 /* ---------- Phones: long card lists become swipeable rails (scroll-snap), edge to edge ---------- */
 @media (max-width: 639px) {
   .oa-courses,
-  .oa-bento,
   .oa-paths {
     display: grid;
     grid-template-columns: none;
@@ -2135,13 +1903,11 @@
   }
 
   .oa-courses::-webkit-scrollbar,
-  .oa-bento::-webkit-scrollbar,
   .oa-paths::-webkit-scrollbar {
     display: none;
   }
 
   .oa-courses > li,
-  .oa-bento > li,
   .oa-paths > li {
     scroll-snap-align: start;
   }

@@ -276,7 +276,7 @@ public sealed class SeoCrawlabilityTests(ApiFactory api) : IClassFixture<ApiFact
     private static string Text(AngleSharp.Dom.IElement? e) => System.Text.RegularExpressions.Regex.Replace(e?.TextContent ?? string.Empty, @"\s+", " ").Trim();
 
     [Fact]
-    public async Task Home_page_renders_the_agency_first_and_one_compact_band_for_the_academy_and_creators()
+    public async Task Home_page_renders_the_agency_first_and_one_band_for_the_academy_and_creators()
     {
         var doc = await DocAsync("/");
         var main = doc.QuerySelector("#oa-ssr main")!;
@@ -293,18 +293,22 @@ public sealed class SeoCrawlabilityTests(ApiFactory api) : IClassFixture<ApiFact
         var heroLinks = main.QuerySelectorAll("ul a").Take(2).Select(a => (Text(a), a.GetAttribute("href"))).ToList();
         Assert.Equal((Copy("home.hero.primaryCta"), "/book-a-consultation"), heroLinks[0]);
         Assert.Equal((Copy("home.hero.secondaryCta"), "/case-studies"), heroLinks[1]);
-        // Order: services → process → trust → "More from Optimize All" → newsletter; the academy has no section of its own.
-        var order = new[] { At("home.services.title"), At("home.process.title"), At("home.trust.title"), At("home.more.title"), At("home.newsletter.title") };
+        // Order: services → process → "More from Optimize All" → closing call to action → newsletter; the academy has no
+        // section of its own.
+        var order = new[] { At("home.services.title"), At("home.process.title"), At("home.more.title"), At("home.cta.title"), At("home.newsletter.title") };
         Assert.Equal(order.OrderBy(i => i), order);
         Assert.DoesNotContain(Copy("home.academy.title"), headings);
-        foreach (var title in Pairs("home.process.steps", titles: true).Concat(Pairs("home.trust.items", titles: true)))
+        foreach (var title in Pairs("home.process.steps", titles: true))
             Assert.Contains(title, headings);
         var body = Text(main);
-        foreach (var key in new[] { "home.hero.lead", "home.trust.intro", "home.newsletter.intro" })
+        foreach (var key in new[] { "home.hero.lead", "home.process.intro", "home.more.academy.text", "home.more.creators.text", "home.cta.text", "home.newsletter.intro" })
             Assert.Contains(Copy(key), body);
-        foreach (var item in Copy("home.hero.proof").Split('\n')) Assert.Contains(item.Trim(), body);
+        foreach (var item in Copy("home.hero.proof").Split('\n').Concat(Copy("home.cta.points").Split('\n'))) Assert.Contains(item.Trim(), body);
+        // The closing call to action books a consultation first and offers the free audit second.
+        Assert.Equal(Copy("home.cta.primary"), Text(main.QuerySelectorAll("a[href='/book-a-consultation']").Last()));
+        Assert.Equal(Copy("home.cta.secondary"), Text(main.QuerySelector("a[href='/free-audit']")));
 
-        // The compact band links the Academy and the Creators programme, once each.
+        // The band links the Academy and the Creators programme, once each.
         var band = main.QuerySelectorAll("ul").Last(ul => ul.QuerySelector("a[href='/learn']") is not null && ul.QuerySelector("a[href='/creators']") is not null);
         Assert.Equal(Copy("home.more.academy.title"), Text(band.QuerySelector("a[href='/learn']")));
         Assert.Equal(Copy("home.more.creators.title"), Text(band.QuerySelector("a[href='/creators']")));

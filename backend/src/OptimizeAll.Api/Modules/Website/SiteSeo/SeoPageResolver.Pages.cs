@@ -18,8 +18,9 @@ public sealed partial class SeoPageResolver
 
     /// <summary>
     /// The home page, in the order and words of the web app's home page (frontend/src/features/public/pages/HomePage.tsx):
-    /// the agency is the subject; the free Academy and the Creators programme appear once, in a compact "More from
-    /// Optimize All" band near the end.
+    /// hero → services → results and case studies → process → industries → testimonials → insights → "More from
+    /// Optimize All" (the Academy and the Creators programme, once each) → closing consultation call to action with the
+    /// pricing teaser → newsletter. The agency is the subject; the two sibling products appear only in their band.
     /// </summary>
     private async Task<SeoPage> HomeAsync(CancellationToken ct)
     {
@@ -60,10 +61,12 @@ public sealed partial class SeoPageResolver
         if (home.FeaturedCaseStudies.Count > 0)
         {
             c.Add(new HeadingNode(2, _copy.Text("home.caseStudies.title")));
+            c.Add(new ParagraphNode(_copy.Text("home.caseStudies.intro")));
             c.Add(new LinkListNode(home.FeaturedCaseStudies.Select(cs => new LinkItem(cs.Title, $"/case-studies/{cs.Slug}", cs.Summary)).ToList()));
             c.Add(new ActionNode(_copy.Text("home.caseStudies.cta"), "/case-studies"));
         }
         c.Add(new HeadingNode(2, _copy.Text("home.process.title")));
+        c.Add(new ParagraphNode(_copy.Text("home.process.intro")));
         foreach (var (title, text) in _copy.Pairs("home.process.steps"))
         {
             c.Add(new HeadingNode(3, title));
@@ -73,7 +76,9 @@ public sealed partial class SeoPageResolver
         if (home.Industries.Count > 0)
         {
             c.Add(new HeadingNode(2, _copy.Text("home.industries.title")));
+            c.Add(new ParagraphNode(_copy.Text("home.industries.intro")));
             c.Add(new LinkListNode(home.Industries.Take(6).Select(i => new LinkItem(i.Name, $"/industries/{i.Slug}", i.Summary)).ToList()));
+            c.Add(new ActionNode(_copy.Text("home.industries.cta"), "/industries"));
         }
         if (home.Testimonials.Count > 0)
         {
@@ -81,38 +86,37 @@ public sealed partial class SeoPageResolver
             foreach (var t in home.Testimonials.Take(4))
                 c.Add(new QuoteNode(t.Quote, string.Join(", ", new[] { t.AuthorName, t.AuthorRole, t.Company }.Where(x => !string.IsNullOrWhiteSpace(x)))));
         }
+        if (home.LatestPosts.Count > 0)
+        {
+            c.Add(new HeadingNode(2, _copy.Text("home.blog.title")));
+            c.Add(new ParagraphNode(_copy.Text("home.blog.intro")));
+            c.Add(new LinkListNode(home.LatestPosts.Select(p => new LinkItem(p.Title, $"/blog/{p.Slug}", p.Excerpt)).ToList()));
+            c.Add(new ActionNode(_copy.Text("home.blog.cta"), "/blog"));
+        }
+        // The other two products, once each, in their own band.
+        c.Add(new HeadingNode(2, _copy.Text("home.more.title")));
+        c.Add(new ParagraphNode(_copy.Text("home.more.intro")));
+        c.Add(new LinkListNode(new[]
+        {
+            new LinkItem(_copy.Text("home.more.academy.title"), "/learn", $"{_copy.Text("home.more.academy.kicker")}. {_copy.Text("home.more.academy.text")}"),
+            new LinkItem(_copy.Text("home.more.creators.title"), "/creators", $"{_copy.Text("home.more.creators.kicker")}. {_copy.Text("home.more.creators.text")}"),
+        }));
+        // Closing call to action, with the pricing teaser beside it.
+        c.Add(new ParagraphNode(_copy.Text("home.cta.eyebrow")));
+        c.Add(new HeadingNode(2, _copy.Text("home.cta.title")));
+        c.Add(new ParagraphNode(_copy.Text("home.cta.text")));
+        c.Add(new LinkListNode(new[]
+        {
+            new LinkItem(_copy.Text("home.cta.primary"), "/book-a-consultation"), new LinkItem(_copy.Text("home.cta.secondary"), "/free-audit"),
+        }));
+        c.Add(new ListNode(_copy.List("home.cta.points")));
         if (home.PricingTeaser.Count > 0)
         {
-            c.Add(new HeadingNode(2, _copy.Text("home.pricing.title")));
+            c.Add(new HeadingNode(3, _copy.Text("home.pricing.title")));
             c.Add(new ParagraphNode(_copy.Text("home.pricing.intro")));
             c.Add(new FactsNode(home.PricingTeaser.Select(p => KeyValuePair.Create($"{p.ServiceName} — {p.Package.Name}", PackagePrice(p.Package))).ToList()));
             c.Add(new ActionNode(_copy.Text("home.pricing.cta"), "/pricing"));
         }
-        c.Add(new ParagraphNode(_copy.Text("home.trust.eyebrow")));
-        c.Add(new HeadingNode(2, _copy.Text("home.trust.title")));
-        c.Add(new ParagraphNode(_copy.Text("home.trust.intro")));
-        foreach (var (title, text) in _copy.Pairs("home.trust.items"))
-        {
-            c.Add(new HeadingNode(3, title));
-            c.Add(new ParagraphNode(text));
-        }
-        c.Add(new LinkListNode(new[]
-        {
-            new LinkItem("Privacy policy", "/privacy-policy"), new LinkItem("Accessibility statement", "/accessibility"),
-            new LinkItem("Cookie policy", "/cookie-policy"), new LinkItem("Terms of service", "/terms-of-service"),
-        }));
-        if (home.LatestPosts.Count > 0)
-        {
-            c.Add(new HeadingNode(2, _copy.Text("home.blog.title")));
-            c.Add(new LinkListNode(home.LatestPosts.Select(p => new LinkItem(p.Title, $"/blog/{p.Slug}", p.Excerpt)).ToList()));
-        }
-        // The other two products, once, as a compact band.
-        c.Add(new HeadingNode(2, _copy.Text("home.more.title")));
-        c.Add(new LinkListNode(new[]
-        {
-            new LinkItem(_copy.Text("home.more.academy.title"), "/learn", _copy.Text("home.more.academy.kicker")),
-            new LinkItem(_copy.Text("home.more.creators.title"), "/creators", _copy.Text("home.more.creators.kicker")),
-        }));
         c.Add(new HeadingNode(2, _copy.Text("home.newsletter.title")));
         c.Add(new ParagraphNode(_copy.Text("home.newsletter.intro")));
         page.ModifiedAt = Latest(_settingsUpdatedAt, _copyUpdatedAt, home.LatestPosts.Select(p => p.PublishedAt).Max());

@@ -110,13 +110,22 @@ describe('HomePage', () => {
       'A process built for accountability',
       'Specialists in your market',
       'What clients say',
-      'Transparent pricing, no surprises',
-      'Built to earn your trust',
       'Playbooks and insights',
       'More from Optimize All',
+      'Ready for marketing that answers to results?',
       'Get marketing insights in your inbox',
     ];
     expect(titles).toEqual(order);
+
+    // The closing call to action books a consultation first, offers the free audit second, and carries the pricing teaser.
+    const cta = within(home).getByRole('heading', { level: 2, name: 'Ready for marketing that answers to results?' }).closest('section')!;
+    const ctaLinks = within(cta).getAllByRole('link');
+    expect(ctaLinks[0]).toHaveAttribute('href', '/book-a-consultation');
+    expect(ctaLinks[0]).toHaveAccessibleName(/Book a consultation/);
+    expect(within(cta).getByRole('link', { name: 'Get a free audit' })).toHaveAttribute('href', '/free-audit');
+    const pricing = within(cta).getByRole('complementary', { name: 'Transparent pricing, no surprises' });
+    expect(within(pricing).getByText('Growth')).toBeInTheDocument();
+    expect(within(pricing).getByRole('link', { name: /See all pricing/ })).toHaveAttribute('href', '/pricing');
 
     // The academy and creator sections live on /learn and /creators, not here.
     for (const gone of ['Explore by subject', 'Featured courses', 'Earn it. Verify it. Share it.', 'From first lesson to certificate', 'Two ways to grow. Both start today.', 'Become an Optimize All creator'])

@@ -38,6 +38,10 @@ describe('site copy', () => {
     expect(copy.text('shared.footer.copyright', { year: 2030 })).toBe('© 2030 Acme Ltd');
     expect(copy.text('home.hero.eyebrow')).toBe('Full-service digital marketing agency');
     expect(copy.list('home.hero.proof')).toEqual(['No long lock-ins', 'Your accounts, your data', 'Senior strategists on every account']);
+    // The home page's closing call to action books a consultation, like the hero.
+    expect(copy.text('home.cta.primary')).toBe(copy.text('home.hero.primaryCta'));
+    expect(copy.list('home.cta.points')).toHaveLength(3);
+    expect(makeSiteCopy({ 'home.more.creators.text': 'Get paid to post.' }).text('home.more.creators.text')).toBe('Get paid to post.');
   });
 
   it('renders the shipped wording when overrides cannot be loaded, and editor overrides once they are', async () => {

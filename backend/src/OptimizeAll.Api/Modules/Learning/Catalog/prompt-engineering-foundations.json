@@ -133,7 +133,9 @@
                 "visual": "Branded 16:9 slide: title top-left, bullets in left third, main panel right two-thirds. 0s title fades in; bullets slide in at 8s, 20s, 33s, 45s. Main panel: Recap slide with four ticks appearing, then a 'Next lesson' card showing five blocks labelled T, C, A, F, E stacking into a tower. Hold last frame 1s.",
                 "seconds": 48
               }
-            ]
+            ],
+            "src": "https://www.youtube.com/watch?v=QcK55FndGp4",
+            "publishedAt": "2026-10-02"
           },
           "keyTakeaways": [
             "A prompt is everything you give the AI: question, instructions, pasted text and examples.",
@@ -266,7 +268,9 @@
                 "term": "T-CAFE",
                 "say": "tee cafe"
               }
-            ]
+            ],
+            "src": "https://www.youtube.com/watch?v=wh_uLqbwFmI",
+            "publishedAt": "2026-10-02"
           },
           "keyTakeaways": [
             "Great prompts combine Task, Context, Audience, Format and Examples or constraints (T-CAFE).",
@@ -400,7 +404,9 @@
                 "visual": "Branded 16:9 slide: title top-left, bullets in left third, main panel right two-thirds. 0s title fades in; bullets slide in at 3s, 16s, 18s, 24s. Main panel: Recap checklist, then a small counter labelled 'follow-ups needed' dropping from 4 to 1. Hold last frame 1s.",
                 "seconds": 38
               }
-            ]
+            ],
+            "src": "https://www.youtube.com/watch?v=idSMLBCahTA",
+            "publishedAt": "2026-10-02"
           },
           "keyTakeaways": [
             "Replace vague words (short, engaging, professional) with concrete descriptions or numbers.",
@@ -527,7 +533,9 @@
                 "visual": "Branded 16:9 slide: title top-left, bullets in left third, main panel right two-thirds. 0s title fades in; bullets slide in at 2s, 5s, 11s, 22s. Main panel: Recap slide with ticks; teaser of a chat with three quick follow-up messages turning a draft into a finished piece. Hold last frame 1s.",
                 "seconds": 40
               }
-            ]
+            ],
+            "src": "https://www.youtube.com/watch?v=O4c36E3BaSQ",
+            "publishedAt": "2026-10-02"
           },
           "keyTakeaways": [
             "Context (who you are, the situation, the goal, constraints) is the biggest upgrade for most prompts.",
@@ -661,7 +669,9 @@
                 "visual": "Branded 16:9 slide: title top-left, bullets in left third, main panel right two-thirds. 0s title fades in; bullets slide in at 2s, 25s, 27s, 33s. Main panel: Recap card with the five moves as icons, then a teaser showing one piece of information transforming into a table, a WhatsApp message and a script. Hold last frame 1s.",
                 "seconds": 37
               }
-            ]
+            ],
+            "src": "https://www.youtube.com/watch?v=6Sml7wuPuNM",
+            "publishedAt": "2026-10-02"
           },
           "keyTakeaways": [
             "Treat the first answer as a draft; iterate by adjusting, pointing to specifics, asking for options, explaining why, and combining.",

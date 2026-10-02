@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Bundle budgets for the production build (run after `npm run build`; CI fails the frontend job when one is exceeded).
 //
-// What a first visit to any public page downloads before the app can render is the entry: the module script, its
-// modulepreloads and the render-blocking stylesheet listed in dist/index.html (the same tags the seoShell plugin puts
+// What a first visit to any public page downloads before the app can run is the entry: the module script, its
+// modulepreloads, the app chunk it starts (src/start.tsx, from the build manifest) and the render-blocking stylesheets
+// listed in dist/index.html (the same tags the seoShell plugin puts
 // into dist/__shell/head.html). Everything else is a lazy chunk, loaded by the route that needs it. Sizes are gzip
 // (level 9, close to what nginx's gzip_comp_level 5 sends), in KiB.
 //
@@ -38,6 +39,21 @@ for (const tag of tags) {
   if (tag.startsWith('<script') && attr(tag, 'type') === 'module' && attr(tag, 'src')) initialJs.add(attr(tag, 'src'));
   if (tag.startsWith('<link') && attr(tag, 'rel') === 'modulepreload') initialJs.add(attr(tag, 'href'));
   if (tag.startsWith('<link') && attr(tag, 'rel') === 'stylesheet') initialCss.add(attr(tag, 'href'));
+}
+// The entry only starts the app (src/main.tsx → src/start.tsx, fetched right after the first paint): the app chunk and
+// its static imports are part of what every first visit downloads, so they count as initial JavaScript.
+try {
+  const manifest = JSON.parse(readFileSync(join(dist, '.vite', 'manifest.json'), 'utf8'));
+  const entry = Object.values(manifest).find((c) => c.isEntry);
+  const add = (key) => {
+    const chunk = manifest[key];
+    if (!chunk || chunk.isEntry || initialJs.has(`/${chunk.file}`)) return;
+    initialJs.add(`/${chunk.file}`);
+    (chunk.imports ?? []).forEach(add);
+  };
+  (entry?.dynamicImports ?? []).forEach(add);
+} catch {
+  // An older build without a manifest: index.html lists everything.
 }
 if (initialJs.size === 0) {
   console.error(`No module script found in ${join(dist, 'index.html')}: build the frontend first.`);

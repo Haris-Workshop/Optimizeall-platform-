@@ -1,55 +1,45 @@
 // Inter with its optical-size axis: large figures and titles get the tighter "Display" cut automatically.
 import '@fontsource-variable/inter/opsz.css';
 import '@fontsource-variable/inter-tight/wght.css';
-import { hydrate, type DehydratedState } from '@tanstack/react-query';
-import { startTransition, StrictMode } from 'react';
-import { createRoot, hydrateRoot } from 'react-dom/client';
-import { matchRoutes } from 'react-router-dom';
-// Global styles first so component styles (imported through App) can override them.
+// Global styles first so component styles (imported through the app) can override them.
 import './styles/tokens.css';
 import './styles/base.css';
-import { App } from './App';
-import { routes } from './app/router';
-import { SSR_ROOT_ATTR, SSR_STATE_ID } from './app/ssrDocument';
-import { createQueryClient } from './lib/api/query';
-
-const root = document.getElementById('root');
-if (!root) throw new Error('Missing #root element');
+import { SSR_MODULES_ATTR, SSR_ROOT_ATTR } from './app/ssrDocument';
 
 /**
- * Public pages arrive rendered by the server (src/entry-server.tsx) with the data they were rendered with. The route
- * modules of the current URL are loaded first (the router would otherwise render nothing while they load, which does
- * not match the server's markup), then React hydrates the existing DOM. Hydration runs as a transition, so React
- * yields to the browser between components instead of blocking the main thread for the whole page.
+ * The entry is deliberately tiny: it only decides when the app starts (src/start.tsx). A server-rendered page is
+ * painted first — with nothing but its HTML, CSS and fonts — and only then is the app's JavaScript fetched (together
+ * with the page's route chunks, listed on #root) and run: the visitor sees the page as early as the network allows,
+ * and downloading, compiling and hydrating never delay that first paint. Anything else starts right away.
  */
-async function hydrateServerPage(container: HTMLElement) {
-  const queryClient = createQueryClient();
-  const stateScript = document.getElementById(SSR_STATE_ID);
-  if (stateScript?.textContent) hydrate(queryClient, JSON.parse(stateScript.textContent) as DehydratedState);
-  const matches = matchRoutes(routes, window.location) ?? [];
-  await Promise.all(
-    matches.map(async ({ route }) => {
-      if (typeof route.lazy !== 'function') return;
-      const loaded = await route.lazy();
-      Object.assign(route, loaded, { lazy: undefined });
-    }),
-  );
-  startTransition(() => {
-    hydrateRoot(
-      container,
-      <StrictMode>
-        <App queryClient={queryClient} />
-      </StrictMode>,
-    );
+const root = document.getElementById('root');
+if (!root) throw new Error('Missing #root element');
+const serverRendered = root.hasAttribute(SSR_ROOT_ATTR);
+
+/** Resolves once the current content has been painted (right away in a background tab, which never paints). */
+function afterFirstPaint(): Promise<void> {
+  if (document.visibilityState !== 'visible') return Promise.resolve();
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => setTimeout(resolve, 0));
+    // A safety net for browsers that throttle animation frames.
+    setTimeout(resolve, 250);
   });
 }
 
-if (root.hasAttribute(SSR_ROOT_ATTR)) {
-  void hydrateServerPage(root);
-} else {
-  createRoot(root).render(
-    <StrictMode>
-      <App />
-    </StrictMode>,
-  );
+/** Fetches the page's route chunks in parallel with the app (instead of after it). */
+function preloadPageModules(container: HTMLElement) {
+  for (const href of (container.getAttribute(SSR_MODULES_ATTR) ?? '').split(' ').filter(Boolean)) {
+    const link = document.createElement('link');
+    link.rel = 'modulepreload';
+    link.crossOrigin = '';
+    link.href = href;
+    document.head.appendChild(link);
+  }
 }
+
+void (serverRendered ? afterFirstPaint() : Promise.resolve())
+  .then(() => {
+    if (serverRendered) preloadPageModules(root);
+    return import('./start');
+  })
+  .then(({ start }) => start(root, serverRendered));

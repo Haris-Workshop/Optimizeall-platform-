@@ -119,6 +119,7 @@ export function seoShell(apiTarget: string): Plugin {
     transformIndexHtml: {
       order: 'post',
       handler(html, ctx) {
+        html = linkAppChunk(html, ctx.bundle);
         const files = Object.keys(ctx.bundle ?? {});
         const fonts = [
           files.find((f) => /(^|\/)inter-latin-[a-z]+-normal-[^/]+\.woff2$/.test(f)),
@@ -137,6 +138,34 @@ export function seoShell(apiTarget: string): Plugin {
       writeFileSync(join(outDir, '__shell', 'body.html'), shell.body + '\n');
     },
   };
+}
+
+type Bundle = NonNullable<Parameters<Extract<NonNullable<Plugin['transformIndexHtml']>, { handler: unknown }>['handler']>[1]['bundle']>;
+
+/**
+ * The entry (src/main.tsx) only decides when the app starts; the app itself is the dynamically imported src/start.tsx.
+ * Its stylesheets are the site's base styles, so they block the first paint like the entry's and are linked in
+ * index.html (and so in the shell of server-rendered pages). Its scripts are not: they are fetched once the page has
+ * been painted (main.tsx), so nothing but HTML, CSS and fonts competes with the first paint.
+ */
+function linkAppChunk(html: string, bundle: Bundle | undefined): string {
+  if (!bundle) return html;
+  const start = Object.values(bundle).find(
+    (c) => c.type === 'chunk' && c.moduleIds.some((id) => id.replace(/\\/g, '/').endsWith('/src/start.tsx')),
+  );
+  if (!start || start.type !== 'chunk') return html;
+  const css: string[] = [];
+  const seen = new Set<string>();
+  const visit = (file: string) => {
+    const chunk = bundle[file];
+    if (seen.has(file) || !chunk || chunk.type !== 'chunk' || chunk.isEntry) return;
+    seen.add(file);
+    chunk.imports.forEach(visit);
+    for (const c of chunk.viteMetadata?.importedCss ?? []) if (!css.includes(c)) css.push(c);
+  };
+  visit(start.fileName);
+  const links = css.map((f) => `  <link rel="stylesheet" crossorigin href="/${f}">\n`).join('');
+  return html.replace('</head>', `${links}  </head>`);
 }
 
 /**

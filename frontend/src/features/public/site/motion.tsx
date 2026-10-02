@@ -34,6 +34,13 @@ export function useReveal(root: RefObject<HTMLElement>) {
   useEffect(() => {
     const el = root.current;
     if (!el || !motionAllowed()) return;
+    // A server-rendered page was on screen before the app started: what is visible now stays as painted (no flash).
+    // Measured before anything changes classes, so reading the layout does not force a style recalculation.
+    if (onServerRenderedPage() && !scanned.current) {
+      const visible = Array.from(el.querySelectorAll(REVEAL_SELECTOR)).filter(inViewport);
+      for (const node of visible) node.classList.add('is-static');
+    }
+    scanned.current = true;
     el.classList.add('oa-motion');
     observer.current = new IntersectionObserver(
       (entries) => {
@@ -58,16 +65,10 @@ export function useReveal(root: RefObject<HTMLElement>) {
     const el = root.current;
     const io = observer.current;
     if (!el || !io) return;
-    // A server-rendered page was on screen before the app started: what is visible now stays as painted (no flash).
-    const keepVisible = onServerRenderedPage() && !scanned.current;
-    scanned.current = true;
     el.querySelectorAll(REVEAL_SELECTOR).forEach((node) => {
       if (seen.current.has(node)) return;
       seen.current.add(node);
-      if (keepVisible && inViewport(node)) {
-        node.classList.add('is-static');
-        return;
-      }
+      if (node.classList.contains('is-static')) return;
       // Stagger children: each gets its index so CSS can delay it.
       if (node.getAttribute('data-reveal') === 'stagger')
         Array.from(node.children).forEach((child, i) => (child as HTMLElement).style.setProperty('--i', String(Math.min(i, 8))));

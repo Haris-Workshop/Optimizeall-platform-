@@ -240,33 +240,59 @@ production configuration).
 
 ### 9.1 Rendering: complete HTML without JavaScript
 
-The site is a React SPA, so every public page is also **rendered on the server** — without a Node server and without
-changing the React app:
+Every public page is **rendered on the server twice over**: the API writes the SEO head, the status code and a plain,
+crawlable copy of the page, and a small Node renderer next to nginx puts the React app's own markup (the designed
+page) into that document, which the browser then hydrates:
 
 ```
 browser / crawler ──GET /services/seo──▶ nginx (web)
-   nginx: not a static file, not a portal ──▶ API  GET /_document/services/seo      (rewrite, proxy_pass)
-   API:   SeoPageResolver → status 200/301/404/410 + <head> (title, description, canonical, robots, OG, Twitter,
-          article dates, prev/next, JSON-LD) + <div id="root"><div id="oa-ssr"> header nav, breadcrumbs, the page's
-          headings/copy/links/images/videos, footer links </div></div>
-          + <!--# include virtual="/__shell/head.html" -->  and  <!--# include virtual="/__shell/body.html" -->
-   nginx: ssi on → includes dist/__shell/head.html (the build's <script>/<link> tags, icons, manifest, viewport)
-   ◀── one HTML document, real status code
-browser: loads the app bundle; React renders into #root (createRoot replaces the server copy) and takes over.
+   nginx: not a static file, not a portal ──▶ server renderer  GET /_document/services/seo   (@document)
+   renderer (frontend/server/ssr-server.mjs, same container):
+          ──▶ API  GET /_document/services/seo
+              API: SeoPageResolver → status 200/301/404/410 + <head> (title, description, canonical, robots, OG,
+                   Twitter, article dates, prev/next, JSON-LD) + <div id="root"><div id="oa-ssr"> plain copy </div></div>
+                   + <!--# include virtual="/__shell/head.html" -->  and  <!--# include virtual="/__shell/body.html" -->
+          for a 200 public website page (routes marked handle.ssr): renders the app (src/entry-server.tsx) with the
+          page's data (the app's own queries, run against the API) → #root gets the app's markup
+          (<div id="root" data-oa-hydrate>…), the head the page's stylesheets, the body the query cache as JSON
+          (<script type="application/json" id="oa-query-state">); anything else passes through unchanged
+   nginx: ssi on → includes dist/__shell/head.html (stylesheets, icons, fonts, the tiny entry script)
+   ◀── one HTML document, real status code; the designed page paints with HTML + CSS only
+browser: paints, then fetches the app (src/main.tsx → src/start.tsx) and the page's route chunks, seeds the query
+         cache from the JSON and hydrates #root in place (hydrateRoot inside a transition, time-sliced).
 ```
 
+* **Fallbacks.** If the renderer is not running (502) or too slow (504), nginx asks the API directly
+  (`@document_api`): the page is then the API's plain copy, hidden for script-capable browsers, and React renders it in
+  the browser — the behaviour before server rendering. A render error, a non-200 status (404/410/301), portals, tokenized
+  links and client landing pages are never rendered by the renderer. If the API is unreachable, both paths answer
+  `503` + the app shell.
+* **Same data, no flash.** The renderer renders until no new query appears (dependent queries take another pass;
+  the queries a URL needed last time are fetched before the first pass), failed queries stay pending (the browser loads
+  them, as without SSR), and the dehydrated cache is embedded, so hydration needs no API round trip and renders exactly
+  the server's markup. Public-site dates and prices use a fixed locale and time zone (`site/format.ts`); browser-only
+  state (storage, media queries, clipboard, the visitor's time zone on `/book-a-consultation`) is read after hydration
+  (`useHydrated`, `lib/ssr.ts`); entrance effects keep what was already painted (`onServerRenderedPage`). The j-seo
+  suite fails on any hydration error or re-created element.
+* **First paint first.** The page's CSS is linked render-blocking, its JavaScript is not fetched until the page has
+  been painted (`src/main.tsx`), and sections below the first one use `content-visibility: auto`, so the first paint
+  costs HTML, CSS and fonts only.
+* **Deployment.** The web image (`frontend/Dockerfile`) adds Node.js and starts the renderer next to nginx
+  (`nginx/40-optimizeall-ssr.sh`, restarted if it exits; `SSR_ENABLED=false` turns it off, `SSR_MAX_OLD_SPACE` caps its
+  heap, default 160 MB). It talks to the API at the same address nginx uses (`API_UPSTREAM` / `API_HOSTPORT`) with the
+  visitor's `X-Forwarded-*` headers. No extra service.
 * **Shell fragments.** `vite build` runs the `seoShell` plugin, which splits the built `index.html` into
   `dist/__shell/head.html` (everything in `<head>` except `<meta charset>`, `<title>` and the region between
   `<!-- oa:seo-defaults -->` and `<!-- /oa:seo-defaults -->`) and `dist/__shell/body.html` (the body without the empty
   `#root` and the "needs JavaScript" notice). nginx serves `/__shell/` only as an internal location.
 * **Same path in development and tests.** `vite` and `vite preview` use the same plugin as a middleware: page requests
   go to the API's `/_document…` and the two directives are filled exactly as nginx does (dev: from the transformed
-  `index.html`; preview: from `dist/__shell`). If the API is not running, the plain SPA is served.
-  `scripts/serve-web-nginx.sh` runs the real nginx configuration against a local build (used by the E2E suite with
-  `E2E_WEB_SERVER=nginx` and by CI).
-* **No flash, no duplicates.** The server copy lives inside `#root` and is hidden for script-capable browsers by
-  `@media (scripting: enabled) { #oa-ssr { display: none } }` (inline style in the document), so visitors see the React
-  page only, while crawlers without JavaScript and visitors with scripts off see the server copy (minimal inline styles).
+  `index.html`; preview: from `dist/__shell`, and rendered with the built renderer `dist-ssr/entry-server.js` like in
+  production; the dev server keeps the plain copy and renders in the browser). If the API is not running, the plain SPA
+  is served. `scripts/serve-web-nginx.sh` runs the real nginx configuration against a local build, with the renderer when
+  the build has it (used by the E2E suite with `E2E_WEB_SERVER=nginx` and by CI).
+* **Plain copy, head tags.** When the API's plain copy is served (fallback), it is hidden for script-capable browsers by
+  `@media (scripting: enabled) { #oa-ssr { display: none } }` (inline style in the document) and React renders the page.
   Head tags carry `data-oa-head data-oa-ssr`: the head manager updates title, description, canonical, robots, Open Graph
   and Twitter tags **in place**; the server's JSON-LD is kept while the visitor is on the page the server rendered (it
   can be richer than the page payload, e.g. ItemList on listings) and replaced by the page's own after the first

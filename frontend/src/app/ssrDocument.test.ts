@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SHELL_BODY_INCLUDE, SHELL_HEAD_INCLUDE } from './seoShellCore';
-import { injectRenderedPage, pageAssets, serializeState, SSR_ROOT_ATTR, SSR_STATE_ID, type Manifest } from './ssrDocument';
+import { injectRenderedPage, pageAssets, serializeState, SSR_MODULES_ATTR, SSR_ROOT_ATTR, SSR_STATE_ID, type Manifest } from './ssrDocument';
 
 const manifest: Manifest = {
   'index.html': {
@@ -8,8 +8,11 @@ const manifest: Manifest = {
     src: 'index.html',
     isEntry: true,
     imports: ['_react-r1.js', '_query-q1.js'],
+    dynamicImports: ['_start-s1.js'],
     css: ['assets/index-c1.css'],
   },
+  // The app chunk the entry starts: linked by the shell itself.
+  '_start-s1.js': { file: 'assets/start-s1.js', imports: ['_react-r1.js'], css: ['assets/start-s1.css'] },
   '_react-r1.js': { file: 'assets/react-r1.js' },
   '_query-q1.js': { file: 'assets/query-q1.js' },
   '_marketing-m1.js': { file: 'assets/marketing-m1.js', imports: ['index.html', '_react-r1.js'], css: ['assets/marketing-m1.css'] },
@@ -18,7 +21,7 @@ const manifest: Manifest = {
     file: 'assets/HomePage-h1.js',
     src: 'src/features/public/pages/HomePage.tsx',
     isDynamicEntry: true,
-    imports: ['index.html', '_react-r1.js', '_kit-k1.js', '_marketing-m1.js'],
+    imports: ['index.html', '_start-s1.js', '_react-r1.js', '_kit-k1.js', '_marketing-m1.js'],
     css: ['assets/HomePage-h1.css'],
   },
   'src/features/public/pages/BlogPages.tsx': {
@@ -71,10 +74,13 @@ describe('injectRenderedPage', () => {
     const out = injectRenderedPage(apiDocument, page)!;
     expect(out).not.toContain('oa-ssr');
     expect(out).not.toContain('Plain');
-    expect(out).toContain(`<div id="root" ${SSR_ROOT_ATTR}><div class="site-layout"><main id="main"><h1>Designed</h1></main></div></div>`);
+    expect(out).toContain(
+      `<div id="root" ${SSR_ROOT_ATTR} ${SSR_MODULES_ATTR}="/assets/HomePage-h1.js"><div class="site-layout"><main id="main"><h1>Designed</h1></main></div></div>`,
+    );
     const head = out.slice(0, out.indexOf('</head>'));
     expect(head.indexOf(SHELL_HEAD_INCLUDE)).toBeLessThan(head.indexOf('<link rel="stylesheet" crossorigin href="/assets/HomePage-h1.css">'));
-    expect(head).toContain('<link rel="modulepreload" crossorigin href="/assets/HomePage-h1.js">');
+    // Scripts are not fetched before the first paint (src/main.tsx preloads them afterwards).
+    expect(head).not.toContain('modulepreload');
     expect(out).toContain(`<script type="application/json" id="${SSR_STATE_ID}">{"queries":[{"queryKey":["public","site"]}]}</script>`);
     // The shell's body include (the app's scripts) still follows #root, and the head is untouched otherwise.
     expect(out.indexOf(SSR_STATE_ID)).toBeLessThan(out.indexOf(SHELL_BODY_INCLUDE));

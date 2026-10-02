@@ -14,6 +14,12 @@ import { SHELL_BODY_INCLUDE, SHELL_HEAD_INCLUDE } from './seoShellCore';
 
 /** Attribute on `#root` when it holds the app's server-rendered markup: the client hydrates instead of rendering. */
 export const SSR_ROOT_ATTR = 'data-oa-hydrate';
+/**
+ * Attribute on `#root` listing the page's route chunks (space separated): src/main.tsx preloads them together with the
+ * app once the page has been painted (they are not fetched before: nothing but HTML, CSS and fonts competes with the
+ * first paint).
+ */
+export const SSR_MODULES_ATTR = 'data-oa-modules';
 /** id of the `<script type="application/json">` holding the dehydrated React Query cache. */
 export const SSR_STATE_ID = 'oa-query-state';
 
@@ -59,7 +65,7 @@ export type Manifest = Record<string, ManifestChunk>;
 export interface PageAssets {
   /** Stylesheets of the page's chunks that the entry does not already load (render-blocking, in order). */
   css: string[];
-  /** JavaScript chunks of the page (modulepreload: they are fetched in parallel with the entry). */
+  /** JavaScript chunks of the page (preloaded by src/main.tsx after the first paint, see SSR_MODULES_ATTR). */
   js: string[];
 }
 
@@ -76,7 +82,11 @@ export function pageAssets(manifest: Manifest, modules: Iterable<string>, base =
     inEntry.add(key);
     manifest[key].imports?.forEach(walkEntry);
   };
-  if (entryKey) walkEntry(entryKey);
+  if (entryKey) {
+    walkEntry(entryKey);
+    // The app chunk the entry starts (src/start.tsx) is linked by the shell too (seoShell.ts, linkAppChunk).
+    manifest[entryKey].dynamicImports?.forEach(walkEntry);
+  }
   const entryCss = new Set([...inEntry].flatMap((k) => manifest[k].css ?? []));
 
   const seen = new Set<string>();
@@ -120,8 +130,8 @@ const ROOT_OPEN = '<div id="root">';
 
 /**
  * Puts the rendered page into the API's document: the app's markup replaces the plain server copy inside `#root`
- * (marked for hydration), the page's stylesheets and module preloads follow the shell's head include (after the entry's
- * stylesheet, so page styles still override it), and the query state goes right after `#root`. Returns null when the
+ * (marked for hydration, with the page's chunks to preload), the page's stylesheets follow the shell's head include
+ * (after the app's stylesheets, so page styles still override them), and the query state goes right after `#root`. Returns null when the
  * document does not have the expected shape (it is then served unchanged).
  */
 export function injectRenderedPage(document: string, page: RenderedPage): string | null {
@@ -133,16 +143,14 @@ export function injectRenderedPage(document: string, page: RenderedPage): string
   const rootClose = document.lastIndexOf('</div>', bodyAt);
   if (rootClose < rootAt) return null;
 
-  const links =
-    page.assets.css.map((href) => `<link rel="stylesheet" crossorigin href="${escapeAttr(href)}">`).join('\n') +
-    (page.assets.css.length ? '\n' : '') +
-    page.assets.js.map((href) => `<link rel="modulepreload" crossorigin href="${escapeAttr(href)}">`).join('\n');
+  const links = page.assets.css.map((href) => `<link rel="stylesheet" crossorigin href="${escapeAttr(href)}">`).join('\n');
+  const modules = page.assets.js.length ? ` ${SSR_MODULES_ATTR}="${escapeAttr(page.assets.js.join(' '))}"` : '';
   const headEnd = headAt + SHELL_HEAD_INCLUDE.length;
   return (
     document.slice(0, headEnd) +
     (links ? `\n${links}` : '') +
     document.slice(headEnd, rootAt) +
-    `<div id="root" ${SSR_ROOT_ATTR}>` +
+    `<div id="root" ${SSR_ROOT_ATTR}${modules}>` +
     page.html +
     '</div>\n' +
     `<script type="application/json" id="${SSR_STATE_ID}">${serializeState(page.state)}</script>` +

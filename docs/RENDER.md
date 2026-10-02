@@ -13,7 +13,7 @@ Both run the same images and code; only the database differs (`Database__Provide
 
 | Service | Type | What it is |
 |---|---|---|
-| `optimizeall-web` | Web service (public) | nginx serving the React app; proxies `/api`, `/t` and `/health` to the API |
+| `optimizeall-web` | Web service (public) | nginx serving the React app (public pages server-rendered by a small Node renderer in the same container, docs/SEO_CRO.md §9.1); proxies `/api`, `/t` and `/health` to the API |
 | `optimizeall-api` | Private service + 1 GB disk at `/app/storage` | ASP.NET Core API. The disk holds the database (`db/optimizeall.db`, its `-wal`/`-shm` files and the `optimizeall-keys/` encryption key ring) and uploaded files (`files/`). Applies migrations and loads the demo data on first start |
 
 * **Cheapest:** two `starter` services and one small disk; no database service.
@@ -46,7 +46,7 @@ Both run the same images and code; only the database differs (`Database__Provide
 
 | Service | Type | What it is |
 |---|---|---|
-| `optimizeall-web` | Web service (public) | nginx serving the React app; proxies `/api`, `/t` and `/health` to the API |
+| `optimizeall-web` | Web service (public) | nginx serving the React app (public pages server-rendered by a small Node renderer in the same container, docs/SEO_CRO.md §9.1); proxies `/api`, `/t` and `/health` to the API |
 | `optimizeall-api` | Private service + 1 GB disk | ASP.NET Core API (uploads on the disk); applies migrations and loads the demo data on first start |
 | `optimizeall-mysql` | Private service + 5 GB disk | MySQL 8 (Render has no managed MySQL, so it runs as a container with a persistent disk) |
 

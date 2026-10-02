@@ -3617,3 +3617,14 @@ button.site-chip {
   font-family: var(--font-sans);
   letter-spacing: -0.011em;
 }
+
+/* ---------- Rendering work on long pages ----------
+ * Sections below a page's first one are laid out and painted only when they come near the viewport
+ * (content-visibility: auto): the first paint of a server-rendered page lays out its top, not all of it, and
+ * offscreen decoration costs nothing. contain-intrinsic-size reserves an estimated height until a section has been
+ * rendered once and then remembers its real height. */
+.public-main > * > section:not(:first-child),
+.site-layout > .public-footer {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 720px;
+}

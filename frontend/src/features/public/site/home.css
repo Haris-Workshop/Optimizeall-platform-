@@ -313,8 +313,9 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .oa-h-hero__copy > :not(.oa-h-hero__title) {
-    animation: oa-h-rise 800ms var(--ease-standard) both; /* the h1 (LCP) paints immediately */
+  /* The h1 and the lead (the largest-contentful-paint candidates) paint immediately; the rest rises in. */
+  .oa-h-hero__copy > :not(.oa-h-hero__title, .oa-h-hero__lead) {
+    animation: oa-h-rise 800ms var(--ease-standard) both;
   }
 
   .oa-h-hero__copy > :nth-child(3) {

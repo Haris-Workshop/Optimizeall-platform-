@@ -195,7 +195,8 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .cr-hero__copy > :not(h1) {
+  /* The h1 and the lead paragraph (the largest-contentful-paint candidates) paint immediately. */
+  .cr-hero__copy > :not(h1, p) {
     animation: cr-rise 800ms var(--ease-standard) both;
   }
 

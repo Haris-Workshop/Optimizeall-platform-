@@ -54,9 +54,22 @@ function preloadPageModules(container: HTMLElement) {
   }
 }
 
-void (serverRendered ? afterFirstPaint() : Promise.resolve())
-  .then(() => {
-    if (serverRendered) preloadPageModules(root);
-    return import('./start');
-  })
-  .then(({ start }) => start(root, serverRendered));
+/** Lets the browser handle input and rendering before the next step. */
+const yieldToMain = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+async function boot(container: HTMLElement) {
+  if (serverRendered) {
+    await afterFirstPaint();
+    preloadPageModules(container);
+    // Loaded in steps, each evaluated in a task of its own (the page is already on screen and stays responsive):
+    // the libraries, the routes, then the app.
+    await import('./vendor');
+    await yieldToMain();
+    await import('./app/router');
+    await yieldToMain();
+  }
+  const { start } = await import('./start');
+  start(container, serverRendered);
+}
+
+void boot(root);

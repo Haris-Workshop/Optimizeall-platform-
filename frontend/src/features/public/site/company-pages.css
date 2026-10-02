@@ -270,12 +270,9 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .oa-co-hero__copy > :not(.oa-co-hero__title, .site-breadcrumbs) {
-    animation: oa-co-rise 700ms var(--ease-standard) both; /* the h1 (LCP) paints immediately */
-  }
-
-  .oa-co-hero__copy > .oa-co-hero__lead {
-    animation-delay: 80ms;
+  /* The h1 and the lead (the largest-contentful-paint candidates) paint immediately; the rest rises in. */
+  .oa-co-hero__copy > :not(.oa-co-hero__title, .oa-co-hero__lead, .site-breadcrumbs) {
+    animation: oa-co-rise 700ms var(--ease-standard) both;
   }
 
   .oa-co-hero__copy > .oa-co-hero__actions,

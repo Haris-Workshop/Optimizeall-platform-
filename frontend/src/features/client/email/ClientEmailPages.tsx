@@ -24,6 +24,7 @@ import type { CampaignReport, ClientCampaignItem, EmailKpis, PagedResult, Render
 import { CampaignReportView } from '@/features/agency/email/reports/CampaignReportView';
 import { ApprovalBadge, CampaignStatusBadge, rate } from '@/features/agency/email/shared/ui';
 import '@/features/agency/email/email.css';
+import { HtmlPreviewFrame } from '@/components/HtmlPreviewFrame';
 
 /** Client portal API for this area (relative to /api/v1). */
 export const CLIENT_EMAIL_API = '/client/email';
@@ -231,7 +232,7 @@ function Preview({ id }: { id: string }) {
         Subject: <strong>{preview.data.subject || '(no subject)'}</strong> · shown with sample contact details
       </p>
       <div className="email-preview__frame-wrap">
-        <iframe title="Email preview" className="email-preview__frame" sandbox="" srcDoc={preview.data.html} />
+        <HtmlPreviewFrame title="Email preview" className="email-preview__frame" html={preview.data.html} />
       </div>
     </div>
   );

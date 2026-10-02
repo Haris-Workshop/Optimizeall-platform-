@@ -24,6 +24,7 @@ import { api } from '@/lib/api/client';
 import { isApiError } from '@/lib/api/errors';
 import { QueryError } from '../shared/common';
 import { adminErrorMessage, isConflict, toDisplayError } from '../shared/errors';
+import { HtmlPreviewFrame } from '@/components/HtmlPreviewFrame';
 
 export interface EmailTemplateSummary {
   key: string;
@@ -262,12 +263,7 @@ function TemplateEditor({ templateKey, onClose }: { templateKey: string; onClose
                 <strong>Subject:</strong> {preview.data.subject}
               </p>
               {preview.data.html && (
-                <iframe
-                  className="admin-email__frame"
-                  title={`HTML preview of ${t.name}`}
-                  sandbox=""
-                  srcDoc={preview.data.html}
-                />
+                <HtmlPreviewFrame className="admin-email__frame" title={`HTML preview of ${t.name}`} html={preview.data.html} />
               )}
               <details open={!preview.data.html}>
                 <summary>Plain-text version</summary>

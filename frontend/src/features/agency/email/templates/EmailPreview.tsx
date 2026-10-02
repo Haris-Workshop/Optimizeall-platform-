@@ -9,10 +9,11 @@ import { formatBytes } from '@/lib/format/text';
 import { useDebouncedValue } from '@/lib/hooks/useDebouncedValue';
 import { EMAIL_API } from '../api/queries';
 import type { EmailDesign, RenderResult } from '../api/types';
+import { HtmlPreviewFrame } from '@/components/HtmlPreviewFrame';
 
 /**
  * Server-rendered preview with sample data, on a desktop or mobile width. The HTML is shown in a sandboxed iframe
- * (no scripts, no same-origin access).
+ * (HtmlPreviewFrame: no scripts; its styles are applied through the CSSOM under the strict CSP).
  */
 export function EmailPreview({
   clientId,
@@ -82,11 +83,10 @@ export function EmailPreview({
             </Alert>
           )}
           <div className="email-preview__frame-wrap">
-            <iframe
+            <HtmlPreviewFrame
               title={`Email preview (${device})`}
               className={device === 'mobile' ? 'email-preview__frame email-preview__frame--mobile' : 'email-preview__frame'}
-              sandbox=""
-              srcDoc={render.data.html}
+              html={render.data.html}
             />
           </div>
           <details>

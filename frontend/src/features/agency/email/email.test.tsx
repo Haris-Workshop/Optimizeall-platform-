@@ -83,7 +83,7 @@ describe('Template editor preview', () => {
     await user.type(await screen.findByLabelText(/^Subject/), 'Hi {{{{first_name}}');
 
     const frame = await screen.findByTitle('Email preview (desktop)', {}, { timeout: 3000 });
-    expect(frame).toHaveAttribute('sandbox', '');
+    expect(frame).toHaveAttribute('sandbox', 'allow-same-origin');
     await waitFor(() => expect(frame.getAttribute('srcdoc')).toContain('Hello Ada'));
     await waitFor(() => expect(screen.getByText('Hi Ada')).toBeInTheDocument(), { timeout: 3000 });
     expect(screen.getByText('Add alt text to every image.')).toBeInTheDocument();

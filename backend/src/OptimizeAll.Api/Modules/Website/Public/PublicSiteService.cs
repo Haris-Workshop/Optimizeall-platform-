@@ -22,7 +22,7 @@ namespace OptimizeAll.Api.Modules.Website.Public;
 /// in an unpublished category), industries, case studies, testimonials, team members and pages answer 404 / are left out.
 /// </summary>
 public sealed class PublicSiteService(
-    AppDbContext db, SiteSettingsService settingsService, IPublicOrigin publicOrigin, TimeProvider clock)
+    AppDbContext db, SiteSettingsService settingsService, SiteSeo.SeoSettingsService seoSettings, IPublicOrigin publicOrigin, TimeProvider clock)
 {
     private SiteSettings? _settings;
     private Catalog? _catalog;
@@ -102,7 +102,8 @@ public sealed class PublicSiteService(
         var booking = await db.Set<ConsultationSettings>().AsNoTracking().Where(x => x.Key == ConsultationSettings.DefaultKey)
             .Select(x => (bool?)x.IsEnabled).FirstOrDefaultAsync(ct) ?? false;
         return new PublicSiteDto(s.SiteName, s.Tagline, s.Header, s.Footer, s.Contact, s.Social, s.TrustLogos, s.Announcement,
-            s.Seo with { SiteUrl = await BaseUrlAsync(ct) }, s.Analytics, menu, ConsentTexts.Dto, booking);
+            s.Seo with { SiteUrl = await BaseUrlAsync(ct) }, s.Analytics, menu, ConsentTexts.Dto, booking,
+            (await seoSettings.GetAsync(ct)).LlmsTxtEnabled);
     }
 
     public async Task<HomeDto> HomeAsync(CancellationToken ct)

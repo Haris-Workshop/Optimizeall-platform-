@@ -40,7 +40,7 @@ Contents: [Public site](#public-site) · [Public forms](#public-forms) · [SEO f
 
 | Method & path | Returns |
 |---|---|
-| `GET /api/v1/public/site` | Site name, header menu + CTA, footer, contact, social, trust logos, announcement bar, default SEO, analytics ids, `serviceMenu` (published categories → services for the mega-menu), consent texts and versions, `bookingEnabled`. |
+| `GET /api/v1/public/site` | Site name, header menu + CTA, footer, contact, social, trust logos, announcement bar, default SEO, analytics ids, `serviceMenu` (published categories → services for the mega-menu), consent texts and versions, `bookingEnabled`, `llmsTxt` (whether /llms.txt is published; the footer links it). |
 | `GET /api/v1/public/home` | `serviceCategories`, `featuredCaseStudies`, `testimonials`, `industries`, `latestPosts`, `pricingTeaser`, `stats`, `trustLogos`, `seo`, `jsonLd` (Organization + WebSite). |
 | `GET /api/v1/public/services` | Published categories with their published services (`startingPrice` = cheapest active priced package). |
 | `GET /api/v1/public/services/{slug}` | Service detail: hero, overview Markdown, problems solved, deliverables, process steps, tools, KPIs, FAQs, active `packages`, related services, case studies, testimonials, `seo`, `jsonLd` (Service with Offers, FAQPage, BreadcrumbList). |

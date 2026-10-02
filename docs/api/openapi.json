@@ -114521,10 +114521,13 @@
           },
           "bookingEnabled": {
             "type": "boolean"
+          },
+          "llmsTxt": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false,
-        "description": "`GET /public/site`: everything the header, footer, consent banner and head manager need."
+        "description": "`GET /public/site`: everything the header, footer, consent banner and head manager need. `LlmsTxt`: whether\n/llms.txt is published (Website → SEO), so the footer links it next to the sitemap."
       },
       "Website.Public.PublicTeamMemberDto": {
         "type": "object",

@@ -106,6 +106,15 @@ function LegalRow({ onCookieSettings, social = false }: { onCookieSettings: () =
               <FooterLink link={{ label: s.platform, url: s.url }} />
             </li>
           ))}
+        {/* Machine-readable versions of the site, for crawlers and AI assistants (files, not app routes). */}
+        <li>
+          <a href="/sitemap.xml">Sitemap</a>
+        </li>
+        {site?.llmsTxt && (
+          <li>
+            <a href="/llms.txt">llms.txt</a>
+          </li>
+        )}
       </ul>
     </div>
   );

@@ -77,6 +77,8 @@ export interface PublicSite {
   serviceMenu: MenuCategory[];
   consent: ConsentTexts;
   bookingEnabled: boolean;
+  /** Whether /llms.txt is published (the footer links it; absent from older APIs). */
+  llmsTxt?: boolean;
 }
 
 export interface Price {

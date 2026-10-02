@@ -14,11 +14,14 @@ public sealed record MenuServiceDto(string Slug, string Name, string Tagline, st
 
 public sealed record MenuCategoryDto(string Slug, string Name, string? Description, string? Icon, IReadOnlyList<MenuServiceDto> Services);
 
-/// <summary><c>GET /public/site</c>: everything the header, footer, consent banner and head manager need.</summary>
+/// <summary>
+/// <c>GET /public/site</c>: everything the header, footer, consent banner and head manager need. <c>LlmsTxt</c>: whether
+/// /llms.txt is published (Website → SEO), so the footer links it next to the sitemap.
+/// </summary>
 public sealed record PublicSiteDto(
     string SiteName, string Tagline, HeaderSettings Header, FooterSettings Footer, ContactSettings Contact, IReadOnlyList<SocialProfile> Social,
     IReadOnlyList<TrustLogo> TrustLogos, AnnouncementBar Announcement, DefaultSeo Seo, AnalyticsSettings Analytics,
-    IReadOnlyList<MenuCategoryDto> ServiceMenu, ConsentTextsDto Consent, bool BookingEnabled);
+    IReadOnlyList<MenuCategoryDto> ServiceMenu, ConsentTextsDto Consent, bool BookingEnabled, bool LlmsTxt);
 
 public sealed record PriceDto(decimal Amount, string Currency, PackageBillingPeriod BillingPeriod);
 

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../support/csp';
 import { BASE, PRIVATE_PAGES, noJsPage, parseHead } from './support/seo';
 
 /**

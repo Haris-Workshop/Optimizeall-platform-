@@ -42,7 +42,9 @@ http {
     listen 127.0.0.1:$api_port;
     default_type text/html;
     location = /_document/ { return 200 '<!doctype html><h1>API home</h1>'; }
-    location = /_document/page { add_header Strict-Transport-Security "max-age=2592000" always; return 200 '<!doctype html><h1>API page</h1>'; }
+    location = /_document/page { add_header Strict-Transport-Security "max-age=2592000" always; add_header X-OA-Style-Hashes "'sha256-cGFnZQ=='"; return 200 '<!doctype html><h1>API page</h1>'; }
+    # Style hashes nginx must refuse to put into the CSP (anything but 'sha256-…' sources).
+    location = /_document/bad-hashes { add_header X-OA-Style-Hashes "'sha256-cGFnZQ==' 'unsafe-inline'"; return 200 '<!doctype html><h1>API page</h1>'; }
     location = /_document/missing { return 404 '<!doctype html><h1>API not found</h1>'; }
     location = /_document/gone { return 410 '<!doctype html><h1>API gone</h1>'; }
     location = /_document/moved { return 301 /page; }
@@ -74,7 +76,7 @@ EOF
   echo "  server {"
   echo "    listen 127.0.0.1:$ssr_port;"
   echo "    default_type text/html;"
-  echo "    location = /_document/rendered { return 200 '<!doctype html><h1>Rendered by the renderer</h1>'; }"
+  echo "    location = /_document/rendered { add_header X-OA-Style-Hashes \"'sha256-YXBp' 'sha256-cmVuZGVyZWQ='\"; return 200 '<!doctype html><h1>Rendered by the renderer</h1>'; }"
   echo "    location = /_document/ssr-api-down { default_type application/problem+json; return 503 '{\"status\":503}'; }"
   echo "    location / { return 502; }"
   echo "  }"
@@ -149,6 +151,27 @@ for path in / /page /app /favicon.svg; do
   expect_header "$path" "^strict-transport-security: max-age=31536000" https
   expect_no_header "$path" "^strict-transport-security" ""
 done
+# The exact Content-Security-Policy (frontend/src/app/csp.ts, nginx/snippets/security-headers.conf): strict for scripts
+# and styles; a page's inline <style> elements only by the hashes its server lists in X-OA-Style-Hashes (never passed to
+# the browser, and ignored unless it is a list of 'sha256-…' sources); upgrade-insecure-requests on https only.
+csp() {
+  echo "default-src 'self'; script-src 'self'; style-src 'self'${1:-}; img-src 'self' data: blob: https://i.ytimg.com ; font-src 'self' data:; connect-src 'self'; media-src 'self' blob: ; frame-src 'self' https://www.youtube-nocookie.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'${2:-}"
+}
+# expect_csp PATH EXPECTED_POLICY [FORWARDED_PROTO]: exactly one CSP header, with exactly this value.
+expect_csp() {
+  local got
+  got=$(headers_of "$1" "${3:-}" | grep -i '^content-security-policy:' | sed 's/^[^:]*: //')
+  if [ "$got" = "$2" ]; then ok "$1${3:+ ($3)}: exact CSP"; else warn "$1${3:+ ($3)}: CSP is [$got], expected [$2]"; failures=$((failures + 1)); fi
+}
+for path in /app /favicon.svg /index.html /missing /moved; do expect_csp "$path" "$(csp)"; done
+expect_csp /app "$(csp '' '; upgrade-insecure-requests')" https
+expect_csp /page "$(csp " 'sha256-cGFnZQ=='")"
+expect_csp /page "$(csp " 'sha256-cGFnZQ=='" '; upgrade-insecure-requests')" https
+expect_csp /rendered "$(csp " 'sha256-YXBp' 'sha256-cmVuZGVyZWQ='")"
+expect_csp /bad-hashes "$(csp)"
+for path in /page /rendered /bad-hashes; do expect_no_header "$path" "^x-oa-style-hashes"; done
+if headers_of / | grep -qi "unsafe-inline"; then warn "/: unsafe-inline in a header"; failures=$((failures + 1)); fi
+
 if [ "$(headers_of /page https | grep -ci '^strict-transport-security')" != 1 ]; then
   warn "/page (https): expected exactly one Strict-Transport-Security header"; failures=$((failures + 1))
 fi

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../support/csp';
 import { ApiSession } from '../journeys/support/api';
 import { BASE, expectValidJsonLd, noJsPage, readHead } from './support/seo';
 

@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test, type Browser } from '@playwright/test';
+import { guardCsp } from '../support/csp';
 import { BASE } from './support/seo';
 
 /**
@@ -22,6 +23,7 @@ interface Vitals {
 
 async function measure(browser: Browser, path: string, shellOnly: string | null): Promise<Vitals> {
   const context = await browser.newContext({ baseURL: BASE, viewport: { width: 1280, height: 800 } });
+  const csp = await guardCsp(context);
   const page = await context.newPage();
   await page.addInitScript(() => {
     const w = window as unknown as { __vitals: { lcp: number; cls: number } };
@@ -54,6 +56,7 @@ async function measure(browser: Browser, path: string, shellOnly: string | null)
     const fcp = performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? 0;
     return { lcp: w.__vitals.lcp, cls: w.__vitals.cls, fcp, ttfb: nav.responseStart };
   });
+  csp.expectNone(path);
   await context.close();
   return { ...vitals, h1 };
 }

@@ -1,4 +1,5 @@
-import { expect, test, type Route } from '@playwright/test';
+import { type Route } from '@playwright/test';
+import { expect, test } from '../support/csp';
 import { authResponse, hasHorizontalScroll, mockApi, participant, problem } from '../support/mockApi';
 
 const ok = (body: unknown) => (route: Route) =>

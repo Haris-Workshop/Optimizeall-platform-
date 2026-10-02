@@ -1,4 +1,5 @@
-import { expect, type Page, type Route, test } from '@playwright/test';
+import { type Page, type Route } from '@playwright/test';
+import { expect, test } from '../support/csp';
 import { hasHorizontalScroll, mockApi } from '../support/mockApi';
 
 /**

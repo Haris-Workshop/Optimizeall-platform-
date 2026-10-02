@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../support/csp';
 import { authResponse, hasHorizontalScroll, mockApi, participant, problem } from '../support/mockApi';
 
 test.describe('public site', () => {

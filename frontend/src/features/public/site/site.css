@@ -3629,9 +3629,30 @@ button.site-chip {
  * Sections below a page's first one are laid out and painted only when they come near the viewport
  * (content-visibility: auto): the first paint of a server-rendered page lays out its top, not all of it, and
  * offscreen decoration costs nothing. contain-intrinsic-size reserves an estimated height until a section has been
- * rendered once and then remembers its real height. */
-.public-main > * > section:not(:first-child),
-.site-layout > .public-footer {
+ * rendered once and then remembers its real height. The long lists inside a page (service lines, every service's
+ * prices, blog cards, a lesson's text) get the same treatment item by item, each with its typical height. */
+.public-main > * > :is(section, .oa-h-proof, .oa-a-dark):not(:first-child),
+.site-layout > .public-footer,
+.oa-a-lines > .oa-a-line,
+.oa-a-pricelist > .oa-a-pricing,
+.oa-co-posts > li,
+.lx-lesson > section:not(:first-child) {
   content-visibility: auto;
   contain-intrinsic-size: auto 720px;
+}
+
+.public-main > * > :is(.oa-h-proof, .oa-a-dark):not(:first-child) {
+  contain-intrinsic-size: auto 2400px;
+}
+
+.oa-a-lines > .oa-a-line {
+  contain-intrinsic-size: auto 960px;
+}
+
+.oa-a-pricelist > .oa-a-pricing {
+  contain-intrinsic-size: auto 1650px;
+}
+
+.oa-co-posts > li {
+  contain-intrinsic-size: auto 400px;
 }

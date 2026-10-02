@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { useParams, useSearchParams, type RouteObject } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { ErrorState, Skeleton } from '@/components/ui';
 import { getVisitorId } from '@/features/public/landing/landingApi';
 import { MovedOrNotFound } from '@/features/public/site/redirects';
@@ -174,11 +174,3 @@ export function EmbeddedFormPage() {
   );
 }
 
-/**
- * Anonymous routes for the root router (mount as siblings of the public/auth layouts, outside any app chrome):
- * `/lp/:client/:slug` landing pages and `/f/:formId` embeddable forms.
- */
-export const publicRoutes: RouteObject[] = [
-  { path: 'lp/:client/:slug', element: <PublicLandingPageView /> },
-  { path: 'f/:formId', element: <EmbeddedFormPage /> },
-];

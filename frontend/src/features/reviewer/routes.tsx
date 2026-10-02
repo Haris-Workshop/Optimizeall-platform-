@@ -3,7 +3,6 @@ import { BadgeCheck, Inbox, LayoutDashboard, Radar, Scale, TicketPercent } from 
 import type { RouteObject } from 'react-router-dom';
 import type { PortalNavItem } from '@/app/portalTypes';
 import { type PermissionRequirement, Permissions } from '@/lib/auth/permissions';
-import './reviewer.css';
 
 const AppealDetailPage = lazyPage(() => import('./pages/AppealDetailPage'), 'AppealDetailPage');
 const AppealsPage = lazyPage(() => import('./pages/AppealsPage'), 'AppealsPage');

@@ -1,6 +1,4 @@
 import type { RouteObject } from 'react-router-dom';
-import { FaqPage } from './FaqPage';
-import { LandingPage } from './LandingPage';
 import { StaticRedirect } from './site/redirects';
 
 /**
@@ -12,8 +10,8 @@ import { StaticRedirect } from './site/redirects';
  */
 export const publicRoutes: RouteObject[] = [
   { index: true, lazy: async () => ({ Component: (await import('./pages/HomePage')).HomePage }) },
-  { path: 'creators', element: <LandingPage /> },
-  { path: 'creators/faq', element: <FaqPage /> },
+  { path: 'creators', lazy: async () => ({ Component: (await import('./LandingPage')).LandingPage }) },
+  { path: 'creators/faq', lazy: async () => ({ Component: (await import('./FaqPage')).FaqPage }) },
   { path: 'faq', element: <StaticRedirect to="/creators/faq" /> },
   { path: 'services', lazy: async () => ({ Component: (await import('./pages/ServicePages')).ServicesPage }) },
   { path: 'services/:slug', lazy: async () => ({ Component: (await import('./pages/ServicePages')).ServiceDetailPage }) },

@@ -75,21 +75,23 @@ export function seoShell(apiTarget: string): Plugin {
       });
       server.middlewares.use((req, res, next) => void render(req, res, next, shell).catch(next));
     },
-    // Preload the Latin subset of the self-hosted Inter font: it is then ready before the app's first render, so text
-    // never re-wraps when the font swaps in (a layout shift on the hero headline). The file is the one the build
-    // actually emits for the axis set src/main.tsx imports (currently `@fontsource-variable/inter/opsz.css`, i.e.
-    // inter-latin-opsz-normal); the Latin-extended and italic files are not preloaded.
+    // Preload the Latin subsets of the self-hosted fonts: Inter (body text) and Inter Tight (headings, so every page's
+    // h1, its largest contentful paint). They are then ready before the app's first render, so text never re-wraps when
+    // a font swaps in (a layout shift on the hero headline), and the headline's font does not wait for the stylesheet
+    // to be parsed. The files are the ones the build actually emits for the axis sets src/main.tsx imports (currently
+    // `@fontsource-variable/inter/opsz.css` → inter-latin-opsz-normal and `@fontsource-variable/inter-tight/wght.css`
+    // → inter-tight-latin-wght-normal); the Latin-extended and italic files are not preloaded.
     transformIndexHtml: {
       order: 'post',
       handler(html, ctx) {
-        const font = Object.keys(ctx.bundle ?? {}).find((f) =>
-          /inter-latin-[a-z]+-normal-[^/]+\.woff2$/.test(f),
-        );
-        if (!font) return html;
-        return html.replace(
-          '</head>',
-          `  <link rel="preload" as="font" type="font/woff2" href="/${font}" crossorigin />\n  </head>`,
-        );
+        const files = Object.keys(ctx.bundle ?? {});
+        const fonts = [
+          files.find((f) => /(^|\/)inter-latin-[a-z]+-normal-[^/]+\.woff2$/.test(f)),
+          files.find((f) => /(^|\/)inter-tight-latin-[a-z]+-normal-[^/]+\.woff2$/.test(f)),
+        ].filter((f): f is string => Boolean(f));
+        if (fonts.length === 0) return html;
+        const links = fonts.map((f) => `  <link rel="preload" as="font" type="font/woff2" href="/${f}" crossorigin />\n`).join('');
+        return html.replace('</head>', `${links}  </head>`);
       },
     },
     writeBundle() {

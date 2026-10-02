@@ -99,7 +99,7 @@ describe('seoShell plugin (vite / vite preview, mirrors nginx @document)', () =>
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('preloads the Latin Inter file the build emits for the imported axis set (opsz), not Latin-extended or italic', () => {
+  it('preloads the Latin Inter and Inter Tight files the build emits for the imported axis sets, not Latin-extended or italic', () => {
     const plugin = seoShell('http://127.0.0.1:5080');
     const hook = plugin.transformIndexHtml as {
       handler: (html: string, ctx: { bundle?: Record<string, unknown> }) => string;
@@ -108,11 +108,16 @@ describe('seoShell plugin (vite / vite preview, mirrors nginx @document)', () =>
       'assets/inter-latin-ext-opsz-normal-AAA.woff2': {},
       'assets/inter-latin-opsz-italic-BBB.woff2': {},
       'assets/inter-latin-opsz-normal-CCC.woff2': {},
+      'assets/inter-tight-latin-ext-wght-normal-DDD.woff2': {},
+      'assets/inter-tight-latin-wght-normal-EEE.woff2': {},
     };
     const html = hook.handler('<html><head></head><body></body></html>', { bundle });
     expect(html).toContain(
       '<link rel="preload" as="font" type="font/woff2" href="/assets/inter-latin-opsz-normal-CCC.woff2" crossorigin />',
     );
-    expect(html.match(/rel="preload"/g)).toHaveLength(1);
+    expect(html).toContain(
+      '<link rel="preload" as="font" type="font/woff2" href="/assets/inter-tight-latin-wght-normal-EEE.woff2" crossorigin />',
+    );
+    expect(html.match(/rel="preload"/g)).toHaveLength(2);
   });
 });

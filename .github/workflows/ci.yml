@@ -122,6 +122,8 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - name: Bundle budgets (entry JS/CSS of the public site, lazy chunks, total; scripts/check-bundle-budget.mjs)
+        run: npm run budget
       - name: No source maps in the build (nginx serves dist/ publicly)
         run: |
           if find dist -name '*.map' | grep .; then

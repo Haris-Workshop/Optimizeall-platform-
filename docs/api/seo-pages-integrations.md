@@ -184,14 +184,9 @@ logs or audit entries. `IntegrationExpiryJob` (daily, idempotent per connection/
 
 * Agency areas export `nav`, `routes`, `opensWith` from `features/agency/{seo,pages,integrations}/routes.tsx`;
   the client area from `features/client/seo/routes.tsx`. No edits to `portals.ts` were needed.
-* Public routes are exported as `publicRoutes` from `features/agency/pages/publicRoutes.tsx`
-  (`lp/:client/:slug`, `f/:formId`). Mount them in `app/router.tsx` as children of the root route **outside**
-  `PublicLayout`, so client pages and embedded forms render without the platform header/footer:
-
-  ```tsx
-  import { publicRoutes as landingRoutes } from '@/features/agency/pages/publicRoutes';
-  // routes[0].children:
-  ...landingRoutes,
-  ```
+* The public views `PublicLandingPageView` (`lp/:client/:slug`) and `EmbeddedFormPage` (`f/:formId`) live in
+  `features/agency/pages/publicRoutes.tsx`. `app/router.tsx` mounts them as lazy routes (`lazy: () => import(…)`) and
+  children of the root route **outside** `PublicLayout`, so client pages and embedded forms render without the platform
+  header/footer and their code stays out of the public website's entry bundle.
 * `AppLinks`: notification links point at `/agency/pages/forms/{formId}/submissions` (`FormLinks.Submissions`) and
   `/agency/integrations`; mirror them in the shared link helper if one is added.

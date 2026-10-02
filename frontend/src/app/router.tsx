@@ -1,27 +1,43 @@
 import { createBrowserRouter, Outlet, ScrollRestoration, type RouteObject } from 'react-router-dom';
-import { CheckEmailPage } from '@/features/auth/CheckEmailPage';
-import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage';
-import { GoogleCallbackPage } from '@/features/auth/google/GoogleCallbackPage';
-import { LoginPage } from '@/features/auth/LoginPage';
-import { RegisterPage } from '@/features/auth/RegisterPage';
-import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
-import { VerifyEmailPage } from '@/features/auth/VerifyEmailPage';
-import { CampaignLandingPage } from '@/features/public/landing/CampaignLandingPage';
-import { JoinPage } from '@/features/public/landing/JoinPage';
 import { NotFound } from '@/features/public/NotFound';
 import { RouteErrorPage } from '@/features/public/RouteErrorPage';
 import { publicRoutes } from '@/features/public/routes';
 import { AuthProvider } from '@/lib/auth/AuthProvider';
 import { RedirectIfAuthenticated, RequireAuth, RequirePermission } from './guards';
-import { AuthLayout } from './layouts/AuthLayout';
-import { PortalLayout } from './layouts/PortalLayout';
+import { lazyPage } from './lazyPage';
 import { publicRoutes as billingPublicRoutes } from '@/features/agency/billing/publicRoutes';
 import { publicRoutes as crmPublicRoutes } from '@/features/agency/crm/publicRoutes';
 import { publicRoutes as emailPublicRoutes } from '@/features/agency/email/publicRoutes';
-import { publicRoutes as pagesPublicRoutes } from '@/features/agency/pages/publicRoutes';
 import { PublicLayout } from './layouts/PublicLayout';
 import { portals } from './portals';
 import type { PortalRouteHandle } from './portalTypes';
+
+// Code-split: the public website's entry bundle carries neither the sign-in pages nor the portal shell (nor the CSS
+// they import); each loads the first time it renders. The client bundle budget (scripts/check-bundle-budget.mjs) keeps
+// it that way.
+const AuthLayout = lazyPage(() => import('./layouts/AuthLayout'), 'AuthLayout');
+const PortalLayout = lazyPage(() => import('./layouts/PortalLayout'), 'PortalLayout');
+const LoginPage = lazyPage(() => import('@/features/auth/LoginPage'), 'LoginPage');
+const RegisterPage = lazyPage(() => import('@/features/auth/RegisterPage'), 'RegisterPage');
+const CheckEmailPage = lazyPage(() => import('@/features/auth/CheckEmailPage'), 'CheckEmailPage');
+const VerifyEmailPage = lazyPage(() => import('@/features/auth/VerifyEmailPage'), 'VerifyEmailPage');
+const ForgotPasswordPage = lazyPage(() => import('@/features/auth/ForgotPasswordPage'), 'ForgotPasswordPage');
+const ResetPasswordPage = lazyPage(() => import('@/features/auth/ResetPasswordPage'), 'ResetPasswordPage');
+const GoogleCallbackPage = lazyPage(() => import('@/features/auth/google/GoogleCallbackPage'), 'GoogleCallbackPage');
+const JoinPage = lazyPage(() => import('@/features/public/landing/JoinPage'), 'JoinPage');
+const CampaignLandingPage = lazyPage(() => import('@/features/public/landing/CampaignLandingPage'), 'CampaignLandingPage');
+
+/** Client landing pages (/lp/:client/:slug) and embeddable forms (/f/:formId) render without the site chrome. */
+const pagesPublicRoutes: RouteObject[] = [
+  {
+    path: 'lp/:client/:slug',
+    lazy: async () => ({ Component: (await import('@/features/agency/pages/publicRoutes')).PublicLandingPageView }),
+  },
+  {
+    path: 'f/:formId',
+    lazy: async () => ({ Component: (await import('@/features/agency/pages/publicRoutes')).EmbeddedFormPage }),
+  },
+];
 
 /** The design-system showcase ships in development and in builds with VITE_SHOW_DESIGN_SYSTEM=true (staging). */
 export const showDesignSystem = import.meta.env.DEV || import.meta.env.VITE_SHOW_DESIGN_SYSTEM === 'true';

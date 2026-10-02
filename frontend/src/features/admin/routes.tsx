@@ -16,7 +16,6 @@ import type { ReactElement } from 'react';
 import type { RouteObject } from 'react-router-dom';
 import type { PortalNavItem } from '@/app/portalTypes';
 import { type PermissionRequirement, Permissions } from '@/lib/auth/permissions';
-import './admin.css';
 
 const AnalyticsPage = lazyPage(() => import('./analytics/AnalyticsPage'), 'AnalyticsPage');
 const AuditLogPage = lazyPage(() => import('./audit/AuditLogPage'), 'AuditLogPage');

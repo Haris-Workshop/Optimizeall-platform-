@@ -3,10 +3,10 @@ import { Mail, MessageSquareText } from 'lucide-react';
 import type { RouteObject } from 'react-router-dom';
 import type { PortalNavItem } from '@/app/portalTypes';
 import { type PermissionRequirement, Permissions } from '@/lib/auth/permissions';
-import { CampaignEditorPage } from './campaigns/CampaignEditorPage';
-import { CampaignReportPage } from './campaigns/CampaignReportPage';
-import { CampaignsPage } from './campaigns/CampaignsPage';
 
+const CampaignEditorPage = lazyPage(() => import('./campaigns/CampaignEditorPage'), 'CampaignEditorPage');
+const CampaignReportPage = lazyPage(() => import('./campaigns/CampaignReportPage'), 'CampaignReportPage');
+const CampaignsPage = lazyPage(() => import('./campaigns/CampaignsPage'), 'CampaignsPage');
 const ListDetailPage = lazyPage(() => import('./audience/ListDetailPage'), 'ListDetailPage');
 const ListsPage = lazyPage(() => import('./audience/ListsPage'), 'ListsPage');
 const SubscriberPage = lazyPage(() => import('./audience/SubscriberPage'), 'SubscriberPage');

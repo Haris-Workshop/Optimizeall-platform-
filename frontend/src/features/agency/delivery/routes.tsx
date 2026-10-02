@@ -12,7 +12,6 @@ import {
 import type { RouteObject } from 'react-router-dom';
 import type { PortalNavItem } from '@/app/portalTypes';
 import { type PermissionRequirement, Permissions } from '@/lib/auth/permissions';
-import './delivery.css';
 
 const ClientDetailPage = lazyPage(() => import('./ClientDetailPage'), 'ClientDetailPage');
 const ClientsPage = lazyPage(() => import('./ClientsPage'), 'ClientsPage');

@@ -13,9 +13,8 @@ import {
 import type { RouteObject } from 'react-router-dom';
 import type { PortalNavItem } from '@/app/portalTypes';
 import { type PermissionRequirement, Permissions } from '@/lib/auth/permissions';
-import { BatchReviewPage } from './batch/BatchReviewPage';
-import './finance.css';
 
+const BatchReviewPage = lazyPage(() => import('./batch/BatchReviewPage'), 'BatchReviewPage');
 const LedgerPage = lazyPage(() => import('./ledger/LedgerPage'), 'LedgerPage');
 const UserBalancePage = lazyPage(() => import('./ledger/UserBalancePage'), 'UserBalancePage');
 const ApprovalsPage = lazyPage(() => import('./pages/ApprovalsPage'), 'ApprovalsPage');

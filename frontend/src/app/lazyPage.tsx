@@ -6,9 +6,13 @@ import { Spinner } from '@/components/ui/Spinner';
  * portal only load the code they use. Keeps `element: <Page />` route definitions (and the permission guards that wrap
  * them) unchanged.
  */
-export function lazyPage<M, K extends keyof M & string>(load: () => Promise<M>, name: K): ComponentType {
-  const LazyComponent = lazy(async () => ({ default: (await load())[name] as ComponentType }));
-  function LazyPage() {
+/** The props of a component type (pages that take props, e.g. `channel`, keep them through lazyPage). */
+type PropsOf<C> = C extends ComponentType<infer P> ? P : Record<string, never>;
+
+export function lazyPage<M, K extends keyof M & string>(load: () => Promise<M>, name: K): ComponentType<PropsOf<M[K]>> {
+  type P = PropsOf<M[K]>;
+  const LazyComponent = lazy(async () => ({ default: (await load())[name] as ComponentType<Record<string, unknown>> }));
+  function LazyPage(props: P) {
     return (
       <Suspense
         fallback={
@@ -17,7 +21,7 @@ export function lazyPage<M, K extends keyof M & string>(load: () => Promise<M>, 
           </div>
         }
       >
-        <LazyComponent />
+        <LazyComponent {...(props as Record<string, unknown>)} />
       </Suspense>
     );
   }

@@ -31,6 +31,12 @@ import { ImpersonationBanner } from './ImpersonationBanner';
 import { NotificationBell } from './NotificationBell';
 import { NotificationSettingsDialog } from './NotificationSettingsDialog';
 import './PortalLayout.css';
+// Portal-wide styles of the portals' route modules: imported here (the lazily loaded portal shell) rather than by the
+// route definitions, so the public website's render-blocking stylesheet does not carry them.
+import '@/features/admin/admin.css';
+import '@/features/finance/finance.css';
+import '@/features/reviewer/reviewer.css';
+import '@/features/agency/delivery/delivery.css';
 
 /** Portals whose staff get the global search / command palette (Ctrl/Cmd+K). */
 const PALETTE_PORTALS = new Set(['agency', 'admin']);

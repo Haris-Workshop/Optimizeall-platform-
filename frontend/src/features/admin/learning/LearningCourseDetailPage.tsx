@@ -94,6 +94,8 @@ function Overview({ detail, canManage }: { detail: AdminCourseDetail; canManage:
   const toast = useToast();
   const [featured, setFeatured] = useState(c.isFeatured);
   const [sortOrder, setSortOrder] = useState(String(c.sortOrder));
+  const [noIndex, setNoIndex] = useState(!!c.noIndex);
+  const [hideFromSitemap, setHideFromSitemap] = useState(!!c.hideFromSitemap);
   const onError = (e: unknown) => toast.error('The change wasn’t saved', adminErrorMessage(e));
   return (
     <div className="stack">
@@ -170,12 +172,24 @@ function Overview({ detail, canManage }: { detail: AdminCourseDetail; canManage:
             <FormField label="Sort order" hint="Lower numbers come first.">
               <Input type="number" min={0} max={10000} value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} />
             </FormField>
+            <Switch
+              checked={noIndex}
+              onCheckedChange={setNoIndex}
+              label="Hide from search engines (noindex)"
+              description="The course page and its lessons ask search engines not to index them, and leave the sitemap."
+            />
+            <Switch
+              checked={hideFromSitemap}
+              onCheckedChange={setHideFromSitemap}
+              label="Hide from the sitemap"
+              description="The course stays indexable but is left out of sitemap.xml and llms.txt."
+            />
             <div>
               <Button
                 loading={m.settings.isPending}
                 onClick={() =>
                   m.settings.mutate(
-                    { isFeatured: featured, sortOrder: Number(sortOrder) || 0, concurrencyStamp: c.concurrencyStamp },
+                    { isFeatured: featured, sortOrder: Number(sortOrder) || 0, noIndex, hideFromSitemap, concurrencyStamp: c.concurrencyStamp },
                     { onError, onSuccess: () => toast.success('Catalog placement saved') },
                   )
                 }

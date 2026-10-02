@@ -54,6 +54,7 @@ interface Draft {
   metaDescription: string;
   ogImageUrl: string;
   noIndex: boolean;
+  hideFromSitemap: boolean;
   experimentEnabled: boolean;
   variants: Variant[];
 }
@@ -65,6 +66,7 @@ const fromDetail = (p: PageDetail): Draft => ({
   metaDescription: p.metaDescription ?? '',
   ogImageUrl: p.ogImageUrl ?? '',
   noIndex: p.noIndex,
+  hideFromSitemap: !!p.hideFromSitemap,
   experimentEnabled: p.experimentEnabled,
   variants: p.variants,
 });
@@ -135,6 +137,7 @@ function PageBuilder({ page: initial }: { page: PageDetail }) {
         metaDescription: draft.metaDescription || null,
         ogImageUrl: draft.ogImageUrl || null,
         noIndex: draft.noIndex,
+        hideFromSitemap: draft.hideFromSitemap,
         experimentEnabled: draft.experimentEnabled,
         variants: draft.variants,
         concurrencyStamp: page.concurrencyStamp,
@@ -453,6 +456,12 @@ function SettingsPanel({ draft, onChange, errors }: { draft: Draft; onChange: (p
             <Input value={draft.ogImageUrl} onChange={(ev) => onChange({ ogImageUrl: ev.target.value })} />
           </FormField>
           <Checkbox label="Hide from search engines (noindex)" description="Use for thank-you pages, paid-only campaigns and tests." checked={draft.noIndex} onChange={(ev) => onChange({ noIndex: ev.target.checked })} />
+          <Checkbox
+            label="Hide from the sitemap"
+            description="The published page stays indexable but is left out of sitemap.xml. Applies as soon as you save."
+            checked={draft.hideFromSitemap}
+            onChange={(ev) => onChange({ hideFromSitemap: ev.target.checked })}
+          />
           <Alert tone="info" title="Tracking and analytics">
             Pages never contain third-party scripts. Views and conversions are measured by the platform; consent-gated analytics tags are configured once in the website settings.
           </Alert>

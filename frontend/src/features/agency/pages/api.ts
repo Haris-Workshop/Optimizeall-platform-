@@ -153,6 +153,8 @@ export interface PageDetail {
   metaDescription: string | null;
   ogImageUrl: string | null;
   noIndex: boolean;
+  /** Left out of the sitemaps while indexable (applies at once, not versioned). */
+  hideFromSitemap?: boolean;
   templateKey: string | null;
   variants: Variant[];
   experimentEnabled: boolean;

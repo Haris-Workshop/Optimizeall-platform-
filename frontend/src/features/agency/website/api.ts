@@ -15,6 +15,8 @@ export interface Seo {
   ogImageUrl: string | null;
   canonicalUrl: string | null;
   noIndex: boolean;
+  /** Left out of the sitemaps and llms.txt while still indexable. */
+  hideFromSitemap?: boolean;
 }
 
 export interface ServiceCategory {

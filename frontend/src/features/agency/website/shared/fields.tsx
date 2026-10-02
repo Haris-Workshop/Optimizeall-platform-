@@ -239,11 +239,17 @@ export function SeoFields({ value, onChange, errors }: { value: Seo; onChange: (
       <ImageField label="Social image" value={value.ogImageUrl} onChange={(v) => set('ogImageUrl', v)} error={errors['seo.ogImageUrl']} />
       <TextField label="Canonical URL" value={value.canonicalUrl} onChange={(v) => set('canonicalUrl', v)} error={errors['seo.canonicalUrl']} hint="Only when this content is published elsewhere first." />
       <SwitchField label="Hide from search engines (noindex)" checked={value.noIndex} onChange={(v) => set('noIndex', v)} description="Also removes the page from the sitemap." />
+      <SwitchField
+        label="Hide from the sitemap"
+        checked={!!value.hideFromSitemap}
+        onChange={(v) => set('hideFromSitemap', v)}
+        description="Search engines may still index the page, but it is left out of sitemap.xml and llms.txt. See Website → SEO → Sitemaps."
+      />
     </fieldset>
   );
 }
 
-export const EMPTY_SEO: Seo = { title: null, description: null, ogImageUrl: null, canonicalUrl: null, noIndex: false };
+export const EMPTY_SEO: Seo = { title: null, description: null, ogImageUrl: null, canonicalUrl: null, noIndex: false, hideFromSitemap: false };
 
 /** Generic editor for a list of small records (FAQs, process steps, metrics, links). */
 export function ListEditor<T>({

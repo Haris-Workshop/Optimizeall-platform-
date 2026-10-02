@@ -15,6 +15,10 @@ export interface AdminCourseRow {
   origin: CourseSource;
   isFeatured: boolean;
   sortOrder: number;
+  /** Search engines may not index the course and its lessons (also out of the sitemaps). */
+  noIndex?: boolean;
+  /** Left out of the sitemaps and llms.txt while indexable. */
+  hideFromSitemap?: boolean;
   lessonCount: number;
   publishedVersionNumber: number | null;
   latestVersionNumber: number | null;
@@ -242,7 +246,7 @@ export function useCourseMutations(id: string) {
       onSuccess: done,
     }),
     settings: useMutation({
-      mutationFn: (v: { isFeatured: boolean; sortOrder: number; concurrencyStamp: string }) =>
+      mutationFn: (v: { isFeatured: boolean; sortOrder: number; noIndex: boolean; hideFromSitemap: boolean; concurrencyStamp: string }) =>
         api.put<AdminCourseDetail>(`${base}/courses/${id}/settings`, v),
       onSuccess: done,
     }),

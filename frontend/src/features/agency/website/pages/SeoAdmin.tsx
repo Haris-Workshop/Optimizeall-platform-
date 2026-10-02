@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Alert,
   Badge,
   Button,
+  ConfirmDialog,
   DataTable,
   type DataTableColumn,
   Dialog,
@@ -24,6 +25,7 @@ import { errorMessage, isApiError } from '@/lib/api/errors';
 import { W } from '../api';
 import { AreaField, type Errors, SwitchField, TextField, toErrors } from '../shared/fields';
 import '../website.css';
+import { LlmsTab, RobotsTab, SitemapsTab } from './SeoFilesAdmin';
 
 export interface SeoWarning {
   code: string;
@@ -368,26 +370,35 @@ function CrawlersTab() {
   });
   const [draft, setDraft] = useState<SeoSettings | null>(null);
   const [errors, setErrors] = useState<Errors>({});
+  const [confirmSearch, setConfirmSearch] = useState(false);
   useEffect(() => {
     if (query.data && !draft) setDraft(query.data);
   }, [query.data, draft]);
 
   const save = useMutation({
-    mutationFn: (s: SeoSettings) =>
+    mutationFn: ({ s, confirmBlockSearch }: { s: SeoSettings; confirmBlockSearch: boolean }) =>
       api.put<SeoSettings>(`${W}/seo/settings`, {
         crawlerGroups: Object.fromEntries(s.crawlerGroups.map((g) => [g.key, g.allowed])),
         indexNowEnabled: s.indexNowEnabled,
         llmsTxtEnabled: s.llmsTxtEnabled,
         securityContactEmail: s.securityContactEmail || null,
+        confirmBlockSearch,
         concurrencyStamp: query.data!.concurrencyStamp,
       }),
     onSuccess: (saved) => {
       qc.setQueryData(['website', 'seo', 'settings'], saved);
+      // robots.txt, llms.txt and the files' concurrency stamp changed with these settings.
+      void qc.invalidateQueries({ queryKey: ['website', 'seo', 'files'] });
       setDraft(saved);
       setErrors({});
+      setConfirmSearch(false);
       toast.success('SEO settings saved');
     },
     onError: (e) => {
+      if (isApiError(e) && e.code === 'seo.confirm_block_search') {
+        setConfirmSearch(true);
+        return;
+      }
       if (isApiError(e)) setErrors(toErrors(e.errors));
       toast.error(errorMessage(e));
     },
@@ -456,27 +467,63 @@ function CrawlersTab() {
         />
       </fieldset>
       <div>
-        <Button onClick={() => save.mutate(draft)} loading={save.isPending}>
+        <Button onClick={() => save.mutate({ s: draft, confirmBlockSearch: false })} loading={save.isPending}>
           Save SEO settings
         </Button>
       </div>
+      <ConfirmDialog
+        open={confirmSearch}
+        onClose={() => setConfirmSearch(false)}
+        tone="danger"
+        title="Block search engines?"
+        description="Google, Bing and the other search engines will stop crawling the whole site, and its pages drop out of search results."
+        confirmText="BLOCK SEARCH"
+        confirmLabel="Block search engines"
+        onConfirm={() => save.mutateAsync({ s: draft, confirmBlockSearch: true }).then(() => undefined)}
+      >
+        <p>Type BLOCK SEARCH to confirm.</p>
+      </ConfirmDialog>
     </div>
   );
 }
 
+const TABS = ['pages', 'crawlers', 'robots', 'sitemaps', 'llms'] as const;
+
 /** Agency → Website → SEO: every public URL's search metadata with warnings, and the crawler / AI bot policy. */
 export function SeoAdminPage() {
+  const [params, setParams] = useSearchParams();
+  const requested = params.get('tab');
+  const tab = TABS.includes(requested as (typeof TABS)[number]) ? (requested as string) : 'pages';
+  const setTab = (id: string) =>
+    setParams(
+      (p) => {
+        const next = new URLSearchParams(p);
+        if (id === 'pages') next.delete('tab');
+        else next.set('tab', id);
+        return next;
+      },
+      { replace: true },
+    );
   return (
     <div className="stack">
       <PageHeader
         title="SEO"
-        description="What search engines, social networks and AI assistants see for every public page — titles, descriptions, canonical URLs, indexing and structured data — plus which crawlers may read the site."
+        description="What search engines, social networks and AI assistants see for every public page — titles, descriptions, canonical URLs, indexing and structured data — plus which crawlers may read the site and what robots.txt, the sitemaps and llms.txt contain."
       />
       <Tabs
         label="SEO sections"
+        value={tab}
+        onValueChange={setTab}
         tabs={[
           { id: 'pages', label: 'Pages', content: <OverviewTab /> },
           { id: 'crawlers', label: 'Crawlers & AI', content: <CrawlersTab /> },
+          {
+            id: 'robots',
+            label: 'robots.txt',
+            content: <RobotsTab onOpenCrawlers={() => setTab('crawlers')} />,
+          },
+          { id: 'sitemaps', label: 'Sitemaps', content: <SitemapsTab /> },
+          { id: 'llms', label: 'llms.txt', content: <LlmsTab /> },
         ]}
       />
     </div>

@@ -80,6 +80,7 @@ import { useAcademyOverview } from '../site/academy';
 import { AcademyHubExtras } from '../site/AcademyOverview';
 import { useSiteCopy } from '../site/copy';
 import { useDocumentHead } from '../site/head';
+import { siteNumber } from '../site/format';
 import { Markdown } from '../site/Markdown';
 import { useReveal } from '../site/motion';
 import { NotFound } from '../NotFound';
@@ -409,7 +410,7 @@ function HubSearch({ onSearch, placeholder }: { onSearch: (q: string) => void; p
 /** A figure that counts up once (immediately for reduced motion); the final value is what assistive technology reads. */
 function useCounted(value: number): string {
   const shown = useCountUp(value);
-  return shown.toLocaleString('en');
+  return siteNumber(shown);
 }
 
 export function AcademyPage() {

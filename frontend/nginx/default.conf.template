@@ -34,6 +34,20 @@ map $oa_forwarded_proto $oa_hsts {
     https   "max-age=31536000";
 }
 
+# upgrade-insecure-requests in the CSP (snippets/security-headers.conf) on HTTPS only, like HSTS.
+map $oa_forwarded_proto $oa_csp_upgrade {
+    default "";
+    https   "; upgrade-insecure-requests";
+}
+
+# CSP hashes of the inline <style> elements of a page (style-src in snippets/security-headers.conf): the API's document
+# and the server renderer list them in X-OA-Style-Hashes (src/app/csp.ts). Only a list of 'sha256-…' sources is
+# accepted; anything else (or no header: static files, the app shell) adds nothing. document.conf hides the header.
+map $upstream_http_x_oa_style_hashes $oa_style_hashes {
+    default "";
+    "~^'sha256-[A-Za-z0-9+/]+={0,2}'( 'sha256-[A-Za-z0-9+/]+={0,2}')*$" " $upstream_http_x_oa_style_hashes";
+}
+
 # The host (and port) the visitor used, for X-Forwarded-Host: the Host header as received (with a non-default port, e.g.
 # localhost:4173), or the server's own name for requests without one. The API validates it (Common/Hosting/PublicOrigin.cs).
 map $http_host $oa_forwarded_host {

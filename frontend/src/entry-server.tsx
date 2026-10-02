@@ -11,13 +11,14 @@
  * left pending, so the client fetches them exactly as it does today.
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { createHash } from 'node:crypto';
 import { dehydrate, QueryClient, type Query, type QueryFunction, type QueryKey } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { createStaticHandler, createStaticRouter, StaticRouterProvider } from 'react-router-dom/server';
 import { AppProviders } from './app/providers';
 import { routerFuture, routes } from './app/router';
-import { injectRenderedPage, pageAssets, type RenderInput, type RenderResult } from './app/ssrDocument';
+import { extractInlineStyles, injectRenderedPage, pageAssets, type RenderInput, type RenderResult } from './app/ssrDocument';
 import { setTransport } from './lib/api/client';
 import { isApiError } from './lib/api/errors';
 import { setServerOrigin } from './lib/ssr';
@@ -166,13 +167,17 @@ async function render(input: RenderInput): Promise<RenderResult> {
         .filter((q) => q.state.status === 'success' && typeof q.options.queryFn === 'function')
         .map((q) => ({ queryKey: q.queryKey, queryFn: q.options.queryFn as QueryFunction })),
     );
+    // The strict CSP blocks style attributes: the markup's inline styles go into one <style> element, allowed by its hash.
+    const styles = extractInlineStyles(html);
     const out = injectRenderedPage(document, {
-      html,
+      html: styles.html,
+      css: styles.css,
       state: dehydrate(queryClient),
       assets: pageAssets(input.manifest, ctx.modules),
     });
     queryClient.clear();
     if (out === null) return { rendered: false, reason: 'unexpected document shape' };
-    return { rendered: true, html: out, passes, ms: Math.round(performance.now() - started), renderMs };
+    const styleHashes = styles.css ? [`'sha256-${createHash('sha256').update(styles.css, 'utf8').digest('base64')}'`] : [];
+    return { rendered: true, html: out, styleHashes, passes, ms: Math.round(performance.now() - started), renderMs };
   });
 }

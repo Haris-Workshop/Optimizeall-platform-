@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -22,14 +23,26 @@ public static class SeoDocumentWriter
     /// <summary>
     /// Hides the server-rendered copy from browsers that run scripts (the React app renders the page; no flash of
     /// duplicate content). Crawlers without JavaScript and visitors with scripts off see it with these minimal styles.
+    /// The web app's strict CSP allows this one inline <c>&lt;style&gt;</c> element by its hash (<see cref="StyleHash"/>).
     /// </summary>
-    private const string InlineStyle =
-        "<style>@media (scripting:enabled){#oa-ssr{display:none}}" +
+    private const string InlineCss =
+        "@media (scripting:enabled){#oa-ssr{display:none}}" +
         ".oa-ssr{max-width:72rem;margin:0 auto;padding:1rem 1rem 3rem;font:1rem/1.6 system-ui,-apple-system,'Segoe UI',sans-serif;color:#141833}" +
         ".oa-ssr a{color:#243ab8}.oa-ssr img,.oa-ssr video,.oa-ssr iframe{max-width:100%;height:auto}" +
         ".oa-ssr nav ul,.oa-ssr nav ol,.oa-ssr footer ul{display:flex;flex-wrap:wrap;gap:.25rem 1rem;list-style:none;padding:0}" +
         ".oa-ssr__skip{position:absolute;left:-999px}.oa-ssr__skip:focus{left:1rem}.oa-ssr dt{font-weight:600}" +
-        ".oa-ssr footer{margin-top:3rem;border-top:1px solid #ccd;font-size:.9rem}</style>";
+        ".oa-ssr footer{margin-top:3rem;border-top:1px solid #ccd;font-size:.9rem}";
+
+    private const string InlineStyle = "<style>" + InlineCss + "</style>";
+
+    /// <summary>Response header listing the CSP hashes of the document's inline styles (frontend/src/app/csp.ts).</summary>
+    public const string StyleHashesHeader = "X-OA-Style-Hashes";
+
+    /// <summary>
+    /// The CSP source of the document's <c>&lt;style&gt;</c> element (<c>'sha256-…'</c>). Sent in
+    /// <see cref="StyleHashesHeader"/>: nginx and the server renderer put it into the page's <c>style-src</c>.
+    /// </summary>
+    public static readonly string StyleHash = "'sha256-" + Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(InlineCss))) + "'";
 
     private static readonly JsonSerializerOptions JsonOptions = new() { Encoder = JavaScriptEncoder.Default };
 

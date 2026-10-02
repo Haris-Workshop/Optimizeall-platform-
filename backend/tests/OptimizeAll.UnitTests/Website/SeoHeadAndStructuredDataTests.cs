@@ -33,6 +33,17 @@ public sealed class SeoHeadAndStructuredDataTests
         Assert.DoesNotContain("/llms.txt", hidden);
     }
 
+    [Fact]
+    public void The_document_has_one_style_element_whose_hash_the_csp_header_lists_and_no_style_attributes()
+    {
+        var html = SeoDocumentWriter.Write(Page(), Chrome, "Optimize All", null, "https://optimizeall.com");
+        var styles = System.Text.RegularExpressions.Regex.Matches(html, "<style>(.*?)</style>", System.Text.RegularExpressions.RegexOptions.Singleline);
+        var style = Assert.Single(styles);
+        var hash = Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(style.Groups[1].Value)));
+        Assert.Equal($"'sha256-{hash}'", SeoDocumentWriter.StyleHash);
+        Assert.DoesNotMatch(@"\sstyle\s*=", html);
+    }
+
     [Theory]
     [InlineData("https://x.com/og/a.png?v=1", "image/png")]
     [InlineData("https://x.com/api/v1/files/abc", null)]

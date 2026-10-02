@@ -4,7 +4,7 @@ import '@fontsource-variable/inter-tight/wght.css';
 // Global styles first so component styles (imported through the app) can override them.
 import './styles/tokens.css';
 import './styles/base.css';
-import { SSR_MODULES_ATTR, SSR_ROOT_ATTR } from './app/ssrDocument';
+import { restoreInlineStyles, SSR_MODULES_ATTR, SSR_ROOT_ATTR } from './app/ssrDocument';
 
 /**
  * The entry is deliberately tiny: it only decides when the app starts (src/start.tsx). A server-rendered page is
@@ -69,6 +69,9 @@ async function boot(container: HTMLElement) {
     await yieldToMain();
   }
   const { start } = await import('./start');
+  // The server moved the markup's inline styles into a hashed <style> block (strict CSP): they become element styles
+  // again, exactly as React rendered them, right before it hydrates.
+  if (serverRendered) restoreInlineStyles(container);
   start(container, serverRendered);
 }
 

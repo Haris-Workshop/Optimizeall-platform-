@@ -183,6 +183,11 @@ public sealed class TechnicalSeoTests(ApiFactory api) : IClassFixture<ApiFactory
         Assert.Equal(HttpStatusCode.OK, doc.Status);
         Assert.Equal("text/html", doc.Response.Content.Headers.ContentType!.MediaType);
         Assert.False(doc.Response.Headers.Contains("X-Robots-Tag"), "Indexable pages carry no X-Robots-Tag");
+        // Strict CSP (frontend/src/app/csp.ts): no style attributes; the one <style> element is listed by hash for nginx.
+        Assert.Equal(SeoDocumentWriter.StyleHash, doc.Response.Headers.GetValues(SeoDocumentWriter.StyleHashesHeader).Single());
+        Assert.Empty(doc.Html.QuerySelectorAll("[style]"));
+        Assert.Single(doc.Html.QuerySelectorAll("style"));
+        Assert.False(doc.Response.Headers.Contains("Content-Security-Policy"), "the web server sets the page's CSP");
 
         var title = doc.Html.Title!;
         Assert.InRange(title.Length, 15, 60);

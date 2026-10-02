@@ -34,6 +34,8 @@ const { renderDocument } = await import(pathToFileURL(entry).href);
 
 /** Request headers passed on to the API (the document and the renderer's data requests). */
 const FORWARD = ['x-forwarded-for', 'x-forwarded-proto', 'x-forwarded-host', 'x-real-ip', 'user-agent', 'accept-language'];
+/** Lists the CSP hashes of the document's inline <style> elements (same name as STYLE_HASHES_HEADER in src/app/csp.ts). */
+const STYLE_HASHES_HEADER = 'x-oa-style-hashes';
 /** Response headers of the API that are not passed back (the body is re-encoded here). */
 const DROP = new Set(['content-length', 'content-encoding', 'transfer-encoding', 'connection', 'keep-alive']);
 
@@ -106,6 +108,10 @@ const server = createServer(async (req, res) => {
   const result = rendering ? await rendering : null;
   if (result?.rendered) {
     body = Buffer.from(result.html, 'utf8');
+    // The CSP hashes of the document's <style> elements: the API's own plus the page's inline-style block (nginx puts
+    // them into style-src and hides the header; src/app/csp.ts).
+    const hashes = [out[STYLE_HASHES_HEADER], ...result.styleHashes].filter(Boolean).join(' ');
+    if (hashes) out[STYLE_HASHES_HEADER] = hashes;
     if (verbose) console.log(`ssr: ${pageUrl} rendered in ${result.ms} ms (${result.passes} passes, ${result.renderMs.join('+')} ms rendering)`);
   } else if (result && (result.reason.startsWith('Error') || verbose)) {
     console.error(`ssr: ${pageUrl} not rendered: ${result.reason}`);

@@ -1,6 +1,20 @@
+import type { CSSProperties } from 'react';
+import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { SHELL_BODY_INCLUDE, SHELL_HEAD_INCLUDE } from './seoShellCore';
-import { injectRenderedPage, pageAssets, serializeState, SSR_MODULES_ATTR, SSR_ROOT_ATTR, SSR_STATE_ID, type Manifest } from './ssrDocument';
+import {
+  extractInlineStyles,
+  injectRenderedPage,
+  pageAssets,
+  restoreInlineStyles,
+  serializeState,
+  SSR_MODULES_ATTR,
+  SSR_ROOT_ATTR,
+  SSR_STATE_ID,
+  SSR_STYLE_ATTR,
+  SSR_STYLE_ID,
+  type Manifest,
+} from './ssrDocument';
 
 const manifest: Manifest = {
   'index.html': {
@@ -91,5 +105,76 @@ describe('injectRenderedPage', () => {
   it('leaves documents of another shape alone', () => {
     expect(injectRenderedPage('<!doctype html><p>no shell</p>', page)).toBeNull();
     expect(injectRenderedPage(apiDocument.replace(SHELL_BODY_INCLUDE, ''), page)).toBeNull();
+  });
+});
+
+describe('extractInlineStyles / restoreInlineStyles (strict CSP: no style attributes in HTML)', () => {
+  const hostile = 'red}body{display:none}</style><script>alert(1)</script>/*';
+  const markup = renderToString(
+    <div className="hero" style={{ '--i': 2 } as CSSProperties}>
+      <p style={{ fontFamily: '"Inter Tight", sans-serif', width: '40%' }} title='say style="x"'>
+        style=&quot;not an attribute&quot; and {'style="text"'}
+      </p>
+      <svg viewBox="0 0 10 10">
+        <rect className="bar" style={{ '--i': 2 } as CSSProperties} width="2" height="2" />
+      </svg>
+      <span style={{ color: hostile }} />
+      <span data-style="kept" />
+    </div>,
+  );
+
+  it('moves every style attribute into one rule per distinct value, outranking class selectors', () => {
+    const { html, css } = extractInlineStyles(markup);
+    expect(html).not.toMatch(/\sstyle="/);
+    expect(html).toContain(`${SSR_STYLE_ATTR}="--i:2"`);
+    expect(html).toContain('data-style="kept"');
+    // Text and other attributes that mention style="…" are untouched (React escapes their quotes).
+    expect(html).toContain('title="say style=&quot;x&quot;"');
+    expect(html).toContain('style=&quot;text&quot;');
+    expect(css.match(/\{--i:2\}/g)).toHaveLength(1);
+    expect(css).toContain(`[${SSR_STYLE_ATTR}="--i:2"]:not(#oa-x):not(#oa-x):not(#oa-x){--i:2}`);
+    expect(css).toContain('{font-family:"Inter Tight", sans-serif;width:40%}');
+  });
+
+  it('keeps hostile values inside their rule and the style element', () => {
+    const { css } = extractInlineStyles(markup);
+    expect(css).not.toMatch(/<|>/);
+    // Exactly one opening and one closing brace per rule: nothing in a value can end the rule or open another.
+    expect(css.match(/\{/g)).toHaveLength(3);
+    expect(css.match(/\}/g)).toHaveLength(3);
+    expect(css).not.toContain('/*');
+  });
+
+  it('applies the same styles in the browser, then restores them as element styles before hydration', () => {
+    const { html, css } = extractInlineStyles(markup);
+    const style = document.createElement('style');
+    style.id = SSR_STYLE_ID;
+    style.textContent = css;
+    document.head.appendChild(style);
+    const root = document.createElement('div');
+    root.innerHTML = html;
+    document.body.appendChild(root);
+    // Every element is matched by the rule for its own value (and by no other).
+    const rules = [...style.sheet!.cssRules] as CSSStyleRule[];
+    for (const el of root.querySelectorAll(`[${SSR_STYLE_ATTR}]`)) {
+      const matching = rules.filter((r) => el.matches(r.selectorText));
+      expect(matching, el.outerHTML).toHaveLength(1);
+    }
+    const hostileEl = root.querySelectorAll('span')[0]!;
+    expect(hostileEl.getAttribute(SSR_STYLE_ATTR)).toBe(`color:${hostile}`);
+
+    restoreInlineStyles(root);
+    expect(root.querySelector(`[${SSR_STYLE_ATTR}]`)).toBeNull();
+    expect(document.getElementById(SSR_STYLE_ID)).toBeNull();
+    expect((root.querySelector('p') as HTMLElement).style.width).toBe('40%');
+    expect((root.querySelector('rect') as SVGElement).style.getPropertyValue('--i')).toBe('2');
+    root.remove();
+  });
+
+  it('puts the block after the page stylesheets in the head', () => {
+    const doc = `<html><head>${SHELL_HEAD_INCLUDE}</head><body><div id="root"><div id="oa-ssr"></div></div>${SHELL_BODY_INCLUDE}</body></html>`;
+    const out = injectRenderedPage(doc, { html: '<p data-oa-style="--i:1"></p>', css: 'x{y:z}', state: {}, assets: { css: ['/a.css'], js: [] } })!;
+    expect(out).toContain(`<link rel="stylesheet" crossorigin href="/a.css">\n<style id="${SSR_STYLE_ID}">x{y:z}</style>`);
+    expect(injectRenderedPage(doc, { html: '<p></p>', css: '', state: {}, assets: { css: [], js: [] } })).not.toContain('<style');
   });
 });

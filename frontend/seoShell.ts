@@ -10,6 +10,7 @@ import {
   isDocumentRequest,
   type Shell,
 } from './src/app/seoShellCore';
+import { contentSecurityPolicy, STYLE_HASHES_HEADER } from './src/app/csp';
 import type { Manifest, Renderer } from './src/app/ssrDocument';
 
 type ServerRenderer = { renderer: Renderer; manifest: Manifest };
@@ -24,6 +25,9 @@ type ServerRenderer = { renderer: Renderer; manifest: Manifest };
  * - `vite preview` also renders public pages with the built server renderer (dist-ssr/entry-server.js), as the
  *   production SSR server does (server/ssr-server.mjs). The dev server keeps the API's plain copy and renders in the
  *   browser.
+ * - `vite preview` sends the production Content-Security-Policy (src/app/csp.ts) on everything but the proxied API,
+ *   with the style hashes of each document, as nginx does: the e2e suites run the app under the real policy. (The dev
+ *   server does not: Vite injects its styles as inline <style> elements.)
  */
 export function seoShell(apiTarget: string): Plugin {
   let outDir = 'dist';
@@ -36,6 +40,7 @@ export function seoShell(apiTarget: string): Plugin {
     next: Connect.NextFunction,
     shell: () => Promise<Shell>,
     ssr?: () => Promise<ServerRenderer | null>,
+    csp = false,
   ) {
     if (!isDocumentRequest(req.method, req.url)) return next();
     const headers = { 'user-agent': String(req.headers['user-agent'] ?? ''), 'x-forwarded-proto': 'http' };
@@ -57,6 +62,7 @@ export function seoShell(apiTarget: string): Plugin {
     res.statusCode = upstream.status;
     if (upstream.status >= 300 && upstream.status < 400) return res.end();
     let document = await upstream.text();
+    const styleHashes = [upstream.headers.get(STYLE_HASHES_HEADER) ?? ''];
     const server = upstream.status === 200 && req.method === 'GET' && ssr ? await ssr() : null;
     if (server) {
       const result = await server.renderer
@@ -69,9 +75,12 @@ export function seoShell(apiTarget: string): Plugin {
           origin: `http://${req.headers.host ?? 'localhost'}`,
         })
         .catch((error: unknown) => ({ rendered: false as const, reason: String(error) }));
-      if (result.rendered) document = result.html;
-      else if (result.reason.startsWith('Error')) console.warn(`[ssr] ${req.url}: ${result.reason}`);
+      if (result.rendered) {
+        document = result.html;
+        styleHashes.push(...result.styleHashes);
+      } else if (result.reason.startsWith('Error')) console.warn(`[ssr] ${req.url}: ${result.reason}`);
     }
+    if (csp) res.setHeader('content-security-policy', contentSecurityPolicy({ styleHashes: styleHashes.filter(Boolean).join(' ') }));
     const html = fillShell(document, await shell());
     res.setHeader('content-length', Buffer.byteLength(html));
     res.end(req.method === 'HEAD' ? undefined : html);
@@ -108,7 +117,12 @@ export function seoShell(apiTarget: string): Plugin {
                 manifest: JSON.parse(readFileSync(manifestFile, 'utf8')) as Manifest,
               }))
             : Promise.resolve(null));
-      server.middlewares.use((req, res, next) => void render(req, res, next, shell, ssr).catch(next));
+      // Every response but the proxied API's gets the production CSP; documents get their style hashes in render().
+      server.middlewares.use((req, res, next) => {
+        if (!/^\/(api|t|e|health)(\/|$)/.test(req.url ?? '/')) res.setHeader('content-security-policy', contentSecurityPolicy());
+        next();
+      });
+      server.middlewares.use((req, res, next) => void render(req, res, next, shell, ssr, true).catch(next));
     },
     // Preload the Latin subsets of the self-hosted fonts: Inter (body text) and Inter Tight (headings, so every page's
     // h1, its largest contentful paint). They are then ready before the app's first render, so text never re-wraps when

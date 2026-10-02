@@ -22,6 +22,13 @@ export const SSR_ROOT_ATTR = 'data-oa-hydrate';
 export const SSR_MODULES_ATTR = 'data-oa-modules';
 /** id of the `<script type="application/json">` holding the dehydrated React Query cache. */
 export const SSR_STATE_ID = 'oa-query-state';
+/**
+ * Attribute that carries an element's inline style in server-rendered markup (in place of `style`, which the strict CSP
+ * blocks in HTML): see {@link extractInlineStyles} and {@link restoreInlineStyles}.
+ */
+export const SSR_STYLE_ATTR = 'data-oa-style';
+/** id of the `<style>` element that applies the {@link SSR_STYLE_ATTR} styles until the app starts. */
+export const SSR_STYLE_ID = 'oa-ssr-styles';
 
 export interface RenderInput {
   /** Path and query string of the page, e.g. `/blog?page=2`. */
@@ -42,7 +49,15 @@ export interface RenderInput {
 }
 
 export type RenderResult =
-  | { rendered: true; html: string; passes: number; ms: number; renderMs: number[] }
+  | {
+      rendered: true;
+      html: string;
+      /** CSP sources (`'sha256-…'`) of the `<style>` elements the renderer added (X-OA-Style-Hashes, src/app/csp.ts). */
+      styleHashes: string[];
+      passes: number;
+      ms: number;
+      renderMs: number[];
+    }
   | { rendered: false; reason: string };
 
 /** What the server build (dist-ssr/entry-server.js) exports. */
@@ -118,9 +133,64 @@ export function serializeState(state: unknown): string {
 
 const escapeAttr = (value: string) => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
+/** The characters React escapes in attribute values (escapeTextForBrowser), decoded. */
+const decodeAttr = (value: string) =>
+  value
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+
+/**
+ * CSS text for a style attribute's value that can never leave its rule or the `<style>` element: braces, angle
+ * brackets, backslashes, comment starts and line breaks become CSS escapes (the same characters inside strings and
+ * identifiers; React's style values do not use them otherwise).
+ */
+const cssSafe = (value: string) =>
+  value.replace(/[\\{}<>\r\n\f]/g, (c) => `\\${c.charCodeAt(0).toString(16)} `).replace(/\/\*/g, '/\\2a ');
+
+/**
+ * The strict CSP blocks `style="…"` attributes in HTML. This moves the inline styles of React's server-rendered markup
+ * into one `<style>` element, allowed by its hash (src/app/csp.ts): every `style` attribute becomes `data-oa-style`
+ * with the same value, and each distinct value gets one rule that applies it to the elements carrying it. The rules
+ * outrank class selectors (three `:not(#oa-x)`, an id no element has), as the attribute did, so the first paint is the
+ * same. Once the app starts, {@link restoreInlineStyles} turns them back into real inline styles through the CSSOM
+ * (which CSP allows) before React hydrates.
+ *
+ * React escapes `"` in text and attribute values, so ` style="` only ever starts an attribute in its markup.
+ */
+export function extractInlineStyles(html: string): { html: string; css: string } {
+  const rules = new Map<string, string>();
+  const out = html.replace(/(\s)style="([^"]*)"/g, (_match, space: string, escaped: string) => {
+    const value = decodeAttr(escaped);
+    if (!rules.has(value)) {
+      const css = cssSafe(value);
+      rules.set(value, `[${SSR_STYLE_ATTR}="${css.replace(/"/g, '\\22 ')}"]:not(#oa-x):not(#oa-x):not(#oa-x){${css}}`);
+    }
+    return `${space}${SSR_STYLE_ATTR}="${escaped}"`;
+  });
+  return { html: out, css: [...rules.values()].join('') };
+}
+
+/**
+ * Browser, before hydrating a server-rendered page: the {@link SSR_STYLE_ATTR} values become inline styles again
+ * (element.style, the CSSOM, which the CSP allows) and the server's style block goes, so the DOM is exactly what React
+ * rendered and later style changes (removed properties too) apply as usual.
+ */
+export function restoreInlineStyles(root: ParentNode, doc: Document = document): void {
+  root.querySelectorAll<HTMLElement | SVGElement>(`[${SSR_STYLE_ATTR}]`).forEach((el) => {
+    el.style.cssText = el.getAttribute(SSR_STYLE_ATTR) ?? '';
+    el.removeAttribute(SSR_STYLE_ATTR);
+  });
+  doc.getElementById(SSR_STYLE_ID)?.remove();
+}
+
 export interface RenderedPage {
-  /** The app's markup for `#root`. */
+  /** The app's markup for `#root`, inline styles moved out ({@link extractInlineStyles}). */
   html: string;
+  /** The markup's inline-style rules, in a `<style>` element after the page's stylesheets. */
+  css?: string;
   /** Dehydrated React Query state. */
   state: unknown;
   assets: PageAssets;
@@ -131,8 +201,9 @@ const ROOT_OPEN = '<div id="root">';
 /**
  * Puts the rendered page into the API's document: the app's markup replaces the plain server copy inside `#root`
  * (marked for hydration, with the page's chunks to preload), the page's stylesheets follow the shell's head include
- * (after the app's stylesheets, so page styles still override them), and the query state goes right after `#root`. Returns null when the
- * document does not have the expected shape (it is then served unchanged).
+ * (after the app's stylesheets, so page styles still override them) with the markup's inline-style block, and the query
+ * state goes right after `#root`. Returns null when the document does not have the expected shape (it is then served
+ * unchanged).
  */
 export function injectRenderedPage(document: string, page: RenderedPage): string | null {
   const headAt = document.indexOf(SHELL_HEAD_INCLUDE);
@@ -143,7 +214,10 @@ export function injectRenderedPage(document: string, page: RenderedPage): string
   const rootClose = document.lastIndexOf('</div>', bodyAt);
   if (rootClose < rootAt) return null;
 
-  const links = page.assets.css.map((href) => `<link rel="stylesheet" crossorigin href="${escapeAttr(href)}">`).join('\n');
+  const links = [
+    ...page.assets.css.map((href) => `<link rel="stylesheet" crossorigin href="${escapeAttr(href)}">`),
+    ...(page.css ? [`<style id="${SSR_STYLE_ID}">${page.css}</style>`] : []),
+  ].join('\n');
   const modules = page.assets.js.length ? ` ${SSR_MODULES_ATTR}="${escapeAttr(page.assets.js.join(' '))}"` : '';
   const headEnd = headAt + SHELL_HEAD_INCLUDE.length;
   return (

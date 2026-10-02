@@ -76,6 +76,8 @@ public sealed class SeoDocumentController(SeoPageResolver resolver, SeoSettingsS
 
         if (!page.IsIndexable) Response.Headers["X-Robots-Tag"] = page.Robots;
         Response.Headers.ContentLanguage = "en";
+        // The web server's CSP allows the document's inline <style> element by this hash (style-src stays strict).
+        Response.Headers[SeoDocumentWriter.StyleHashesHeader] = SeoDocumentWriter.StyleHash;
         // HTML is revalidated on every visit (the shell's hashed asset names change on deploy); the ETag makes that a 304.
         Response.Headers.CacheControl = "no-cache";
         var etag = "W/\"" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(html)))[..32].ToLowerInvariant() + "\"";

@@ -33,6 +33,22 @@ describe('AuthProvider', () => {
     expect(calls.filter((c) => c.path === '/auth/refresh')).toHaveLength(1);
   });
 
+  it('skips the refresh call on public pages when the session hint cookie is absent', async () => {
+    document.cookie = 'oa_signed_in=; path=/; max-age=0';
+    const { calls } = mockFetch({ 'POST /auth/refresh': () => json(200, session(makeUser())) });
+    renderWithApp(<Probe />, { route: '/services' });
+    expect(await screen.findByText('status:anonymous')).toBeInTheDocument();
+    expect(calls.filter((c) => c.path === '/auth/refresh')).toHaveLength(0);
+  });
+
+  it('still restores a session without the hint in the signed-in areas', async () => {
+    document.cookie = 'oa_signed_in=; path=/; max-age=0';
+    const { calls } = mockFetch({ 'POST /auth/refresh': () => json(200, session(makeUser())) });
+    renderWithApp(<Probe />, { route: '/app' });
+    expect(await screen.findByText('status:authenticated')).toBeInTheDocument();
+    expect(calls.filter((c) => c.path === '/auth/refresh')).toHaveLength(1);
+  });
+
   it('becomes anonymous when there is no session', async () => {
     mockFetch({ 'POST /auth/refresh': () => problem(401, 'auth.session_expired', 'Expired') });
     renderWithApp(<Probe />);

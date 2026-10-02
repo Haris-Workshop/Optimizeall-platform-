@@ -8,6 +8,7 @@ import { AuthContext, type AuthContextValue, type AuthStatus } from './authConte
 import { announceSignOut, onSignOutElsewhere } from './crossTab';
 import { getDeviceId } from './deviceId';
 import { hasAnyPermission as hasAny, hasPermission as has } from './permissions';
+import { shouldRestoreSession } from './sessionHint';
 import { IMPERSONATION_EXIT_PATH, loginPathAfterExpiry, SIGNED_OUT_PATH } from './sessionPaths';
 
 /** Refresh this long before the access token expires. */
@@ -50,9 +51,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ status: 'authenticated', user: session.user, expiresAt: session.expiresAt });
   }, []);
 
-  // Bootstrap: try to restore the session from the refresh cookie.
+  // Bootstrap: try to restore the session from the refresh cookie (skipped on public pages when no session can exist).
   useEffect(() => {
     let cancelled = false;
+    if (!shouldRestoreSession(locationRef.current.pathname)) {
+      setState({ status: 'anonymous', user: null, expiresAt: null });
+      return;
+    }
     refreshSession()
       .then((session) => {
         if (!cancelled) applySession(session);

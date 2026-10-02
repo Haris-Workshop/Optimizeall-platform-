@@ -42,6 +42,9 @@ Element.prototype.scrollIntoView = vi.fn();
 
 beforeEach(() => {
   setViewportWidth(1280);
+  // Most tests mock POST /auth/refresh as a signed-in browser would see it: with the API's session hint cookie set
+  // (src/lib/auth/sessionHint.ts). Tests of the anonymous case clear it.
+  document.cookie = 'oa_signed_in=1; path=/';
 });
 
 afterEach(() => {

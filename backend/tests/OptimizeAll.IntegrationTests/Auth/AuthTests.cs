@@ -146,6 +146,31 @@ public sealed class AuthTests(ApiFactory api) : IClassFixture<ApiFactory>
         (await client.SendAsync(Refresh(newCookie))).EnsureSuccessStatusCode();
     }
 
+    [Fact]
+    public async Task Sign_in_sets_a_readable_session_hint_next_to_the_refresh_cookie_and_sign_out_removes_it()
+    {
+        var user = await api.CreateUserAsync();
+        var client = CookielessClient();
+        var login = await client.PostAsJsonAsync("/api/v1/auth/login", new { email = user.Email, password = user.Password });
+        login.EnsureSuccessStatusCode();
+        var cookies = login.Headers.GetValues("Set-Cookie").ToList();
+
+        // The refresh cookie stays first (and HttpOnly, auth path only); the hint carries no secret and is site-wide.
+        Assert.StartsWith("oa_refresh=", cookies[0], StringComparison.Ordinal);
+        var hint = Assert.Single(cookies, c => c.StartsWith("oa_signed_in=", StringComparison.Ordinal));
+        Assert.StartsWith("oa_signed_in=1;", hint, StringComparison.Ordinal);
+        Assert.Contains("path=/;", hint + ";", StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("httponly", hint, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("samesite=strict", hint, StringComparison.OrdinalIgnoreCase);
+
+        var logout = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
+        logout.Headers.Add("Cookie", RefreshCookieOf(login));
+        var loggedOut = await client.SendAsync(logout);
+        Assert.Equal(HttpStatusCode.NoContent, loggedOut.StatusCode);
+        var cleared = loggedOut.Headers.GetValues("Set-Cookie").Single(c => c.StartsWith("oa_signed_in=", StringComparison.Ordinal));
+        Assert.Contains("expires=Thu, 01 Jan 1970", cleared, StringComparison.OrdinalIgnoreCase);
+    }
+
     private HttpClient CookielessClient()
     {
         var client = api.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });

@@ -3,8 +3,14 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api, expireSession, onSessionEvent, refreshSession, tokenStore } from '@/lib/api/client';
 import { isApiError } from '@/lib/api/errors';
-import type { AuthResponse, MessageResponse, RegisterRequest, SessionUser } from '@/lib/api/types';
-import { AuthContext, type AuthContextValue, type AuthStatus } from './authContext';
+import type {
+  AuthResponse,
+  MessageResponse,
+  RegisterRequest,
+  SessionUser,
+  TwoFactorRequiredResponse,
+} from '@/lib/api/types';
+import { AuthContext, type AuthContextValue, type AuthStatus, type LoginOutcome } from './authContext';
 import { announceSignOut, onSignOutElsewhere } from './crossTab';
 import { getDeviceId } from './deviceId';
 import { hasAnyPermission as hasAny, hasPermission as has } from './permissions';
@@ -145,11 +151,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [state.status, state.expiresAt, state.user?.impersonatedBy]);
 
   const login = useCallback(
-    async (email: string, password: string) => {
-      const session = await api.post<AuthResponse>('/auth/login', { email, password });
+    async (email: string, password: string): Promise<LoginOutcome> => {
+      const response = await api.post<AuthResponse | TwoFactorRequiredResponse>('/auth/login', {
+        email,
+        password,
+      });
+      // Two-step verification: no session yet, the sign-in page asks for the code.
+      if ('twoFactor' in response) return { kind: 'twoFactor', challenge: response.twoFactor };
       queryClient.clear();
-      applySession(session);
-      return session.user;
+      applySession(response);
+      return { kind: 'signedIn', user: response.user };
     },
     [applySession, queryClient],
   );

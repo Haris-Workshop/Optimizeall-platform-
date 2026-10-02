@@ -7,14 +7,16 @@ import { Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/components/ui/toastContext';
 import { api } from '@/lib/api/client';
 import { isApiError } from '@/lib/api/errors';
-import type { GoogleCallbackResponse } from '@/lib/api/types';
+import type { GoogleCallbackResponse, TwoFactorChallenge } from '@/lib/api/types';
 import { useAuth } from '@/lib/auth/useAuth';
+import { TwoFactorSignInStep } from '../twoFactor/TwoFactorSignInStep';
 import { GoogleTermsStep } from './GoogleTermsStep';
 import '@/app/layouts/AuthLayout.css';
 
 type Phase =
   | { kind: 'working' }
   | { kind: 'terms'; response: GoogleCallbackResponse }
+  | { kind: 'twoFactor'; challenge: TwoFactorChallenge; next: string | null }
   | { kind: 'error'; title: string; message: string; code?: string };
 
 function googleErrorMessage(error: string): string {
@@ -69,6 +71,9 @@ export function GoogleCallbackPage() {
         } else if (response.status === 'linked') {
           toast.success('Google connected', 'You can now sign in with Google.');
           navigate(next ?? '/', { replace: true });
+        } else if (response.status === 'twoFactorRequired' && response.twoFactor) {
+          // Google proved who this is; the account's two-step verification still has to be completed.
+          setPhase({ kind: 'twoFactor', challenge: response.twoFactor, next });
         } else if (response.status === 'needsTerms' && response.ticket) {
           setPhase({ kind: 'terms', response });
         } else {
@@ -97,6 +102,17 @@ export function GoogleCallbackPage() {
   }, [phase.kind]);
 
   if (phase.kind === 'terms') return <GoogleTermsStep response={phase.response} />;
+  if (phase.kind === 'twoFactor')
+    return (
+      <TwoFactorSignInStep
+        challenge={phase.challenge}
+        onSignedIn={(session) => {
+          const signedIn = startSession(session);
+          navigate(defaultLandingPath(signedIn.permissions, phase.next), { replace: true });
+        }}
+        onRestart={() => navigate('/login', { replace: true })}
+      />
+    );
 
   return (
     <div className="auth-page">

@@ -8,6 +8,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Search,
+  ShieldCheck,
   UserRound,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -159,6 +160,12 @@ export function PortalLayout({ portal }: { portal: PortalDefinition }) {
           },
         ]
       : [
+          {
+            id: 'account-security',
+            label: 'Account security',
+            icon: <ShieldCheck />,
+            to: `${portal.basePath}/account/security`,
+          },
           {
             id: 'notification-settings',
             label: 'Notification settings',

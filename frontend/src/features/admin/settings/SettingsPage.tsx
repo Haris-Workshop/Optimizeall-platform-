@@ -74,7 +74,8 @@ function parseDraft(
   if (setting.valueType === 'boolean') return { value: Boolean(draft), errors: {} };
   if (setting.valueType === 'string') {
     const text = String(draft).trim();
-    if (meta?.maxLength && text.length > meta.maxLength) return { errors: { value: `Use at most ${meta.maxLength} characters.` } };
+    if (meta?.maxLength && text.length > meta.maxLength)
+      return { errors: { value: `Use at most ${meta.maxLength} characters.` } };
     return { value: text, errors: {} };
   }
   if (setting.valueType === 'integer') {
@@ -393,15 +394,26 @@ function SettingCard({ setting }: { setting: Setting }) {
         requireReason
         onConfirm={async ({ reason }) => {
           try {
-            const updated = await api.post<Setting>(`/admin/settings/${encodeURIComponent(setting.key)}/reset`, { reason, confirm: true });
-            queryClient.setQueryData<Setting[]>(settingsQueryKey, (list) => list?.map((s) => (s.key === updated.key ? updated : s)));
-            toast.success('Default restored', `${meta?.label ?? setting.key} is now ${formatValue(updated, updated.value)}.`);
+            const updated = await api.post<Setting>(
+              `/admin/settings/${encodeURIComponent(setting.key)}/reset`,
+              { reason, confirm: true },
+            );
+            queryClient.setQueryData<Setting[]>(settingsQueryKey, (list) =>
+              list?.map((s) => (s.key === updated.key ? updated : s)),
+            );
+            toast.success(
+              'Default restored',
+              `${meta?.label ?? setting.key} is now ${formatValue(updated, updated.value)}.`,
+            );
           } catch (error) {
             throw toDisplayError(error);
           }
         }}
       >
-        <KeyChange from={formatValue(setting, setting.value)} to={formatValue(setting, setting.defaultValue)} />
+        <KeyChange
+          from={formatValue(setting, setting.value)}
+          to={formatValue(setting, setting.defaultValue)}
+        />
       </ConfirmDialog>
       <ConfirmDialog
         open={pending !== undefined}
@@ -442,7 +454,15 @@ function KeyChange({ from, to }: { from: string; to: string }) {
 /** A fragment-safe id for a group heading (the section nav links to it). */
 const groupId = (group: string) => `group-${group.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
 
-const GROUP_ORDER: SettingMeta['group'][] = ['Eligibility', 'Fraud & review', 'Rates', 'Retention', 'Growth', 'Learning'];
+const GROUP_ORDER: SettingMeta['group'][] = [
+  'Security',
+  'Eligibility',
+  'Fraud & review',
+  'Rates',
+  'Retention',
+  'Growth',
+  'Learning',
+];
 
 export function SettingsPage() {
   const settings = useQuery({

@@ -1,7 +1,17 @@
 import { createContext } from 'react';
-import type { AuthResponse, Impersonator, RegisterRequest, SessionUser } from '@/lib/api/types';
+import type {
+  AuthResponse,
+  Impersonator,
+  RegisterRequest,
+  SessionUser,
+  TwoFactorChallenge,
+} from '@/lib/api/types';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'anonymous';
+
+/** A password sign-in either starts the session or needs the two-step verification step first. */
+export type LoginOutcome =
+  { kind: 'signedIn'; user: SessionUser } | { kind: 'twoFactor'; challenge: TwoFactorChallenge };
 
 export interface AuthContextValue {
   status: AuthStatus;
@@ -18,7 +28,8 @@ export interface AuthContextValue {
   signedOut: boolean;
   hasPermission: (permission: string) => boolean;
   hasAnyPermission: (permissions: readonly string[]) => boolean;
-  login: (email: string, password: string) => Promise<SessionUser>;
+  /** Password sign-in; resolves with the signed-in user, or the two-step verification challenge to complete. */
+  login: (email: string, password: string) => Promise<LoginOutcome>;
   /** Adopts a session established by another sign-in flow (e.g. Google); returns the signed-in user. */
   startSession: (session: AuthResponse) => SessionUser;
   logout: () => Promise<void>;

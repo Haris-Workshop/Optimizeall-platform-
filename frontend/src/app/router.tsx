@@ -23,19 +23,37 @@ const CheckEmailPage = lazyPage(() => import('@/features/auth/CheckEmailPage'), 
 const VerifyEmailPage = lazyPage(() => import('@/features/auth/VerifyEmailPage'), 'VerifyEmailPage');
 const ForgotPasswordPage = lazyPage(() => import('@/features/auth/ForgotPasswordPage'), 'ForgotPasswordPage');
 const ResetPasswordPage = lazyPage(() => import('@/features/auth/ResetPasswordPage'), 'ResetPasswordPage');
-const GoogleCallbackPage = lazyPage(() => import('@/features/auth/google/GoogleCallbackPage'), 'GoogleCallbackPage');
+const GoogleCallbackPage = lazyPage(
+  () => import('@/features/auth/google/GoogleCallbackPage'),
+  'GoogleCallbackPage',
+);
+const AccountSecurityPage = lazyPage(
+  () => import('@/features/auth/AccountSecurityPage'),
+  'AccountSecurityPage',
+);
+const AccountSecurityRedirect = lazyPage(
+  () => import('@/features/auth/AccountSecurityPage'),
+  'AccountSecurityRedirect',
+);
 const JoinPage = lazyPage(() => import('@/features/public/landing/JoinPage'), 'JoinPage');
-const CampaignLandingPage = lazyPage(() => import('@/features/public/landing/CampaignLandingPage'), 'CampaignLandingPage');
+const CampaignLandingPage = lazyPage(
+  () => import('@/features/public/landing/CampaignLandingPage'),
+  'CampaignLandingPage',
+);
 
 /** Client landing pages (/lp/:client/:slug) and embeddable forms (/f/:formId) render without the site chrome. */
 const pagesPublicRoutes: RouteObject[] = [
   {
     path: 'lp/:client/:slug',
-    lazy: async () => ({ Component: (await import('@/features/agency/pages/publicRoutes')).PublicLandingPageView }),
+    lazy: async () => ({
+      Component: (await import('@/features/agency/pages/publicRoutes')).PublicLandingPageView,
+    }),
   },
   {
     path: 'f/:formId',
-    lazy: async () => ({ Component: (await import('@/features/agency/pages/publicRoutes')).EmbeddedFormPage }),
+    lazy: async () => ({
+      Component: (await import('@/features/agency/pages/publicRoutes')).EmbeddedFormPage,
+    }),
   },
 ];
 
@@ -155,8 +173,22 @@ export const routes: RouteObject[] = [
             </RequirePermission>
           </RequireAuth>
         ),
-        children: [...guardPortalRoutes(portal.routes), { path: '*', element: <NotFound /> }],
+        children: [
+          ...guardPortalRoutes(portal.routes),
+          // Every portal: the signed-in user's own password, two-step verification and Google connection.
+          { path: 'account/security', element: <AccountSecurityPage /> },
+          { path: '*', element: <NotFound /> },
+        ],
       })),
+      // AppLinks.AccountSecurity (security emails): forwards to the user's own portal's security page.
+      {
+        path: 'account/security',
+        element: (
+          <RequireAuth>
+            <AccountSecurityRedirect />
+          </RequireAuth>
+        ),
+      },
       {
         element: <PublicLayout />,
         children: [{ path: '*', element: <NotFound siteLinks /> }],

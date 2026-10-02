@@ -10,10 +10,12 @@ import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { isApiError } from '@/lib/api/errors';
+import type { AuthResponse, TwoFactorChallenge } from '@/lib/api/types';
 import { useAuth } from '@/lib/auth/useAuth';
 import { mapServerErrors, type MappedErrors } from './formErrors';
 import { ContinueWithGoogle } from './google/GoogleButton';
 import { TestAccountsPanel } from './TestAccountsPanel';
+import { TwoFactorSignInStep } from './twoFactor/TwoFactorSignInStep';
 import '@/app/layouts/AuthLayout.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -51,7 +53,7 @@ function noticeFor(params: URLSearchParams): Notice | null {
 }
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, startSession } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [email, setEmail] = useState('');
@@ -59,8 +61,13 @@ export function LoginPage() {
   const [clientErrors, setClientErrors] = useState<Record<string, string>>({});
   const [server, setServer] = useState<MappedErrors | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  /** Two-step verification after a correct password: the challenge lives in memory only, never in the URL. */
+  const [challenge, setChallenge] = useState<TwoFactorChallenge | null>(null);
   const alertRef = useRef<HTMLDivElement>(null);
   const notice = noticeFor(params);
+  // No next: resume a remembered "enrol in a course" intent (registration went through email verification).
+  const landingFor = (permissions: readonly string[]) =>
+    defaultLandingPath(permissions, safeNextPath(params.get('next')) ?? pendingEnrolPath());
 
   useEffect(() => {
     document.title = 'Sign in · Optimize All';
@@ -83,9 +90,13 @@ export function LoginPage() {
     }
     setSubmitting(true);
     try {
-      const user = await login(email.trim(), password);
-      // No next: resume a remembered "enrol in a course" intent (registration went through email verification).
-      navigate(defaultLandingPath(user.permissions, safeNextPath(params.get('next')) ?? pendingEnrolPath()), { replace: true });
+      const outcome = await login(email.trim(), password);
+      if (outcome.kind === 'twoFactor') {
+        setPassword('');
+        setChallenge(outcome.challenge);
+        return;
+      }
+      navigate(landingFor(outcome.user.permissions), { replace: true });
     } catch (error) {
       setServer(mapServerErrors(error, ['email', 'password']));
       if (isApiError(error) && error.code === 'auth.invalid_credentials') setPassword('');
@@ -97,13 +108,29 @@ export function LoginPage() {
   const formError = server?.form;
   const code = formError?.code;
 
+  if (challenge)
+    return (
+      <TwoFactorSignInStep
+        challenge={challenge}
+        onSignedIn={(session: AuthResponse) => {
+          const user = startSession(session);
+          navigate(landingFor(user.permissions), { replace: true });
+        }}
+        onRestart={() => {
+          setChallenge(null);
+          setServer(null);
+          document.title = 'Sign in · Optimize All';
+        }}
+      />
+    );
+
   return (
     <div className="auth-page">
       <div className="auth-page__header">
         <h1 className="auth-page__title">Sign in</h1>
         <p className="auth-page__subtitle">
-          Clients, learners and creators all sign in here. Client accounts are set up by the Optimize All team, so
-          clients sign in with the invitation we sent.
+          Clients, learners and creators all sign in here. Client accounts are set up by the Optimize All
+          team, so clients sign in with the invitation we sent.
         </p>
       </div>
 

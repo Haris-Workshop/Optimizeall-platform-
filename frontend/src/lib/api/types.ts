@@ -81,6 +81,54 @@ export interface AuthResponse {
   user: SessionUser;
 }
 
+/**
+ * The second sign-in step (two-step verification) after a correct password or Google sign-in. No session exists yet.
+ * `verify`: enter a code from the authenticator app (or a recovery code). `enroll`: two-step verification is required
+ * for this (staff) account and must be set up now.
+ */
+export interface TwoFactorChallenge {
+  /** Signed, single use, short-lived. Kept in memory only (never in the URL or storage). */
+  challengeToken: string;
+  kind: 'verify' | 'enroll';
+  expiresAt: IsoDateTime;
+}
+
+/** POST /auth/login answers this instead of an AuthResponse when a second step is needed. */
+export interface TwoFactorRequiredResponse {
+  twoFactor: TwoFactorChallenge;
+}
+
+export interface TwoFactorStatus {
+  enabled: boolean;
+  enabledAt: IsoDateTime | null;
+  setupPending: boolean;
+  recoveryCodesRemaining: number;
+  recoveryCodesGeneratedAt: IsoDateTime | null;
+  lastUsedAt: IsoDateTime | null;
+  /** The platform requires it for this (staff) account: it can't be turned off. */
+  required: boolean;
+  /** Turning it off asks for the password when the account has one. */
+  hasPassword: boolean;
+}
+
+export interface TwoFactorSetup {
+  /** Base32 secret in groups of four, for typing into the app by hand. */
+  secret: string;
+  /** otpauth:// URI, the QR code's content. */
+  otpAuthUri: string;
+  issuer: string;
+  accountName: string;
+}
+
+export interface RecoveryCodesResponse {
+  recoveryCodes: string[];
+}
+
+export interface TwoFactorEnrolledResponse {
+  auth: AuthResponse;
+  recoveryCodes: string[];
+}
+
 export interface RegisterRequest {
   email: string;
   password: string;
@@ -124,7 +172,7 @@ export interface GoogleStartResponse {
   authorizationUrl: string;
 }
 
-export type GoogleCallbackStatus = 'signedIn' | 'needsTerms' | 'linked';
+export type GoogleCallbackStatus = 'signedIn' | 'needsTerms' | 'linked' | 'twoFactorRequired';
 
 export interface GoogleCallbackResponse {
   status: GoogleCallbackStatus;
@@ -136,6 +184,8 @@ export interface GoogleCallbackResponse {
   displayName: string | null;
   /** App-relative path to continue to (validated server side; validate again before navigating). */
   returnTo: string | null;
+  /** Set with status "twoFactorRequired": the second sign-in step (no session yet). */
+  twoFactor?: TwoFactorChallenge | null;
 }
 
 export interface GoogleCompleteRequest {

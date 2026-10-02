@@ -31,6 +31,7 @@ import { AdminBadge, roleLabel } from '../shared/badges';
 import { QueryError, useCan } from '../shared/common';
 import {
   ReactivateDialog,
+  ResetTwoFactorDialog,
   RolesDialog,
   SuspendDialog,
   TierDialog,
@@ -213,6 +214,26 @@ export function UserDetailPage() {
                   : 'Opted out',
               },
               {
+                label: 'Two-step verification',
+                value: user.twoFactor?.enabled ? (
+                  <span className="cluster">
+                    <span>
+                      On since <DateTime value={user.twoFactor.enabledAt} format="date" /> ·{' '}
+                      {user.twoFactor.recoveryCodesRemaining} recovery codes left
+                    </span>
+                    {canTier && !isSelf && !impersonation && (
+                      <Button size="sm" variant="secondary" onClick={() => setAction('twoFactorReset')}>
+                        Reset
+                      </Button>
+                    )}
+                  </span>
+                ) : user.twoFactor?.required ? (
+                  'Off (required: set up at next sign-in)'
+                ) : (
+                  'Off'
+                ),
+              },
+              {
                 label: 'Payout profile',
                 value: user.payoutProfile
                   ? `${humanize(user.payoutProfile.method)} ${user.payoutProfile.destinationHint} · ${user.payoutProfile.preferredCurrency}`
@@ -373,6 +394,7 @@ export function UserDetailPage() {
       <ReactivateDialog user={user} open={action === 'reactivate'} onClose={close} />
       <RolesDialog user={user} open={action === 'roles'} onClose={close} />
       <TierDialog user={user} open={action === 'tier'} onClose={close} />
+      <ResetTwoFactorDialog user={user} open={action === 'twoFactorReset'} onClose={close} />
       {impersonateOpen && (
         <ImpersonateDialog
           target={{

@@ -13,7 +13,7 @@ import { roleLabel } from '../shared/badges';
 import { enumOptions } from '../shared/common';
 import { toDisplayError } from '../shared/errors';
 
-export type UserAction = 'suspend' | 'reactivate' | 'roles' | 'tier';
+export type UserAction = 'suspend' | 'reactivate' | 'roles' | 'tier' | 'twoFactorReset';
 
 interface DialogProps {
   user: AdminUserDetail;
@@ -194,6 +194,49 @@ export function TierDialog({ user, open, onClose }: DialogProps) {
       <FormField label="Tier" required>
         <Select value={tier} options={enumOptions(TIERS)} onChange={(e) => setTier(e.target.value)} />
       </FormField>
+    </ConfirmDialog>
+  );
+}
+
+/** Lost phone and recovery codes: removes the user's two-step verification after a support check (reason audited). */
+export function ResetTwoFactorDialog({ user, open, onClose }: DialogProps) {
+  const toast = useToast();
+  const mutation = useUserMutation(user);
+  return (
+    <ConfirmDialog
+      open={open}
+      onClose={onClose}
+      tone="danger"
+      title={`Reset two-step verification for ${user.profile.displayName}?`}
+      description="Only after you have confirmed it is really them (for example from their account email address)."
+      confirmLabel="Reset two-step verification"
+      requireReason
+      reasonHint="Say how you checked their identity, e.g. the support ticket. Recorded in the audit log."
+      confirmText={user.profile.email}
+      onConfirm={async ({ reason }) => {
+        try {
+          await mutation.mutateAsync({
+            method: 'post',
+            path: 'two-factor/reset',
+            body: { reason, confirm: true },
+          });
+        } catch (error) {
+          throw toDisplayError(error);
+        }
+        toast.success(
+          'Two-step verification reset',
+          `${user.profile.displayName} has been signed out everywhere.`,
+        );
+      }}
+    >
+      <Alert tone="warning" title="What happens">
+        Their authenticator app and recovery codes stop working, every session ends, and they get an email
+        about it. They can sign in with their password alone
+        {user.twoFactor?.required
+          ? ' and must set up a new authenticator straight away (required for staff)'
+          : ', then set it up again'}
+        .
+      </Alert>
     </ConfirmDialog>
   );
 }

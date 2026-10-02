@@ -11,6 +11,7 @@ import { GoogleConnectionCard } from '@/features/auth/google/GoogleConnectionCar
 import { signInMethodsQueryKey } from '@/features/auth/google/googleApi';
 import { passwordProblem } from '@/features/auth/passwordPolicy';
 import { PasswordStrength } from '@/features/auth/PasswordStrength';
+import { TwoFactorCard } from '@/features/auth/twoFactor/TwoFactorCard';
 import { api } from '@/lib/api/client';
 import type { MessageResponse, SignInMethods } from '@/lib/api/types';
 import { useAuth } from '@/lib/auth/useAuth';
@@ -60,7 +61,8 @@ function SetPasswordCard({ email }: { email: string | undefined }) {
 
 /**
  * Change password (the API revokes every session, so the user is signed out and asked to sign in again), or set a
- * first one for accounts created with Google, and the Google sign-in connection.
+ * first one for accounts created with Google; two-step verification; and the Google sign-in connection. Participants
+ * reach it under Profile, every other portal under Account security (AccountSecurityPage).
  */
 export function SecurityPage() {
   const { user, logout } = useAuth();
@@ -113,6 +115,7 @@ export function SecurityPage() {
     return (
       <div className="stack">
         <SetPasswordCard email={user?.email} />
+        <TwoFactorCard />
         <GoogleConnectionCard />
       </div>
     );
@@ -179,6 +182,7 @@ export function SecurityPage() {
           </form>
         </CardBody>
       </Card>
+      <TwoFactorCard />
       <GoogleConnectionCard />
     </div>
   );

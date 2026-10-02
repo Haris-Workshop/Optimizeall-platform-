@@ -2,7 +2,7 @@
 
 export interface SettingMeta {
   label: string;
-  group: 'Eligibility' | 'Fraud & review' | 'Rates' | 'Retention' | 'Growth' | 'Learning';
+  group: 'Security' | 'Eligibility' | 'Fraud & review' | 'Rates' | 'Retention' | 'Growth' | 'Learning';
   /** Max length for string settings. */
   maxLength?: number;
   /** Inclusive range for integer settings (the server enforces the same). */
@@ -13,6 +13,12 @@ export interface SettingMeta {
 }
 
 export const SETTING_META: Record<string, SettingMeta> = {
+  'security.requireTwoFactorForStaff': {
+    label: 'Require two-step verification for staff',
+    group: 'Security',
+    impact:
+      'Every staff and admin account (including custom roles with staff permissions) must use an authenticator app. Staff who haven’t set it up are signed out at their next session refresh and walked through the set-up when they sign in again; they can’t view as another user until then, and can’t turn it off. Participants, learners and clients still choose for themselves. Turn it on for your own account first (Account security).',
+  },
   'eligibility.minAccountAgeDays': {
     label: 'Minimum social account age',
     group: 'Eligibility',

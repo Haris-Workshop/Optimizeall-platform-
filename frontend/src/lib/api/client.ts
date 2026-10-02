@@ -17,6 +17,10 @@ const NO_REFRESH_PATHS = [
   '/auth/resend-verification',
   '/auth/forgot-password',
   '/auth/reset-password',
+  // The two-step sign-in step: answers 401 when its challenge expired, there is no session to refresh yet.
+  '/auth/2fa/verify',
+  '/auth/2fa/enroll/setup',
+  '/auth/2fa/enroll/confirm',
 ];
 
 // ---------- Access token (memory only — never persisted) ----------

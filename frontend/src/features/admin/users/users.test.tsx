@@ -60,6 +60,63 @@ function detail(
 const renderDetail = (id = 'u-42') =>
   renderAdmin(<UserDetailPage />, `/admin/users/${id}`, '/admin/users/:userId');
 
+describe('User detail — two-step verification', () => {
+  it('resets a lost authenticator with a reason and the typed email', async () => {
+    const user = userEvent.setup();
+    const twoFactor = {
+      enabled: true,
+      enabledAt: '2026-09-01T00:00:00Z',
+      required: false,
+      recoveryCodesRemaining: 7,
+      lastUsedAt: null,
+    };
+    const { calls } = mockAdminApi({
+      'GET /admin/users/u-42': () => json(200, { ...detail(), twoFactor }),
+      'POST /admin/users/u-42/two-factor/reset': () =>
+        json(200, { ...detail(), twoFactor: { ...twoFactor, enabled: false, enabledAt: null } }),
+    });
+    renderDetail();
+    expect(await screen.findByText(/7 recovery codes left/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    const dialog = await screen.findByRole('alertdialog', {
+      name: /Reset two-step verification for Sara Khan/,
+    });
+    expect(within(dialog).getByText(/every session ends/)).toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText(/Type/), 'sara@example.com');
+    await user.type(within(dialog).getByLabelText(/Reason/), 'Lost phone, checked via ticket #88');
+    await user.click(within(dialog).getByRole('button', { name: 'Reset two-step verification' }));
+    await waitFor(() =>
+      expect(calls.find((c) => c.path.endsWith('/two-factor/reset'))?.body).toEqual({
+        reason: 'Lost phone, checked via ticket #88',
+        confirm: true,
+      }),
+    );
+    expect(await screen.findByText('Off')).toBeInTheDocument();
+  });
+
+  it('offers no reset without users.manage', async () => {
+    mockAdminApi(
+      {
+        'GET /admin/users/u-42': () =>
+          json(200, {
+            ...detail(),
+            twoFactor: {
+              enabled: true,
+              enabledAt: '2026-09-01T00:00:00Z',
+              required: false,
+              recoveryCodesRemaining: 10,
+              lastUsedAt: null,
+            },
+          }),
+      },
+      ['users.view'],
+    );
+    renderDetail();
+    expect(await screen.findByText(/10 recovery codes left/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reset' })).not.toBeInTheDocument();
+  });
+});
+
 describe('User detail — suspend', () => {
   it('requires a reason and the typed email before suspending, and explains session revocation', async () => {
     const user = userEvent.setup();

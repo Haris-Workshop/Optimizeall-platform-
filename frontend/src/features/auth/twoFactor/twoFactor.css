@@ -1,0 +1,73 @@
+/* Two-step verification: authenticator set-up (QR code + key) and recovery codes. */
+
+.tf-setup {
+  display: grid;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+@media (min-width: 640px) {
+  .tf-setup {
+    grid-template-columns: auto 1fr;
+  }
+}
+
+.tf-setup__qr {
+  justify-self: center;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: #ffffff;
+  line-height: 0;
+}
+
+.tf-setup__qr svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.tf-setup__steps {
+  margin: 0;
+  padding-inline-start: var(--space-5);
+  display: grid;
+  gap: var(--space-2);
+  color: var(--color-text);
+}
+
+.tf-key {
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.tf-codes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: var(--space-4);
+  list-style: none;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+}
+
+.tf-codes li {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  letter-spacing: 0.06em;
+  color: var(--color-heading);
+}
+
+.tf-code-input input {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  letter-spacing: 0.3em;
+}
+
+.tf-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}

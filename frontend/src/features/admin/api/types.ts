@@ -158,6 +158,17 @@ export interface AdminUserDetail {
   concurrencyStamp: string;
   /** Admin-defined roles assigned to the user (see features/admin/roles). */
   customRoles: AssignedCustomRole[];
+  /** Two-step verification as administrators see it (never secrets or codes). */
+  twoFactor?: AdminTwoFactor | null;
+}
+
+export interface AdminTwoFactor {
+  enabled: boolean;
+  enabledAt: IsoDateTime | null;
+  /** The staff policy requires it for this account. */
+  required: boolean;
+  recoveryCodesRemaining: number;
+  lastUsedAt: IsoDateTime | null;
 }
 
 export interface AssignedCustomRole {

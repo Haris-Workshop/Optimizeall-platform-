@@ -300,6 +300,19 @@ export async function settle(page: Page) {
   await expect(page.locator('main .ui-skeleton, main [aria-busy="true"]'))
     .toHaveCount(0, { timeout: 10_000 })
     .catch(() => undefined);
+  // Entrance animations (the public pages' reveal-on-scroll fades) change opacity for up to a second; axe would measure
+  // the contrast of half-faded text. Audit the settled page: wait until every finite animation has finished (infinite
+  // decorative loops never do and are left running).
+  await page
+    .waitForFunction(
+      () =>
+        document
+          .getAnimations()
+          .every((a) => a.playState !== 'running' || (a.effect?.getTiming().iterations ?? 1) === Infinity),
+      undefined,
+      { timeout: 5_000 },
+    )
+    .catch(() => undefined);
 }
 
 /**

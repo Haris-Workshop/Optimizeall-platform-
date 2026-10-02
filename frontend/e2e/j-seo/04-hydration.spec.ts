@@ -27,9 +27,14 @@ test.describe('the app boots over the server-rendered HTML', () => {
     test(`${path}: no duplicate head tags, server and app agree`, async ({ page, request }) => {
       const server = parseHead(await (await request.get(path)).text());
       const errors: string[] = [];
-      // An anonymous visit's session probe (POST /auth/refresh → 401) is expected; anything else is a failure.
+      // No console errors at all: an anonymous visitor (no session hint cookie, src/lib/auth/sessionHint.ts) does not
+      // even probe POST /auth/refresh, so there is no expected 401 either.
+      const refreshes: string[] = [];
+      page.on('request', (r) => {
+        if (r.url().endsWith('/api/v1/auth/refresh')) refreshes.push(r.url());
+      });
       page.on('console', (m) => {
-        if (m.type() === 'error' && !/status of 401/.test(m.text())) errors.push(m.text());
+        if (m.type() === 'error') errors.push(m.text());
       });
       page.on('pageerror', (e) => errors.push(e.message));
       await page.goto(path);
@@ -46,6 +51,7 @@ test.describe('the app boots over the server-rendered HTML', () => {
       expect(counts.canonicalHref).toBe(server.canonical);
       expect(counts.description0).toBe(server.description!.replace(/&amp;/g, '&').replace(/&#39;/g, "'"));
       expect(errors, errors.join('\n')).toEqual([]);
+      expect(refreshes, 'anonymous visitors do not probe the session').toEqual([]);
     });
   }
 

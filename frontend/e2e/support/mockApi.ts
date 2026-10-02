@@ -54,6 +54,12 @@ export function authResponse(user: MockUser) {
  */
 export async function mockApi(page: Page, handlers: Record<string, Handler> = {}) {
   const calls: { method: string; path: string; body: unknown }[] = [];
+  if (handlers['POST /auth/refresh']) {
+    // A signed-in browser carries the API's session hint cookie (set next to the refresh cookie; see
+    // src/lib/auth/sessionHint.ts): without it, public pages do not try to restore a session at all.
+    const url = process.env.E2E_BASE_URL || process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173';
+    await page.context().addCookies([{ name: 'oa_signed_in', value: '1', url }]);
+  }
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());

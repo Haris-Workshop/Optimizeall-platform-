@@ -588,6 +588,7 @@ Errors: `403 roles.cannot_grant_unheld` (a permission the caller doesn't hold), 
 | `review.appealWindowDays` | integer | 1–365 |
 | `retention.inactivityDays` | integer | 7–365 |
 | `retention.enabled` | boolean | `true` / `false` |
+| `security.requireTwoFactorForStaff` | boolean | `true` / `false` (default `false`; `true` needs the administrator's own two-step verification) |
 | `referral.program` | object | `{ enabled, referrerRewardAmount (0–100,000, rounded to the currency), currency (supported), qualifyingAction (EmailVerified\|FirstApprovedSubmission\|FirstPaidPayout), qualifyWithinDays (1–365), requireManualApproval, maxRewardedReferralsPerUser (0–100,000) }` — send the full object; unknown properties are rejected; omitted properties take their defaults |
 
 Errors: `404 setting.not_found`, `400 settings.invalid_value`, `400 admin.confirmation_required`. Audited
@@ -654,6 +655,31 @@ Short reference for endpoints added in later waves; the request/response shapes 
 
 When a Google account is connected to an existing account (by verified email or from the profile) the owner gets the
 editable **"Google sign-in connected"** security email (`auth.google_linked`).
+
+### Two-step verification (TOTP) — `/auth/2fa` (see `docs/SECURITY.md` § 1.2)
+
+`POST /auth/login` (and `POST /auth/google/callback`, status `twoFactorRequired`) answer
+`{ "twoFactor": { "challengeToken", "kind": "verify" | "enroll", "expiresAt" } }` instead of a session (no refresh
+cookie) when the account uses two-step verification (`verify`) or the staff policy requires it and it isn't set up
+(`enroll`).
+
+| verb | path | who | notes |
+|---|---|---|---|
+| POST | `/auth/2fa/verify` `{ challengeToken, code? \| recoveryCode? }` | anonymous (challenge token) | auth response + refresh cookie; 400 `auth.2fa_invalid_code` (wrong, reused or malformed), 401 `auth.2fa_challenge_expired` (expired, used, 5 tries spent, password changed), 429 `auth.2fa_locked` |
+| POST | `/auth/2fa/enroll/setup` `{ challengeToken }` | anonymous (`enroll` challenge) | `{ secret, otpAuthUri, issuer, accountName }` (a new secret each call) |
+| POST | `/auth/2fa/enroll/confirm` `{ challengeToken, code }` | anonymous (`enroll` challenge) | `{ auth, recoveryCodes[10] }` + refresh cookie; 409 `auth.2fa_no_setup` before `enroll/setup` |
+| GET | `/auth/2fa` | signed in | `{ enabled, enabledAt, setupPending, recoveryCodesRemaining, recoveryCodesGeneratedAt, lastUsedAt, required, hasPassword }` |
+| POST | `/auth/2fa/setup` | signed in, not impersonating | `{ secret, otpAuthUri, issuer, accountName }`; 409 `auth.2fa_already_enabled` |
+| POST | `/auth/2fa/confirm` `{ code }` | signed in, not impersonating | `{ recoveryCodes[10] }` (shown once); emails the owner |
+| POST | `/auth/2fa/recovery-codes` `{ code }` | signed in, not impersonating | a new set; the old codes stop working |
+| POST | `/auth/2fa/disable` `{ password?, code? \| recoveryCode? }` → 204 | signed in, not impersonating | password required when the account has one (400 `auth.invalid_password`); 409 `auth.2fa_required_by_policy`, `auth.2fa_not_enabled`; emails the owner |
+| POST | `/admin/users/{id}/two-factor/reset` `{ reason (5–500), confirm: true }` | `users.manage` (staff targets: built-in Admin) | removes it, ends all sessions, emails the owner, audited with the reason; 403 `admin.two_factor_reset_self`, 409 `admin.two_factor_not_enabled` |
+
+`GET /admin/users/{id}` includes `twoFactor: { enabled, enabledAt, required, recoveryCodesRemaining, lastUsedAt }`.
+The staff policy is the admin setting `security.requireTwoFactorForStaff` (boolean; `PUT /admin/settings/{key}`
+answers 409 `settings.two_factor_required_first` when the administrator hasn't turned it on for themselves). Refresh
+answers 401 `auth.2fa_enrollment_required` to staff who must set it up; impersonation start answers 403 with the same
+code.
 
 ### Impersonation and test users
 

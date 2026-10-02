@@ -40,7 +40,7 @@ this branch; fixes made during the audit are listed with before → after values
 | 3 | Keyboard navigation, visible focus, SR labels | **Pass** | e2e `a11y/keyboard.spec.ts` (dialogs, menus, focus trap/restore) |
 | 4 | Security headers incl. strict CSP, HSTS, nosniff, Referrer-Policy | **Pass** (HSTS added) | `script-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'`; HSTS 1 year on HTTPS; header dumps below |
 | 4 | OWASP Top 10 review | **Pass with notes** | see Security |
-| 4 | 2FA for staff/admin | **Fail — not implemented** | no TOTP support in the code base; plan below |
+| 4 | 2FA for staff/admin | **Pass** (added after the audit) | RFC 6238 TOTP + recovery codes, sign-in challenge after password and Google, admin setting `security.requireTwoFactorForStaff` with forced set-up, admin reset; see "Two-step verification" below and SECURITY.md § 1.2 |
 | 4 | No secrets in code | **Pass** | pattern scan of all tracked files (AWS/Google/Stripe/GitHub/Slack/Anthropic/OpenAI keys, private keys, OAuth tokens): only test fakes; `tools/lecture-studio` holds no credentials (config/ledger files are git-ignored) |
 | 5 | Loading / empty / error states | **Pass** | every public data view goes through `PublicQueryState` (skeleton / empty / error + retry); hero placeholders added |
 | 5 | No TODOs / placeholder features | **Pass on the public site** | no TODO/FIXME in `frontend/src` or `backend/src`; documented portal limitations listed under "Still left" |
@@ -134,7 +134,7 @@ Referrer-Policy, CORP, `Cache-Control: no-store`, HSTS (one year) on HTTPS outsi
 | A04 Insecure design | Rate limits per endpoint class; lockout; signed form tokens with honeypot and minimum fill time |
 | A05 Security misconfiguration | Swagger off in Production by default; dev mailbox and test sign-in refused in Production; strict headers |
 | A06 Vulnerable components | `dotnet list package --vulnerable`: none. `npm audit --omit=dev`: react-router 6.x open-redirect advisory (GHSA-wrjc-x8rr-h8h6) — mitigated: every user-supplied redirect goes through `safeNextPath`, which rejects backslashes, `//` and other origins; the fix exists only in react-router 7 (major upgrade) |
-| A07 Identification & authentication | Refresh rotation with reuse detection, CSRF header on cookie endpoints, session revocation on password change; **no 2FA** (below) |
+| A07 Identification & authentication | Refresh rotation with reuse detection, CSRF header on cookie endpoints, session revocation on password change; TOTP two-step verification, required for staff by policy (below) |
 | A08 Software & data integrity | Lockfiles committed; CI builds from lockfiles |
 | A09 Logging & monitoring | Audit log for staff actions and impersonation |
 | A10 SSRF | Image hosts allow-listed (`Content:AllowedImageHosts`); outbound integrations use configured base URLs |
@@ -164,6 +164,32 @@ descriptions unique.
   above), `j-learning` 11/11, `j-auth` 60/60, `j-partners` 4/4, `j-content` 22/22, `crawl` 20/20.
 * `scripts/test-web-nginx.sh` (nginx error mapping + security headers).
 
+## Two-step verification (added after the audit)
+
+Built to the scoped plan, with these deviations: the staff policy is an administrator setting
+(`security.requireTwoFactorForStaff`, Admin → Settings → Security) covering every holder of any staff permission
+(built-in or custom role) instead of a configured permission list, so it can be changed without a deployment; secrets
+use the Data Protection key ring with their own purpose rather than the credential vault's dictionary API (same keys,
+same at-rest protection); the QR code is drawn by a small built-in encoder (`frontend/src/lib/qr`, checked against
+an independent decoder for every mask and versions 1–38) instead of a dependency.
+
+* API: `POST /auth/login` and the Google callback return a Data-Protection-signed, single-use, 5-minute challenge
+  (5 tries, void after a password change) instead of a session; `/auth/2fa/verify` (app or recovery code),
+  `/auth/2fa/enroll/*` (forced set-up), `/auth/2fa` settings (set up, confirm, new recovery codes, turn off with
+  password + code), `/admin/users/{id}/two-factor/reset` (reason, audited, ends sessions). Replay protection per time
+  step, lockout after 10 wrong codes (15 min), every event audited, security emails on enable/disable/reset/recovery
+  code use. Unenrolled staff under the policy: sessions end at refresh, no impersonation, forced set-up at sign-in.
+* Web: code step on the sign-in and Google callback pages, forced set-up with QR code and recovery codes, a
+  two-step verification card on Account security (now in every portal, `/account/security`), status and reset on the
+  admin user page, the policy on the settings page.
+* Tests: unit (RFC 6238/4226 vectors, recovery codes, replay, attempt limits, lockout, encryption at rest), integration
+  (enrolment, sign-in, recovery, disable, admin reset, policy and forced set-up, Google, impersonation, DefaultDeny),
+  vitest (sign-in step, set-up, card, admin reset, QR encoder), e2e `j-auth/10a-two-factor.spec.ts` with real time.
+* Results on the final code: backend unit 1,753/1,753, integration (SQLite) 1,275/1,275 incl. HostileInput,
+  Permission and DefaultDeny contracts, migrations `--check` clean for MySQL and SQLite; frontend typecheck, lint,
+  vitest 956/956, build and bundle budget; e2e `j-auth` 64/64 and `smoke` 40/40.
+* Not built: "remember this device"; WebAuthn/passkeys.
+
 ## Still left
 
 1. **Mobile Lighthouse Performance ≥ 95 / mobile LCP < 2.5 s (simulated).** Needs the designed page in the first HTML
@@ -171,13 +197,7 @@ descriptions unique.
    or publish-time prerendering of CMS pages into the shell) and `hydrateRoot` on the client; seed React Query from JSON
    embedded in the document so pages render without API round trips. Estimated 1–2 weeks with the SEO/e2e suites as
    the safety net. Interim options measured as low value: further icon/nav splitting (~7 KiB gzip).
-2. **2FA (TOTP) for staff and admin accounts** — not present. Scoped plan: `UserTwoFactor` (secret encrypted with the
-   existing credential vault, enabled-at, hashed recovery codes, last used time step) + migrations for MySQL and
-   SQLite; endpoints to set up (otpauth URI, QR rendered locally), confirm, disable (password + code) and regenerate
-   recovery codes; login returns a short-lived single-use challenge when 2FA is on, completed by `POST /auth/2fa/verify`
-   (rate-limited, lockout, replay protection), also after Google sign-in; policy `Security:RequireTwoFactorFor`
-   (permissions such as settings.manage, users.manage, payouts.*) that forces enrolment after sign-in and before
-   impersonation; admin reset with audit log; RFC 6238 test vectors, integration and `j-auth` journeys. ~3 days.
+2. **2FA (TOTP) for staff and admin accounts** — done, see "Two-step verification" below.
 3. **Demo accounts on the Render blueprint.** `render.yaml` seeds the `Demo` profile, whose accounts have documented
    passwords. Fine for a demo/staging site; a production deployment must drop `Database__Seed__1=Demo` (not changed
    here: deployment settings were out of scope).

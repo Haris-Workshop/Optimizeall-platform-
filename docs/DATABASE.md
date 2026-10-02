@@ -611,10 +611,13 @@ Growth classes: **high-volume** (append-only or one row per event/recipient/day;
 | `tracking_clicks` | high-volume | public link clicks; DataRetention (opt-in) |
 | `tracking_conversions` | per-client / growing | advertiser conversions |
 | `tracking_links` | per-client / business | |
+| `two_factor_challenges` | per-client / growing | pending two-step sign-in steps (5–15 min); a user's spent/old ones are deleted at their next sign-in |
 | `user_achievements` | per-client / growing | awarded achievements |
 | `user_custom_roles` | static / config | |
+| `user_recovery_codes` | per-client / business | two-step verification recovery codes (keyed hashes) |
 | `user_roles` | static / config | |
 | `user_tokens` | per-client / growing | verification/reset tokens; DataRetention |
+| `user_two_factor` | per-client / business | authenticator secret (Data Protection encrypted), replay/lockout state |
 | `users` | per-client / business | |
 | `website_blog_categories` | static / config | |
 | `website_blog_posts` | per-client / business | |

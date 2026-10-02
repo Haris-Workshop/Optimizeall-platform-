@@ -14,7 +14,7 @@ public sealed class AdminPlatformTests(ApiFactory api) : IClassFixture<ApiFactor
         var (adminUser, admin) = await api.AdminAsync();
         var list = await (await admin.GetAsync("/api/v1/admin/settings")).ReadJsonAsync();
         var keys = list.EnumerateArray().Select(s => s.GetProperty("key").GetString()).ToList();
-        Assert.Equal(12, keys.Count); // 9 platform settings + rates.fourEyesIncreasePercent + the 2 Learning issuer settings
+        Assert.Equal(13, keys.Count); // 9 platform settings + rates.fourEyesIncreasePercent + the 2 Learning issuer settings + the staff two-step policy
         var fourEyes = list.EnumerateArray().Single(s => s.GetProperty("key").GetString() == "rates.fourEyesIncreasePercent");
         Assert.Equal(0, fourEyes.GetProperty("defaultValue").GetInt32());
         var inactivity = list.EnumerateArray().Single(s => s.GetProperty("key").GetString() == "retention.inactivityDays");

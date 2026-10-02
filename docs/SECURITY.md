@@ -41,8 +41,8 @@ Configuration keys are documented in [`/.env.example`](../.env.example); deploym
     `sid` claim and are refused as soon as the family has no live refresh token (sign-out, reuse detection), while
     the user's other devices keep their sessions. In the browser the signing-out tab tells the app's other tabs
     (`BroadcastChannel`), which leave the portal for `/login?signedOut=1` immediately.
-* Staff accounts should use strong unique passwords; enforcing SSO/MFA for staff at the identity layer is
-  recommended when available.
+* **Two-step verification** (authenticator app, TOTP): see § 1.2. Administrators can require it for every staff
+  account (setting `security.requireTwoFactorForStaff`).
 
 ### 1.1 Sign in with Google
 
@@ -97,6 +97,54 @@ Setup: [DEPLOYMENT.md § 5.11](DEPLOYMENT.md#511-sign-in-with-google-optional).
 * **Audit**: `auth.google_sign_in`, `auth.external_login_linked` (method `verified_email_match`, `profile` or
   `sign_up`), `auth.external_login_unlinked`, and `auth.registered` for new accounts.
 * **Rate limits**: start, callback and complete use the `auth` policy; the provider list uses `public`.
+
+### 1.2 Two-step verification (TOTP)
+
+Optional for everyone, required for staff when the policy is on (`Modules/Auth/TwoFactor`).
+
+* **Codes**: RFC 6238 TOTP with the parameters every authenticator app supports: HMAC-SHA-1, 6 digits, 30-second
+  steps, ±1 step of clock drift (`Totp.cs`, no third-party library; unit-tested against the RFC 6238 and RFC 4226
+  vectors). Secrets are 160 random bits.
+* **Storage**: the Base32 secret is encrypted with ASP.NET Core Data Protection (purpose
+  `OptimizeAll.Auth.TwoFactor.Secret.v1`, the same key ring as the credential vault and payout destinations) in
+  `user_two_factor`; it is shown to the user once at set-up (QR code rendered in the browser by a small built-in
+  encoder, `frontend/src/lib/qr`, plus the key for manual entry) and never returned again. A set-up only counts once
+  a code from the app is confirmed.
+* **Recovery codes**: 10 single-use codes (`XXXXX-XXXXX`, 50 bits each) shown once, stored as keyed hashes
+  (HMAC-SHA-256 with `Security:HashSalt`) in `user_recovery_codes`; regenerating (needs a current app code) replaces the
+  whole set. Using one is audited and emails the owner with the number left.
+* **Sign-in**: after a correct password — or Google sign-in — an account with two-step verification gets **no
+  session**: `POST /auth/login` (and the Google callback, status `twoFactorRequired`) returns a challenge token
+  instead. The token is Data-Protection-encrypted and names a `two_factor_challenges` row that is **single use**,
+  expires after **5 minutes**, allows **5 tries** and dies when the user's `SecurityVersion` changes (password change,
+  forced sign-out). `POST /auth/2fa/verify` with an app code or a recovery code completes it and issues the normal
+  session. The web app keeps the token in memory only.
+* **Replay protection**: a code is accepted only for a time step *after* the last accepted one (conditional update on
+  `LastUsedTimeStep`), so a code works once even within its 30 seconds, and two concurrent requests can't both use it.
+* **Lockout**: 10 wrong codes in a row (across challenges and settings actions) pause code entry for 15 minutes
+  (`429 auth.2fa_locked`, audited `auth.2fa_locked_out`); recovery codes are paused too. Endpoints use the `auth`
+  rate-limit policy (10/min per IP).
+* **Staff policy** (`security.requireTwoFactorForStaff`, Admin → Settings → Security, default off): every user holding
+  any staff permission (built-in or custom role) must use it. Without it set up, sign-in returns an `enroll` challenge
+  (`/auth/2fa/enroll/setup` → `/auth/2fa/enroll/confirm`, 15 minutes) and the session starts only after the set-up;
+  existing sessions of such staff end at their next refresh (`401 auth.2fa_enrollment_required`, refresh family
+  revoked); they can't start (or resume) impersonation; required users can't turn it off. An administrator can only
+  turn the policy on after enabling two-step verification for their own account. Participants, learners and clients
+  are not affected.
+* **Changes**: turning it off needs the password (when the account has one) plus an app or recovery code; all
+  settings endpoints are refused while impersonating (they are the owner's credentials). The target's two-step
+  verification never blocks impersonation, since the staff member never signs in as the user.
+* **Admin reset** (`POST /admin/users/{id}/two-factor/reset`, `users.manage`; staff accounts need the built-in Admin
+  role; not your own account): removes the authenticator, recovery codes and open challenges, ends all sessions,
+  emails the owner and is audited as `admin.user_two_factor_reset` with the mandatory reason.
+* **Audit**: `auth.2fa_setup_started`, `auth.2fa_enabled`, `auth.2fa_disabled`, `auth.2fa_recovery_codes_regenerated`,
+  `auth.2fa_challenge_issued`, `auth.2fa_enrollment_required`, `auth.2fa_verified` (method and factor),
+  `auth.2fa_failed`, `auth.2fa_recovery_code_used`, `auth.2fa_locked_out`, `admin.user_two_factor_reset`. Secrets and
+  codes never reach the audit log.
+* **Emails** (editable templates): `auth.two_factor_enabled`, `auth.two_factor_disabled` (also on admin reset),
+  `auth.two_factor_recovery_used`.
+* **Not covered**: "remember this device" (every sign-in asks for a code); the non-production test sign-in
+  (`/dev/test-login`, refused in Production) skips the second step like it skips the password.
 
 ## 2. Authorization (permission-based RBAC)
 

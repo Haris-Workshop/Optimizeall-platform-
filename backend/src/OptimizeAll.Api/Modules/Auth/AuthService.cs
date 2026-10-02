@@ -16,12 +16,31 @@ namespace OptimizeAll.Api.Modules.Auth;
 
 public sealed record LoginResult(AuthResponse Response, string RefreshToken, DateTime RefreshExpiresAt);
 
+/// <summary>
+/// The result of a first factor (password, Google): a session, or (two-step verification on, or required by policy and
+/// not set up) a challenge to complete first. Exactly one is set.
+/// </summary>
+public sealed record SignInOutcome(LoginResult? Session, TwoFactor.TwoFactorChallengeDto? Challenge)
+{
+    public static SignInOutcome Signed(LoginResult session) => new(session, null);
+    public static SignInOutcome Pending(TwoFactor.TwoFactorChallengeDto challenge) => new(null, challenge);
+}
+
 public interface IAuthService
 {
     Task RegisterAsync(RegisterRequest request, CancellationToken ct);
     Task VerifyEmailAsync(string token, CancellationToken ct);
     Task ResendVerificationAsync(string email, CancellationToken ct);
-    Task<LoginResult> LoginAsync(LoginRequest request, CancellationToken ct);
+    /// <summary>Password sign-in: a session, or the two-step verification challenge to complete first.</summary>
+    Task<SignInOutcome> LoginAsync(LoginRequest request, CancellationToken ct);
+
+    /// <summary>Completes a two-step verification challenge with an app code or a recovery code and starts the session.</summary>
+    Task<LoginResult> CompleteTwoFactorAsync(TwoFactor.TwoFactorVerifyRequest request, CancellationToken ct);
+
+    /// <summary>Finishes a forced set-up of two-step verification during sign-in and starts the session.</summary>
+    Task<(LoginResult Session, IReadOnlyList<string> RecoveryCodes)> CompleteTwoFactorEnrollmentAsync(
+        TwoFactor.TwoFactorEnrollConfirmRequest request, CancellationToken ct);
+
     Task<LoginResult> RefreshAsync(string? rawRefreshToken, CancellationToken ct);
     Task LogoutAsync(string? rawRefreshToken, CancellationToken ct);
     Task ForgotPasswordAsync(string email, CancellationToken ct);
@@ -39,11 +58,12 @@ public interface IAuthService
     Task RevokeAllSessionsAsync(User user, string reason, CancellationToken ct);
 
     /// <summary>
-    /// Starts a session for a user already authenticated by an external identity provider (e.g. Google). The caller
-    /// has verified the identity and loaded <paramref name="user"/> with its roles; inactive users are refused. Changes
-    /// staged in the context (link bookkeeping, audit rows) are saved together with the new refresh token.
+    /// Starts a session for a user already authenticated by an external identity provider (e.g. Google), or the
+    /// two-step verification challenge they must complete first. The caller has verified the identity and loaded
+    /// <paramref name="user"/> with its roles; inactive users are refused. Changes staged in the context (link
+    /// bookkeeping, audit rows) are saved together with the new refresh token (or challenge).
     /// </summary>
-    Task<LoginResult> SignInExternalAsync(User user, CancellationToken ct);
+    Task<SignInOutcome> SignInExternalAsync(User user, string method, CancellationToken ct);
 }
 
 public sealed class AuthService(
@@ -57,6 +77,7 @@ public sealed class AuthService(
     IPermissionResolver permissionResolver,
     IImpersonationContext impersonation,
     IPrivacyHasher privacyHasher,
+    TwoFactor.TwoFactorService twoFactor,
     IOptions<JwtOptions> jwtOptions,
     TimeProvider clock,
     ILogger<AuthService> logger) : IAuthService
@@ -182,7 +203,7 @@ public sealed class AuthService(
         await SendVerificationEmailAsync(user, raw, ct);
     }
 
-    public async Task<LoginResult> LoginAsync(LoginRequest request, CancellationToken ct)
+    public async Task<SignInOutcome> LoginAsync(LoginRequest request, CancellationToken ct)
     {
         var normalized = Normalization.Email(request.Email);
         var user = await db.Set<User>().Include(u => u.Roles).FirstOrDefaultAsync(u => u.NormalizedEmail == normalized, ct);
@@ -230,30 +251,56 @@ public sealed class AuthService(
         await db.Set<User>().Where(u => u.Id == user.Id).ExecuteUpdateAsync(s => s
             .SetProperty(u => u.FailedLoginCount, 0)
             .SetProperty(u => u.LockoutEndsAt, (DateTime?)null)
-            .SetProperty(u => u.LastLoginAt, Now)
-            .SetProperty(u => u.LastActiveAt, Now)
             .SetProperty(u => u.PasswordHash, rehash), ct);
 
-        var result = IssueSession(user, familyId: IdGenerator.NewId());
-        await db.SaveChangesAsync(ct);
-        return result;
+        return await SessionOrChallengeAsync(user, TwoFactor.TwoFactorService.MethodPassword, ct);
     }
 
-    public async Task<LoginResult> SignInExternalAsync(User user, CancellationToken ct)
+    public async Task<SignInOutcome> SignInExternalAsync(User user, string method, CancellationToken ct)
     {
         if (user.Status != UserStatus.Active)
             throw DomainException.Forbidden("account.suspended",
                 user.Status == UserStatus.Suspended
                     ? "Your account is suspended. Contact support if you believe this is a mistake."
                     : "This account has been deactivated.");
+        return await SessionOrChallengeAsync(user, method, ct);
+    }
 
+    /// <summary>
+    /// After a successful first factor: the two-step verification challenge when the user has it (or must set it up),
+    /// otherwise the session. Every first-factor sign-in path goes through here, so none can skip the second step.
+    /// </summary>
+    private async Task<SignInOutcome> SessionOrChallengeAsync(User user, string method, CancellationToken ct)
+    {
+        if (await twoFactor.ChallengeForAsync(user, method, ct) is { } challenge)
+        {
+            await db.SaveChangesAsync(ct);
+            return SignInOutcome.Pending(challenge);
+        }
+        return SignInOutcome.Signed(await StartSessionAsync(user, ct));
+    }
+
+    private async Task<LoginResult> StartSessionAsync(User user, CancellationToken ct)
+    {
         await db.Set<User>().Where(u => u.Id == user.Id).ExecuteUpdateAsync(s => s
             .SetProperty(u => u.LastLoginAt, Now)
             .SetProperty(u => u.LastActiveAt, Now), ct);
-
         var result = IssueSession(user, familyId: IdGenerator.NewId());
         await db.SaveChangesAsync(ct);
         return result;
+    }
+
+    public async Task<LoginResult> CompleteTwoFactorAsync(TwoFactor.TwoFactorVerifyRequest request, CancellationToken ct)
+    {
+        var completed = await twoFactor.VerifyChallengeAsync(request, ct);
+        return await StartSessionAsync(completed.User, ct);
+    }
+
+    public async Task<(LoginResult Session, IReadOnlyList<string> RecoveryCodes)> CompleteTwoFactorEnrollmentAsync(
+        TwoFactor.TwoFactorEnrollConfirmRequest request, CancellationToken ct)
+    {
+        var (completed, codes) = await twoFactor.ConfirmEnrollmentAsync(request, ct);
+        return (await StartSessionAsync(completed.User, ct), codes);
     }
 
     /// <summary>
@@ -322,6 +369,15 @@ public sealed class AuthService(
 
         var user = await db.Set<User>().AsNoTracking().Include(u => u.Roles).FirstOrDefaultAsync(u => u.Id == token.UserId, ct);
         if (user is null || user.Status != UserStatus.Active) throw SessionExpired();
+        // The staff two-step policy was turned on (or this user's two-step verification reset) after they signed in:
+        // the session ends, and signing in again walks them through the set-up.
+        if (await twoFactor.NeedsEnrollmentAsync(user.Id, ct))
+        {
+            await db.Set<RefreshToken>()
+                .Where(t => t.FamilyId == token.FamilyId && t.RevokedAt == null)
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, Now).SetProperty(t => t.RevokedReason, "two_factor_required"), ct);
+            throw TwoFactor.TwoFactorService.EnrollmentRequired(DomainErrorKind.Unauthorized);
+        }
 
         // Rotation is atomic and transactional: the old token is revoked and its replacement inserted together, and
         // only one concurrent refresh with the same token can win the conditional update.

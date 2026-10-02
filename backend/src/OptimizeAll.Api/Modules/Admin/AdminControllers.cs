@@ -39,6 +39,15 @@ public sealed class AdminUsersController(AdminUsersService users) : ControllerBa
     [HasPermission(Permissions.UsersManage)]
     public Task<AdminUserDetailDto> SetTier(Guid id, SetTierRequest request, CancellationToken ct) => users.SetTierAsync(id, request, ct);
 
+    /// <summary>
+    /// Resets the user's two-step verification after a support check (lost phone and recovery codes): removes it, signs
+    /// the user out everywhere and emails them. Reason required and audited; staff accounts need an administrator.
+    /// </summary>
+    [HttpPost("{id:guid}/two-factor/reset")]
+    [HasPermission(Permissions.UsersManage)]
+    public Task<AdminUserDetailDto> ResetTwoFactor(Guid id, Auth.TwoFactor.AdminResetTwoFactorRequest request, CancellationToken ct) =>
+        users.ResetTwoFactorAsync(id, request, ct);
+
     /// <summary>Creates a verified staff account and emails a set-password (reset) link.</summary>
     [HttpPost("staff")]
     [HasPermission(Permissions.RolesAssign)]

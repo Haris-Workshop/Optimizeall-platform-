@@ -70,6 +70,45 @@ public sealed class AccountEmails(IEmailSender email, EmailTemplateService templ
         return await email.SendAsync(new EmailMessage(user.Email, user.DisplayName, mail.Subject, mail.Text), ct);
     }
 
+    public async Task<EmailSendResult> SendTwoFactorEnabledAsync(User user, CancellationToken ct)
+    {
+        if (await OriginAsync(ct) is not { } origin) return OriginUnknown(user);
+        var mail = await templates.RenderAsync(EmailTemplateCatalog.AuthTwoFactorEnabled, new Dictionary<string, string>
+        {
+            ["securityUrl"] = $"{origin}{AppLinks.AccountSecurity}",
+            ["forgotPasswordUrl"] = $"{origin}{AppLinks.ForgotPassword}",
+            ["displayName"] = user.DisplayName,
+        }, ct);
+        return await email.SendAsync(new EmailMessage(user.Email, user.DisplayName, mail.Subject, mail.Text), ct);
+    }
+
+    /// <summary>Two-step verification was turned off by the user, or reset by an administrator (<paramref name="byAdministrator"/>).</summary>
+    public async Task<EmailSendResult> SendTwoFactorDisabledAsync(User user, bool byAdministrator, CancellationToken ct)
+    {
+        if (await OriginAsync(ct) is not { } origin) return OriginUnknown(user);
+        var mail = await templates.RenderAsync(EmailTemplateCatalog.AuthTwoFactorDisabled, new Dictionary<string, string>
+        {
+            ["changedBy"] = byAdministrator ? "an administrator (account recovery)" : "you",
+            ["securityUrl"] = $"{origin}{AppLinks.AccountSecurity}",
+            ["forgotPasswordUrl"] = $"{origin}{AppLinks.ForgotPassword}",
+            ["displayName"] = user.DisplayName,
+        }, ct);
+        return await email.SendAsync(new EmailMessage(user.Email, user.DisplayName, mail.Subject, mail.Text), ct);
+    }
+
+    public async Task<EmailSendResult> SendRecoveryCodeUsedAsync(User user, int remaining, CancellationToken ct)
+    {
+        if (await OriginAsync(ct) is not { } origin) return OriginUnknown(user);
+        var mail = await templates.RenderAsync(EmailTemplateCatalog.AuthTwoFactorRecoveryUsed, new Dictionary<string, string>
+        {
+            ["remaining"] = remaining.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["securityUrl"] = $"{origin}{AppLinks.AccountSecurity}",
+            ["forgotPasswordUrl"] = $"{origin}{AppLinks.ForgotPassword}",
+            ["displayName"] = user.DisplayName,
+        }, ct);
+        return await email.SendAsync(new EmailMessage(user.Email, user.DisplayName, mail.Subject, mail.Text), ct);
+    }
+
     /// <summary>The public origin, or null when unknown: a root-relative link in an email is useless, so nothing is sent.</summary>
     private async Task<string?> OriginAsync(CancellationToken ct) => await publicOrigin.GetAsync(ct) is { Length: > 0 } origin ? origin : null;
 

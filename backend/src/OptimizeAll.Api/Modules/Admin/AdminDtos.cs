@@ -62,7 +62,14 @@ public sealed record AdminUserDetailDto(
     PayoutProfileSummaryDto? PayoutProfile,
     IReadOnlyList<AuditLogDto> RecentAudit,
     Guid ConcurrencyStamp,
-    IReadOnlyList<Roles.AssignedCustomRoleDto> CustomRoles);
+    IReadOnlyList<Roles.AssignedCustomRoleDto> CustomRoles,
+    AdminTwoFactorDto? TwoFactor = null);
+
+/// <summary>
+/// The user's two-step verification as administrators see it (never the secret or codes). <c>Required</c>: the staff
+/// policy requires it for this account.
+/// </summary>
+public sealed record AdminTwoFactorDto(bool Enabled, DateTime? EnabledAt, bool Required, int RecoveryCodesRemaining, DateTime? LastUsedAt);
 
 public class ReasonRequest
 {

@@ -6911,6 +6911,52 @@ namespace OptimizeAll.Infrastructure.Persistence.Migrations
                     b.ToTable("refresh_tokens", (string)null);
                 });
 
+            modelBuilder.Entity("OptimizeAll.Domain.Identity.TwoFactorChallenge", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ConsumedAt")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<int>("SecurityVersion")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("two_factor_challenges", (string)null);
+                });
+
             modelBuilder.Entity("OptimizeAll.Domain.Identity.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7073,6 +7119,36 @@ namespace OptimizeAll.Infrastructure.Persistence.Migrations
                     b.ToTable("user_custom_roles", (string)null);
                 });
 
+            modelBuilder.Entity("OptimizeAll.Domain.Identity.UserRecoveryCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("char(64)")
+                        .IsFixedLength();
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CodeHash");
+
+                    b.ToTable("user_recovery_codes", (string)null);
+                });
+
             modelBuilder.Entity("OptimizeAll.Domain.Identity.UserRole", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -7136,6 +7212,54 @@ namespace OptimizeAll.Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId", "Purpose");
 
                     b.ToTable("user_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("OptimizeAll.Domain.Identity.UserTwoFactor", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("EnabledAt")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<long>("LastUsedTimeStep")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("LockoutEndsAt")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("RecoveryCodesGeneratedAt")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("SecretCiphertext")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("user_two_factor", (string)null);
                 });
 
             modelBuilder.Entity("OptimizeAll.Domain.Integrations.IntegrationConnection", b =>
@@ -17703,6 +17827,15 @@ namespace OptimizeAll.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("OptimizeAll.Domain.Identity.TwoFactorChallenge", b =>
+                {
+                    b.HasOne("OptimizeAll.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("OptimizeAll.Domain.Identity.UserCustomRole", b =>
                 {
                     b.HasOne("OptimizeAll.Domain.Identity.CustomRole", null)
@@ -17711,6 +17844,15 @@ namespace OptimizeAll.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("OptimizeAll.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OptimizeAll.Domain.Identity.UserRecoveryCode", b =>
+                {
                     b.HasOne("OptimizeAll.Domain.Identity.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -17728,6 +17870,15 @@ namespace OptimizeAll.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("OptimizeAll.Domain.Identity.UserToken", b =>
+                {
+                    b.HasOne("OptimizeAll.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OptimizeAll.Domain.Identity.UserTwoFactor", b =>
                 {
                     b.HasOne("OptimizeAll.Domain.Identity.User", null)
                         .WithMany()

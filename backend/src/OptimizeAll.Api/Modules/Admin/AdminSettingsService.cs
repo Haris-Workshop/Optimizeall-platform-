@@ -49,6 +49,10 @@ public static class SettingDefinitions
             "LinkedIn company page id of the issuer (digits, from the page admin URL). Empty: LinkedIn gets the issuer name instead.",
             v => v.ValueKind == JsonValueKind.String && v.GetString()!.Trim() is var id && (id.Length == 0 || (id.Length <= 20 && id.All(char.IsAsciiDigit)))
                 ? (id, null) : (null, "Use the numeric LinkedIn organization id (up to 20 digits), or leave it empty.")),
+        new Definition(SettingKeys.RequireTwoFactorForStaff, "boolean",
+            "Require two-step verification (authenticator app) for every staff and admin account. Staff without it must set it " +
+            "up the next time they sign in, and can't turn it off. Participants, learners and clients can still choose.",
+            v => v.ValueKind is JsonValueKind.True or JsonValueKind.False ? (v.GetBoolean(), null) : (null, "Use true or false.")),
     }.ToDictionary(d => d.Key);
 
     private static Definition Int(string key, int min, int max, string description) => new(key, "integer", description, v =>
@@ -112,6 +116,12 @@ public sealed class AdminSettingsService(
 
         var (value, error) = def.Validate(request.Value!.Value);
         if (error is not null) throw FieldRules.FieldError("settings.invalid_value", "value", error);
+        // Requiring two-step verification for staff would sign the administrator out at their next refresh and force a
+        // set-up: they turn it on for themselves first, so nobody locks themselves out of the change they just made.
+        if (key == SettingKeys.RequireTwoFactorForStaff && value is true &&
+            !await db.Set<UserTwoFactor>().AnyAsync(t => t.UserId == currentUser.Id && t.EnabledAt != null, ct))
+            throw DomainException.Conflict("settings.two_factor_required_first",
+                "Turn on two-step verification for your own account first (Account security), then require it for staff.");
 
         var existing = await db.Set<SystemSetting>().AsNoTracking().FirstOrDefaultAsync(s => s.Key == key, ct);
         var before = existing is null ? DefaultElement(key) : Parse(existing.ValueJson);

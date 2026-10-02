@@ -98,8 +98,7 @@ public sealed class GoogleSignInService(
             EnsureCanSignIn(user);
             login.LastUsedAt = Now;
             audit.Record("auth.google_sign_in", nameof(User), user.Id, after: new { provider = Provider });
-            var session = await auth.SignInExternalAsync(user, ct);
-            return new GoogleCallbackResult(new GoogleCallbackResponse(GoogleCallbackStatus.SignedIn, session.Response, ReturnTo: returnTo), session);
+            return SignedIn(await auth.SignInExternalAsync(user, TwoFactor.TwoFactorService.MethodGoogle, ct), returnTo);
         }
 
         var normalized = Normalization.Email(identity.Email);
@@ -127,10 +126,10 @@ public sealed class GoogleSignInService(
             audit.Record("auth.external_login_linked", nameof(User), existing.Id,
                 after: new { provider = Provider, method = "verified_email_match" });
             audit.Record("auth.google_sign_in", nameof(User), existing.Id, after: new { provider = Provider });
-            LoginResult session;
+            SignInOutcome session;
             try
             {
-                session = await auth.SignInExternalAsync(existing, ct);
+                session = await auth.SignInExternalAsync(existing, TwoFactor.TwoFactorService.MethodGoogle, ct);
             }
             catch (DbUpdateException ex) when (!retried && Common.Errors.ProblemExceptionHandler.IsUniqueViolation(ex))
             {
@@ -140,7 +139,7 @@ public sealed class GoogleSignInService(
                 return await SignInAsync(identity, returnTo, ct, retried: true);
             }
             await SendLinkedNoticeAsync(existing, identity.Email, ct);
-            return new GoogleCallbackResult(new GoogleCallbackResponse(GoogleCallbackStatus.SignedIn, session.Response, ReturnTo: returnTo), session);
+            return SignedIn(session, returnTo);
         }
 
         // New user: nothing is created until they accept the terms.
@@ -182,6 +181,13 @@ public sealed class GoogleSignInService(
         await SendLinkedNoticeAsync(user, identity.Email, ct);
         return new GoogleCallbackResult(new GoogleCallbackResponse(GoogleCallbackStatus.Linked, ReturnTo: returnTo), null);
     }
+
+    /// <summary>The session, or the two-step verification challenge the user must complete first (no session yet).</summary>
+    private static GoogleCallbackResult SignedIn(SignInOutcome outcome, string? returnTo) =>
+        outcome.Challenge is { } challenge
+            ? new GoogleCallbackResult(new GoogleCallbackResponse(GoogleCallbackStatus.TwoFactorRequired, ReturnTo: returnTo, TwoFactor: challenge), null)
+            : new GoogleCallbackResult(new GoogleCallbackResponse(GoogleCallbackStatus.SignedIn, outcome.Session!.Response, ReturnTo: returnTo),
+                outcome.Session);
 
     /// <summary>Security notice to the account owner (editable template "auth.google_linked"); best effort.</summary>
     private async Task SendLinkedNoticeAsync(User user, string googleEmail, CancellationToken ct)
@@ -256,7 +262,9 @@ public sealed class GoogleSignInService(
         await events.PublishAsync(new EmailVerified(user.Id, Now), ct);
 
         audit.Record("auth.google_sign_in", nameof(User), user.Id, after: new { provider = Provider });
-        return await auth.SignInExternalAsync(user, ct);
+        // A brand-new participant has no two-step verification and no staff role, so this is always a session.
+        var outcome = await auth.SignInExternalAsync(user, TwoFactor.TwoFactorService.MethodGoogle, ct);
+        return outcome.Session ?? throw new InvalidOperationException("A new Google account can't need a second sign-in step.");
     }
 
     public async Task<SignInMethodsResponse> GetSignInMethodsAsync(Guid userId, CancellationToken ct)

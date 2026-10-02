@@ -45,14 +45,22 @@ public sealed class AuthController(
         return Accepted(new MessageResponse("If the account exists and is unverified, a new link is on its way."));
     }
 
-    /// <summary>Returns a short-lived access token and sets the rotating refresh token as an HttpOnly cookie.</summary>
+    /// <summary>
+    /// Returns a short-lived access token and sets the rotating refresh token as an HttpOnly cookie. When the account uses
+    /// two-step verification (or must set it up), it returns <see cref="TwoFactor.TwoFactorRequiredResponse"/> instead
+    /// (no token, no cookie): finish with <c>POST /auth/2fa/verify</c> or the <c>/auth/2fa/enroll/*</c> steps.
+    /// </summary>
     [AllowAnonymous]
     [HttpPost("login")]
-    public async Task<ActionResult<AuthResponse>> Login(LoginRequest request, CancellationToken ct)
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(TwoFactor.TwoFactorRequiredResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> Login(LoginRequest request, CancellationToken ct)
     {
-        var result = await auth.LoginAsync(request, ct);
+        var outcome = await auth.LoginAsync(request, ct);
+        if (outcome.Challenge is { } challenge) return Ok(new TwoFactor.TwoFactorRequiredResponse(challenge));
+        var result = outcome.Session!;
         SetRefreshCookie(result.RefreshToken, result.RefreshExpiresAt);
-        return result.Response;
+        return Ok(result.Response);
     }
 
     /// <summary>Rotates the refresh cookie. Requires the X-Requested-With header (CSRF defence in depth with SameSite=Strict).</summary>

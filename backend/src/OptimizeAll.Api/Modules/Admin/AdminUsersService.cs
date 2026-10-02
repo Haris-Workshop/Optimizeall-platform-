@@ -33,6 +33,7 @@ public sealed class AdminUsersService(
     IPermissionDirectory directory,
     IPermissionResolver permissionResolver,
     Roles.AdminRolesService customRoles,
+    Auth.TwoFactor.TwoFactorService twoFactor,
     TimeProvider clock,
     IOptions<ExportOptions> exports)
 {
@@ -157,7 +158,42 @@ public sealed class AdminUsersService(
             payout,
             recent,
             user.ConcurrencyStamp,
-            await customRoles.AssignedAsync(id, ct));
+            await customRoles.AssignedAsync(id, ct),
+            await TwoFactorSummaryAsync(id, ct));
+    }
+
+    private async Task<AdminTwoFactorDto> TwoFactorSummaryAsync(Guid id, CancellationToken ct)
+    {
+        var row = await db.Set<UserTwoFactor>().AsNoTracking().FirstOrDefaultAsync(t => t.UserId == id && t.EnabledAt != null, ct);
+        var remaining = row is null ? 0 : await db.Set<UserRecoveryCode>().CountAsync(c => c.UserId == id && c.UsedAt == null, ct);
+        return new AdminTwoFactorDto(row is not null, row?.EnabledAt, await twoFactor.IsRequiredAsync(id, ct), remaining, row?.LastUsedAt);
+    }
+
+    // ---------- Two-step verification ----------
+
+    /// <summary>
+    /// Resets a user's two-step verification (lost phone and recovery codes): removes the authenticator and recovery
+    /// codes, ends every session, audits the reason and emails the owner. The user signs in with their password alone
+    /// (or, when the staff policy requires it, is walked through a new set-up). Staff accounts need an administrator.
+    /// </summary>
+    public async Task<AdminUserDetailDto> ResetTwoFactorAsync(Guid id, Auth.TwoFactor.AdminResetTwoFactorRequest request, CancellationToken ct)
+    {
+        RequireConfirm(request.Confirm);
+        var reason = request.Reason.Trim();
+        if (reason.Length < 5) throw FieldRules.FieldError("admin.reason_required", "reason", "Explain why the reset is needed.");
+        if (id == currentUser.Id)
+            throw DomainException.Forbidden("admin.two_factor_reset_self",
+                "You can't reset your own two-step verification here. Use Account security, or ask another administrator.");
+        var user = await db.LoadUserAsync(id, ct);
+        if (!currentUser.Roles.Contains(Role.Admin) && (await directory.StaffAmongAsync(new[] { id }, ct)).Count > 0)
+            throw DomainException.Forbidden("admin.staff_requires_admin", "Only administrators can reset two-step verification of staff accounts.");
+        if (!await twoFactor.ResetAsync(id, ct))
+            throw DomainException.Conflict("admin.two_factor_not_enabled", "This account doesn't use two-step verification.");
+        await auth.RevokeAllSessionsAsync(user, "two_factor_reset", ct);
+        audit.Record("admin.user_two_factor_reset", nameof(User), id, before: new { twoFactor = true }, after: new { twoFactor = false }, reason: reason);
+        await db.SaveChangesAsync(ct);
+        await twoFactor.NotifyResetAsync(id, ct);
+        return await GetAsync(id, ct);
     }
 
     // ---------- Status ----------

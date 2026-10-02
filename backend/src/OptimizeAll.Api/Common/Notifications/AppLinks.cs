@@ -25,6 +25,9 @@ public static class AppLinks
     /// <summary>"Sign in with Google" redirect URI path (registered in Google Cloud as <c>https://&lt;host&gt;/auth/google/callback</c>).</summary>
     public const string GoogleCallback = "/auth/google/callback";
 
+    /// <summary>The signed-in user's security settings (password, two-step verification, Google), whatever their portal.</summary>
+    public const string AccountSecurity = "/account/security";
+
     /// <summary>Invitation landing page (<c>/join/:code</c>).</summary>
     public static string Invitation(string code) => $"/join/{Uri.EscapeDataString(code)}";
 

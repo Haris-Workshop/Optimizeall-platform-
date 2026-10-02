@@ -36,6 +36,12 @@ public static class GoogleCallbackStatus
 
     /// <summary>The signed-in user linked their Google account (profile flow).</summary>
     public const string Linked = "linked";
+
+    /// <summary>
+    /// Google proved the identity, but the account uses two-step verification (or must set it up): <c>twoFactor</c> holds
+    /// the challenge, finished like after a password (<c>POST /auth/2fa/verify</c> or <c>/auth/2fa/enroll/*</c>).
+    /// </summary>
+    public const string TwoFactorRequired = "twoFactorRequired";
 }
 
 public sealed record GoogleCallbackResponse(
@@ -44,7 +50,8 @@ public sealed record GoogleCallbackResponse(
     string? Ticket = null,
     string? Email = null,
     string? DisplayName = null,
-    string? ReturnTo = null);
+    string? ReturnTo = null,
+    TwoFactor.TwoFactorChallengeDto? TwoFactor = null);
 
 /// <summary>Creates the account for a new Google user once they accept the terms (same consent as registration).</summary>
 public sealed class GoogleCompleteRequest

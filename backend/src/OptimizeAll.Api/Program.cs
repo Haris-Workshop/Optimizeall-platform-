@@ -70,6 +70,8 @@ services.Configure<BootstrapOptions>(config.GetSection(BootstrapOptions.Section)
 services.Configure<JobOptions>(config.GetSection(JobOptions.Section));
 services.Configure<DevToolsOptions>(config.GetSection(DevToolsOptions.Section));
 services.Configure<ImpersonationOptions>(config.GetSection(ImpersonationOptions.Section));
+services.Configure<OptimizeAll.Api.Modules.Auth.TwoFactor.TwoFactorOptions>(
+    config.GetSection(OptimizeAll.Api.Modules.Auth.TwoFactor.TwoFactorOptions.Section));
 services.Configure<TestAccountOptions>(config.GetSection(TestAccountOptions.Section));
 services.Configure<ExportOptions>(config.GetSection(ExportOptions.Section));
 
@@ -216,6 +218,7 @@ services.AddScoped<IExchangeRateProvider, ExchangeRateProvider>();
 services.AddScoped<ILedgerWriter, LedgerWriter>();
 services.AddSingleton<JobRunner>();
 services.AddScoped<IAuthService, AuthService>();
+services.AddScoped<OptimizeAll.Api.Modules.Auth.TwoFactor.TwoFactorService>();
 services.AddGoogleSignIn(config);
 services.AddScoped<ImpersonationService>();
 

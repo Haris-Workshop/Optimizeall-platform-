@@ -36,6 +36,7 @@ public sealed class ImpersonationService(
     IAuditLogger audit,
     IOptions<ImpersonationOptions> options,
     IPermissionResolver permissions,
+    TwoFactor.TwoFactorService twoFactor,
     TimeProvider clock)
 {
     private DateTime Now => clock.GetUtcNow().UtcDateTime;
@@ -66,6 +67,11 @@ public sealed class ImpersonationService(
         var impersonatorId = currentUser.Id;
         if (targetId == impersonatorId)
             throw DomainException.Forbidden("admin.impersonation_self", "You can't impersonate yourself.");
+        // Staff who must use two-step verification (policy) but haven't set it up can't act as someone else either.
+        // The target's own two-step verification doesn't matter: the staff member never signs in as them.
+        if (await twoFactor.NeedsEnrollmentAsync(impersonatorId, ct))
+            throw DomainException.Forbidden("auth.2fa_enrollment_required",
+                "Set up two-step verification for your own account (Account security) before viewing as another user.");
 
         var target = await db.Set<User>().AsNoTracking().Include(u => u.Roles).FirstOrDefaultAsync(u => u.Id == targetId, ct)
                      ?? throw DomainException.NotFound("User");
@@ -143,6 +149,12 @@ public sealed class ImpersonationService(
         if (!await Impersonation.PermissionsStillAllowAsync(impersonator.Id, target.Id, db, permissions, ct))
         {
             await EndAndAuditAsync(session, "permissions_changed", ct, save: true);
+            return null;
+        }
+        // The staff two-step policy was turned on (or the impersonator's two-step verification reset) since the start.
+        if (await twoFactor.NeedsEnrollmentAsync(impersonator.Id, ct))
+        {
+            await EndAndAuditAsync(session, "two_factor_required", ct, save: true);
             return null;
         }
         return Issue(target, impersonator, session);

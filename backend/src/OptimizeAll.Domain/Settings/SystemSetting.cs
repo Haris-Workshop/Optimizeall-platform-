@@ -50,6 +50,13 @@ public static class SettingKeys
 
     /// <summary>string: LinkedIn company page id for "Add to profile" (empty: the issuer name is sent instead). Default "".</summary>
     public const string LearningLinkedInOrganizationId = "learning.linkedInOrganizationId";
+
+    /// <summary>
+    /// bool: every staff account (any staff permission, from a built-in or a custom role) must use two-step verification;
+    /// staff without it set it up when they next sign in. Participants, learners and clients choose for themselves.
+    /// Default false.
+    /// </summary>
+    public const string RequireTwoFactorForStaff = "security.requireTwoFactorForStaff";
 }
 
 /// <summary>Referral program configuration (setting <see cref="SettingKeys.ReferralProgram"/>).</summary>

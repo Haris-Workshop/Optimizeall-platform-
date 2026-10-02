@@ -20,6 +20,9 @@ public static class EmailTemplateCatalog
     public const string AuthPasswordReset = "auth.password_reset";
     public const string AuthDuplicateRegistration = "auth.duplicate_registration";
     public const string AuthGoogleLinked = "auth.google_linked";
+    public const string AuthTwoFactorEnabled = "auth.two_factor_enabled";
+    public const string AuthTwoFactorDisabled = "auth.two_factor_disabled";
+    public const string AuthTwoFactorRecoveryUsed = "auth.two_factor_recovery_used";
 
     public const string GroupLayout = "Notification layout";
     public const string GroupNotifications = "Notification emails";
@@ -185,6 +188,46 @@ public static class EmailTemplateCatalog
             {
                 new EmailVariable("googleEmail", "The email address of the connected Google account.", "ada@gmail.com"),
                 forgotUrl, DisplayName, SiteName,
+            },
+            HasHtml: false));
+
+        var securityUrl = new EmailVariable("securityUrl", "The account security page.", "https://app.example.com/account/security", Required: true);
+        list.Add(new EmailTemplateDefinition(AuthTwoFactorEnabled, GroupAccount, "Two-step verification turned on",
+            "Security notice sent when two-step verification (authenticator app) is turned on for an account.",
+            "Two-step verification is on for your Optimize All account",
+            "Hi {{displayName}},\n\nTwo-step verification is now on for your Optimize All account. Each time you sign in, " +
+            "we'll ask for a code from your authenticator app. Keep your recovery codes somewhere safe: each one lets you " +
+            "sign in once if you lose your phone.\n\nManage it at {{securityUrl}}.\n\n" +
+            "If this wasn't you, reset your password at {{forgotPasswordUrl}} right away and contact support.",
+            null,
+            new[] { securityUrl, forgotUrl, DisplayName, SiteName },
+            HasHtml: false));
+
+        list.Add(new EmailTemplateDefinition(AuthTwoFactorDisabled, GroupAccount, "Two-step verification turned off",
+            "Security notice sent when two-step verification is turned off by the account owner or reset by an administrator.",
+            "Two-step verification is off for your Optimize All account",
+            "Hi {{displayName}},\n\nTwo-step verification was turned off for your Optimize All account by {{changedBy}}. " +
+            "Signing in now only needs your password (or Google). You can turn it on again at {{securityUrl}}.\n\n" +
+            "If you didn't expect this, reset your password at {{forgotPasswordUrl}} right away and contact support.",
+            null,
+            new[]
+            {
+                new EmailVariable("changedBy", "Who turned it off: \"you\" or \"an administrator (account recovery)\".", "you"),
+                securityUrl, forgotUrl, DisplayName, SiteName,
+            },
+            HasHtml: false));
+
+        list.Add(new EmailTemplateDefinition(AuthTwoFactorRecoveryUsed, GroupAccount, "Recovery code used",
+            "Security notice sent when a two-step verification recovery code is used to sign in or change settings.",
+            "A recovery code was used on your Optimize All account",
+            "Hi {{displayName}},\n\nA recovery code was just used for your Optimize All account. You have {{remaining}} " +
+            "unused recovery codes left; you can create a new set at {{securityUrl}}.\n\n" +
+            "If this wasn't you, reset your password at {{forgotPasswordUrl}} right away and contact support.",
+            null,
+            new[]
+            {
+                new EmailVariable("remaining", "How many unused recovery codes are left.", "9"),
+                securityUrl, forgotUrl, DisplayName, SiteName,
             },
             HasHtml: false));
     }

@@ -139,10 +139,12 @@ test.describe.serial('editable discovery files and page structure', () => {
       expect(titles.indexOf('Get marketing insights in your inbox')).toBeLessThan(
         titles.indexOf('Every channel, one accountable team'),
       );
-      await expect(page.getByRole('link', { name: /Book a consultation/ }).first()).toHaveAttribute(
-        'href',
-        '/contact',
-      );
+      await expect(
+        page
+          .getByRole('main')
+          .getByRole('link', { name: /Book a consultation/ })
+          .first(),
+      ).toHaveAttribute('href', '/contact');
       expect(errors, 'no hydration or console errors').toEqual([]);
     } finally {
       const now = await admin.get<SettingsEnvelope>('/agency/website/settings');

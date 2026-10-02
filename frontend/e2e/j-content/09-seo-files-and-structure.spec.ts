@@ -78,7 +78,8 @@ test.describe.serial('SEO files and site structure', () => {
     await expect(confirm.getByRole('button', { name: 'Save anyway' })).toBeDisabled();
     await shot(editor, 'seo-robots-confirm');
     await confirm.getByRole('button', { name: 'Cancel' }).click();
-    expect((await anonGet('/robots.txt')).text).not.toMatch(/^Disallow: \/\n/m);
+    // Nothing was saved: the file still has the earlier rule, and the catch-all group still allows the site.
+    expect((await anonGet('/robots.txt')).text).toContain(`Disallow: /drafts-${id}/`);
     await editor.getByRole('button', { name: 'Remove my additions' }).click();
     await editor.getByRole('button', { name: 'Save robots.txt' }).click();
     await expect(toast(editor, 'robots.txt saved')).toBeVisible();

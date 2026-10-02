@@ -23,9 +23,9 @@ this branch; fixes made during the audit are listed with before → after values
 
 | # | Item | Result | Evidence |
 |---|---|---|---|
-| 1 | Lighthouse ≥ 95 **desktop** (Perf, SEO, A11y, BP) | **Pass** | Perf 97–99, A11y 100, SEO 100, BP 100 (96 on the lesson page, see below) |
-| 1 | Lighthouse ≥ 95 **mobile** Performance | **Fail** | Perf 63–78 (was 55–81); A11y/SEO 100, BP 100 |
-| 1 | LCP < 2.5 s | Desktop **pass** (0.8–1.1 s) / mobile simulated **fail** (3.7–4.4 s) | Lighthouse; in-browser LCP 0.4–0.7 s (j-seo, unthrottled) |
+| 1 | Lighthouse ≥ 95 **desktop** (Perf, SEO, A11y, BP) | **Pass** | After server rendering: Perf 97.5–100 (median of 3), A11y 100, SEO 100, BP 100 (96 on the lesson page, see below) |
+| 1 | Lighthouse ≥ 95 **mobile** Performance | **Partial** (machine-bound) | After server rendering (median of 3, interleaved with the old build): 78–98, 5 of 12 pages ≥ 95 (old build in the same runs: 54–80); in the quietest run (load ≈ 4) 10 of 12 pages ≥ 95. What is left is Total Blocking Time from hydration on a shared 4-vCPU sandbox; see "Server-side rendering" |
+| 1 | LCP < 2.5 s | **Pass** | Mobile simulated 2.10–2.41 s on all 12 pages (was 3.70–4.53 s); desktop 0.44–0.58 s (was 0.79–0.98 s) |
 | 1 | INP < 200 ms | **Pass** except the mobile menu (232–432 ms, noisy) | /pricing 560 → 136 ms, /learn 984 → 176 ms, blog 144, contact 104, lesson 168 (4× CPU) |
 | 1 | CLS < 0.1 | **Pass** | Lighthouse 0–0.054 on all 24 runs (was 0.18 /services, 0.23 lesson); 4×-CPU phone check ≤ 0.076 on 22 pages (was up to 0.28) |
 | 1 | Responsive AVIF/WebP images | **Pass** (WebP) | Built-in partner logos now use 128/256 px WebP srcset; content images are uploads/YouTube thumbnails; OG cards are generated PNG (as social networks require) |
@@ -91,12 +91,79 @@ Mobile FCP improved on every page (3.0–3.3 s → 2.4–2.7 s); TBT moves with 
 The lesson page's Best practices 96 is the sandbox: it cannot reach `i.ytimg.com`, so the video thumbnail logs a
 network error (the facade then falls back to the branded stage). With network access the request succeeds.
 
-**Why mobile Performance stays below 95.** Public pages are rendered by the API as plain, crawlable HTML (perfect for
-SEO), but the designed page is client-rendered: the server HTML is hidden while JavaScript runs, so the first designed
-paint needs HTML → CSS + 161 KiB of JS → page chunk → API data → render. Under simulated slow 4G and a 4× slower CPU
-that floor is ~2.4 s FCP / ~3.7 s LCP plus 0.3–1 s of main-thread work for 1,000–1,400-element pages. Reaching 95 needs
-the designed page in the first HTML response: server-side rendering of the React pages with hydration (or build-time /
-publish-time prerendering of the public routes). See "Still left".
+**Why mobile Performance stayed below 95 (first pass).** Public pages were rendered by the API as plain, crawlable HTML,
+but the designed page was client-rendered: the server HTML was hidden while JavaScript ran, so the first designed paint
+needed HTML → CSS + 161 KiB of JS → page chunk → API data → render (~2.4 s FCP / ~3.7 s LCP simulated). Fixed by the
+server-side rendering below.
+
+## Server-side rendering (second pass, 2026-10-02)
+
+**Approach.** The React app renders public website pages on the server and the browser hydrates them
+(docs/SEO_CRO.md §9.1). A small Node renderer (`frontend/server/ssr-server.mjs`, the `vite build --ssr` bundle
+`dist-ssr/entry-server.js`) runs **inside the existing web container** next to nginx (`nginx/40-optimizeall-ssr.sh`; no
+new Render service, no Render setting changed). nginx's `@document` asks it for every page; it fetches the API's
+`/_document` (status, redirects, SEO head and JSON-LD stay the API's), renders the app with the page's data (the app's own
+React Query queries, run against the API with the visitor's forwarded headers) into `#root`, links the route's
+stylesheets and embeds the query cache as JSON. If the renderer is down, nginx falls back to the API's document
+(the previous behaviour). Every request is rendered (no cache), so CMS edits, posts, courses and case studies are live
+immediately — the reason not to prerender at build/publish time. Chosen over making the API's HTML use the design's
+markup (two implementations of every page would drift) and over prerendering (stale content, a publish pipeline).
+
+**What makes the first paint cheap.** The page's CSS is render-blocking, nothing else is: the tiny entry
+(`src/main.tsx`) waits for the reported first contentful paint, then fetches and evaluates the app in steps (libraries,
+routes, app) and hydrates in a transition (time-sliced). Sections below a page's first one use
+`content-visibility: auto`; hero headings and leads (the LCP elements) are never animated from transparent; entrance
+effects keep what was already painted (IntersectionObserver, no forced layout); the visitor's scroll is kept on
+hydration. Hydration is checked by j-seo on every public page (no console error, server elements kept).
+
+**Lighthouse, median of 3 runs**, production nginx + API on SQLite (Baseline, Demo), simulated throttling, "before" =
+the branch before this change and "after" = this change, **interleaved page by page in the same runs** so both saw the
+same machine load (load average 10.6 / 7.4 / 4.2 in runs 1–3). Raw reports: `perf/lh-final/{before,after}/run{1,2,3}` in
+the session scratch directory. Scores are Performance (the three runs in brackets for "after"); A11y and SEO are 100
+everywhere, Best practices 100 (96 on the lesson page, i.ytimg.com is unreachable here), CLS 0–0.054 before, 0 after.
+
+| Page (mobile) | Perf before | Perf after (runs) | LCP before → after | FCP before → after | TBT before → after |
+|---|---|---|---|---|---|
+| `/` | 54.5 | **89** (74, 92, 89) | 4.26 → 2.25 s | 2.57 → 1.50 s | 1805 → 370 ms |
+| `/services` | 70.5 | **84** (81, —, 87) | 3.70 → 2.26 s | 2.58 → 1.51 s | 598 → 582 ms |
+| `/services/seo` | 77 | **95** (88, 100, 95) | 3.74 → 2.25 s | 2.52 → 1.50 s | 377 → 210 ms |
+| `/pricing` | 65 | **79** (79, 70, 98) | 3.87 → 2.26 s | 2.54 → 1.51 s | 929 → 772 ms |
+| `/case-studies/northwind-outdoors-organic-growth` | 73 | **78** (70, 78, 98) | 3.81 → 2.25 s | 2.55 → 1.51 s | 476 → 868 ms |
+| `/blog` | 61 | **90** (90, 90, 97) | 4.05 → 2.41 s | 2.53 → 1.50 s | 1081 → 317 ms |
+| `/blog/google-business-profile-checklist` | 63 | **98** (87, 98, 98) | 4.13 → 2.25 s | 2.65 → 1.50 s | 790 → 33 ms |
+| `/contact` | 80 | **98** (82, 98, 98) | 3.72 → 2.25 s | 2.45 → 1.50 s | 312 → 9 ms |
+| `/learn` | 61 | **97** (85, 98, 97) | 4.53 → 2.34 s | 2.81 → 1.65 s | 765 → 32 ms |
+| `/learn/prompt-engineering-foundations` | 77 | **97** (72, 97, 97) | 4.13 → 2.41 s | 2.84 → 1.66 s | 247 → 14 ms |
+| `/learn/…/how-ai-assistants-respond` | 70 | **87** (85, 87, 97) | 4.33 → 2.40 s | 2.72 → 1.65 s | 435 → 413 ms |
+| `/creators` | 77 | **93** (93, 90, 99) | 3.70 → 2.10 s | 2.41 → 1.21 s | 397 → 270 ms |
+
+| Page (desktop) | Perf before → after | LCP before → after | TBT before → after |
+|---|---|---|---|
+| `/` | 97 → 97.5 | 0.92 → 0.52 s | 123 → 103 ms |
+| `/services` | 96 → 100 | 0.91 → 0.52 s | 129 → 0 ms |
+| `/services/seo` | 98 → 100 | 0.84 → 0.50 s | 116 → 13 ms |
+| `/pricing` | 96 → 100 | 0.87 → 0.48 s | 136 → 19 ms |
+| `/case-studies/northwind-outdoors-organic-growth` | 99 → 100 | 0.86 → 0.49 s | 61 → 2 ms |
+| `/blog` | 99 → 100 | 0.92 → 0.54 s | 43 → 0 ms |
+| `/blog/google-business-profile-checklist` | 99 → 100 | 0.82 → 0.50 s | 15 → 0 ms |
+| `/contact` | 99 → 100 | 0.80 → 0.48 s | 11 → 0 ms |
+| `/learn` | 98 → 100 | 0.98 → 0.58 s | 23 → 21 ms |
+| `/learn/prompt-engineering-foundations` | 98 → 100 | 0.93 → 0.49 s | 21 → 0 ms |
+| `/learn/…/how-ai-assistants-respond` | 98 → 100 | 0.96 → 0.49 s | 46 → 0 ms |
+| `/creators` | 99 → 100 | 0.79 → 0.44 s | 18 → 0 ms |
+
+**Reading the mobile numbers honestly.** FCP and LCP are now network-bound (HTML, CSS and the two self-hosted fonts:
+LCP 2.10–2.41 s on every page and every run). What still varies is Total Blocking Time: Lighthouse multiplies the
+main-thread time it *observes* by 4, and this sandbox has 4 shared vCPUs used by other agents' test runs, so the same
+page scores 70 in a busy run and 98 in a quiet one (pricing, case study). The pages below 95 are the largest ones
+(pricing ~1,400 elements, case study, services, home): hydrating them still costs 20–90 ms tasks of real CPU time here.
+On the quietest run (run 3) ten of the twelve pages scored 95–99; the home page (89) and /services (87) did not
+(/services' second run failed to record a trace three times and is missing). Next steps if a real mid-range phone confirms the gap: Suspense boundaries around below-
+the-fold sections (smaller hydration commits) and fewer decorative effects on the largest pages.
+
+**Costs.** Each page view costs the web container one React render or two (30–100 ms of CPU on this machine) on top of
+the API's document; the renderer is capped at a 160 MB heap. The app's JavaScript starts after the first paint, so a
+click in the first moments after the page appears can arrive before hydration (links still work as plain links).
 
 ## Bundle (gzip, `npm run budget`)
 
@@ -192,11 +259,10 @@ an independent decoder for every mask and versions 1–38) instead of a dependen
 
 ## Still left
 
-1. **Mobile Lighthouse Performance ≥ 95 / mobile LCP < 2.5 s (simulated).** Needs the designed page in the first HTML
-   response. Plan: render the public routes with React on the server (a small Node renderer the API's `/_document` calls,
-   or publish-time prerendering of CMS pages into the shell) and `hydrateRoot` on the client; seed React Query from JSON
-   embedded in the document so pages render without API round trips. Estimated 1–2 weeks with the SEO/e2e suites as
-   the safety net. Interim options measured as low value: further icon/nav splitting (~7 KiB gzip).
+1. **Mobile Lighthouse Performance ≥ 95 on the largest pages under load.** Server-side rendering is done (see
+   "Server-side rendering"): mobile LCP < 2.5 s everywhere, 5 of 12 pages ≥ 95 in the median and 10 of 12 in the
+   quietest run. The remaining gap is hydration CPU (TBT) on pricing, case studies, services and the home page; measure on a real
+   mid-range phone before investing in Suspense-split hydration.
 2. **2FA (TOTP) for staff and admin accounts** — done, see "Two-step verification" below.
 3. **Demo accounts on the Render blueprint.** `render.yaml` seeds the `Demo` profile, whose accounts have documented
    passwords. Fine for a demo/staging site; a production deployment must drop `Database__Seed__1=Demo` (not changed

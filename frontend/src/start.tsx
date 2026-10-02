@@ -2,10 +2,12 @@ import { hydrate, type DehydratedState } from '@tanstack/react-query';
 import { startTransition, StrictMode } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { matchRoutes } from 'react-router-dom';
-import { App } from './App';
+import { App, createRouter } from './App';
 import { serverRenderedRouteTree } from './app/router';
 import { SSR_STATE_ID } from './app/ssrDocument';
 import { createQueryClient } from './lib/api/query';
+
+const yieldToMain = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 /**
  * Public pages arrive rendered by the server (src/entry-server.tsx) with the data they were rendered with. The route
@@ -25,11 +27,16 @@ async function hydrateServerPage(container: HTMLElement) {
       Object.assign(route, loaded, { lazy: undefined });
     }),
   );
+  // The router (matching the URL against every route, portals included) is created in a task of its own rather than
+  // inside the first hydration step.
+  await yieldToMain();
+  const router = createRouter();
+  await yieldToMain();
   startTransition(() => {
     hydrateRoot(
       container,
       <StrictMode>
-        <App queryClient={queryClient} />
+        <App queryClient={queryClient} router={router} />
       </StrictMode>,
     );
   });

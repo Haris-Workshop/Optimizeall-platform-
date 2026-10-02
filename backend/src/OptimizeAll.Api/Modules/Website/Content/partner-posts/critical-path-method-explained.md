@@ -6,7 +6,7 @@ cluster: pci-ai
 primaryKeyword: critical path method
 categories: project-controls
 tags: critical path method, scheduling, float, planning, schedule health
-related: what-is-project-controls, earned-schedule-explained, schedule-risk-analysis-monte-carlo, project-controls-kpis-dashboard, what-is-pcl-ai-certification, how-to-prepare-for-pci-ai-exams
+related: what-is-project-controls, earned-schedule-explained, schedule-risk-analysis-monte-carlo, project-controls-kpis-dashboard, what-is-pcl-ai-certification, delay-analysis-methods
 publishedDaysAgo: 43
 cover: project-controls
 coverAlt: Dark blue cover with a network of linked schedule activities and the words Critical path method

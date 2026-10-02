@@ -6,7 +6,7 @@ cluster: pci-ai
 primaryKeyword: AI in project controls
 categories: project-controls
 tags: ai, project controls, forecasting, risk, governance
-related: what-is-project-controls, earned-value-management-explained, agile-vs-hybrid-project-delivery-with-ai
+related: what-is-project-controls, earned-value-management-explained, agile-vs-hybrid-project-delivery-with-ai, ai-for-project-scheduling, ai-cost-forecasting-for-projects
 publishedDaysAgo: 23
 cover: project-controls
 coverAlt: Dark blue cover with horizontal schedule bars and the words Project controls and finance

@@ -44,6 +44,18 @@ public static class PartnerPostLibrary
     /// <summary>Partner pages on this site the posts may link to.</summary>
     public static readonly string[] PartnerPages = { "/partners/pci-ai", "/partners/certuvo" };
 
+    /// <summary>
+    /// Free PDF guides the posts may link to: static files of the web app (<c>frontend/public/downloads/</c>, served at
+    /// <c>/downloads/{name}.pdf</c>; sources and build script in <c>content/downloads/</c>).
+    /// </summary>
+    public static readonly string[] Downloads =
+    {
+        "/downloads/pmp-study-plan-8-week-checklist.pdf", "/downloads/earned-value-management-cheat-sheet.pdf",
+        "/downloads/ai-in-project-controls-playbook.pdf", "/downloads/choosing-a-project-controls-certification.pdf",
+        "/downloads/certification-exam-day-checklist.pdf", "/downloads/schedule-health-check-template.pdf",
+        "/downloads/exam-readiness-scorecard.pdf",
+    };
+
     /// <summary>Blog categories the partner posts use (slug, name, description); created by the seeder when missing.</summary>
     public static readonly (string Slug, string Name, string Description)[] Categories =
     {

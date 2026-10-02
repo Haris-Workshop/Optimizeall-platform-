@@ -6,7 +6,7 @@ cluster: certuvo
 primaryKeyword: mock exam review
 categories: exam-prep
 tags: mock exam, error log, study skills, exam technique, exam prep
-related: spaced-repetition-and-active-recall-for-exams, how-to-use-an-ai-study-coach, study-for-certification-while-working-full-time, cpa-task-based-simulations-guide, how-to-choose-an-exam-question-bank
+related: spaced-repetition-and-active-recall-for-exams, how-to-use-an-ai-study-coach, study-for-certification-while-working-full-time, cpa-task-based-simulations-guide, how-to-choose-an-exam-question-bank, exam-readiness-checklist
 publishedDaysAgo: 54
 cover: exam-prep
 coverAlt: Purple cover with amber accent bars and the words Certification exam prep

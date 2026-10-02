@@ -6,7 +6,7 @@ cluster: pci-ai
 primaryKeyword: project management certification
 categories: project-controls
 tags: certification, project management, careers, ai
-related: how-to-become-a-project-controls-professional, how-to-prepare-for-pci-ai-exams, pmp-exam-prep-pmbok-7
+related: how-to-become-a-project-controls-professional, how-to-prepare-for-pci-ai-exams, pmp-exam-prep-pmbok-7, capm-vs-pmp, pmp-vs-pcl-ai
 publishedDaysAgo: 8
 cover: project-controls
 coverAlt: Dark blue cover with horizontal schedule bars and the words Project controls and finance

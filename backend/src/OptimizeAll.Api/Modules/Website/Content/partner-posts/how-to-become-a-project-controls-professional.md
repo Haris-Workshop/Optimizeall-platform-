@@ -6,7 +6,7 @@ cluster: pci-ai
 primaryKeyword: project controls career
 categories: project-controls
 tags: project controls, careers, certification
-related: what-is-project-controls, choosing-a-project-management-certification, how-to-prepare-for-pci-ai-exams
+related: what-is-project-controls, choosing-a-project-management-certification, how-to-prepare-for-pci-ai-exams, project-controls-interview-questions, project-controls-certifications-compared
 publishedDaysAgo: 20
 cover: project-controls
 coverAlt: Dark blue cover with horizontal schedule bars and the words Project controls and finance

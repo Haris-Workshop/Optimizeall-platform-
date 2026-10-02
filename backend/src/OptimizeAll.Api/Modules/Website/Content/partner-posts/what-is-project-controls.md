@@ -6,7 +6,7 @@ cluster: pci-ai
 primaryKeyword: what is project controls
 categories: project-controls
 tags: project controls, planning, cost control, ai
-related: earned-value-management-explained, ai-in-project-controls, how-to-become-a-project-controls-professional
+related: earned-value-management-explained, ai-in-project-controls, how-to-become-a-project-controls-professional, work-breakdown-structure-guide, dcma-14-point-schedule-assessment
 publishedDaysAgo: 29
 cover: project-controls
 coverAlt: Dark blue cover with horizontal schedule bars and the words Project controls and finance

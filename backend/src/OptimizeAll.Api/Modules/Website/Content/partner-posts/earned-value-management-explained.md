@@ -6,7 +6,7 @@ cluster: pci-ai
 primaryKeyword: earned value management
 categories: project-controls
 tags: earned value, project controls, forecasting
-related: what-is-project-controls, ai-in-project-controls, how-to-prepare-for-pci-ai-exams
+related: what-is-project-controls, ai-in-project-controls, how-to-prepare-for-pci-ai-exams, s-curve-project-management, progress-measurement-methods
 publishedDaysAgo: 26
 cover: project-controls
 coverAlt: Dark blue cover with horizontal schedule bars and the words Project controls and finance

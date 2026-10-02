@@ -6,7 +6,7 @@ cluster: certuvo
 primaryKeyword: how to pass the CPA exam
 categories: exam-prep
 tags: cpa, accounting, exam prep, study plan
-related: cma-exam-study-plan, spaced-repetition-and-active-recall-for-exams, how-to-use-an-ai-study-coach
+related: cma-exam-study-plan, spaced-repetition-and-active-recall-for-exams, how-to-use-an-ai-study-coach, cma-vs-cpa
 publishedDaysAgo: 28
 cover: exam-prep
 coverAlt: Purple cover with amber accent bars and the words Certification exam prep

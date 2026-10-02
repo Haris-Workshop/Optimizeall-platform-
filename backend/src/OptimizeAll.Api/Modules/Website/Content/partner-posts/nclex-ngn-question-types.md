@@ -6,7 +6,7 @@ cluster: certuvo
 primaryKeyword: NGN question types
 categories: exam-prep
 tags: nclex, ngn, nursing, clinical judgment, exam prep
-related: nclex-rn-vs-nclex-pn, spaced-repetition-and-active-recall-for-exams, how-to-use-an-ai-study-coach
+related: nclex-rn-vs-nclex-pn, spaced-repetition-and-active-recall-for-exams, how-to-use-an-ai-study-coach, nclex-study-plan
 publishedDaysAgo: 13
 cover: exam-prep
 coverAlt: Purple cover with amber accent bars and the words Certification exam prep

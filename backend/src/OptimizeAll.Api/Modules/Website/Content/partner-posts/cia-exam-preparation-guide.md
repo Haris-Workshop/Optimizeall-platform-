@@ -6,7 +6,7 @@ cluster: certuvo
 primaryKeyword: CIA exam preparation
 categories: exam-prep
 tags: cia, internal audit, exam prep, standards
-related: cisa-exam-preparation-guide, how-to-pass-the-cpa-exam, spaced-repetition-and-active-recall-for-exams
+related: cisa-exam-preparation-guide, how-to-pass-the-cpa-exam, spaced-repetition-and-active-recall-for-exams, cia-vs-cisa
 publishedDaysAgo: 22
 cover: exam-prep
 coverAlt: Purple cover with amber accent bars and the words Certification exam prep

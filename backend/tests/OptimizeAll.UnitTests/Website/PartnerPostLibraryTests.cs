@@ -121,11 +121,32 @@ public sealed partial class PartnerPostLibraryTests
             Assert.All(internalLinks, u =>
             {
                 var valid = PartnerPostLibrary.PartnerPages.Contains(u)
+                            || PartnerPostLibrary.Downloads.Contains(u)
                             || (u.StartsWith("/learn/", StringComparison.Ordinal) && PartnerPostLibrary.CourseSlugs.Contains(u["/learn/".Length..]))
                             || (u.StartsWith("/blog/", StringComparison.Ordinal) && slugs.Contains(u["/blog/".Length..]) && u != "/blog/" + p.Slug);
                 Assert.True(valid, $"{p.Slug}: unknown internal link {u}");
             });
             Assert.All(p.Related, r => Assert.Contains(r, slugs));
+        });
+    }
+
+    [Fact]
+    public void Every_free_pdf_guide_exists_in_the_web_app_and_is_linked_from_at_least_two_posts()
+    {
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (root is not null && !Directory.Exists(Path.Combine(root.FullName, "frontend", "public"))) root = root.Parent;
+        Assert.All(PartnerPostLibrary.Downloads, d =>
+        {
+            Assert.Matches("^/downloads/[a-z0-9-]+\\.pdf$", d);
+            Assert.True(Posts.Count(p => p.Body.Contains("](" + d + ")", StringComparison.Ordinal)) >= 2, $"{d} is linked from fewer than two posts");
+            if (root is null) return; // tests running outside the repository (packaged): the file check needs the sources
+            var file = new FileInfo(Path.Combine(root.FullName, "frontend", "public", d.TrimStart('/')));
+            Assert.True(file.Exists, $"{d} is missing from frontend/public");
+            Assert.InRange(file.Length, 10_000, 1_000_000);
+            using var stream = file.OpenRead();
+            var head = new byte[5];
+            stream.ReadExactly(head);
+            Assert.Equal("%PDF-"u8.ToArray(), head);
         });
     }
 

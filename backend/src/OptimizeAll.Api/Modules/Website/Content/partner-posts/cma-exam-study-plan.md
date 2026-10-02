@@ -6,7 +6,7 @@ cluster: certuvo
 primaryKeyword: CMA exam study plan
 categories: exam-prep
 tags: cma, management accounting, exam prep, study plan
-related: how-to-pass-the-cpa-exam, cfa-exam-study-strategies, spaced-repetition-and-active-recall-for-exams
+related: how-to-pass-the-cpa-exam, cfa-exam-study-strategies, spaced-repetition-and-active-recall-for-exams, cma-vs-cpa
 publishedDaysAgo: 25
 cover: exam-prep
 coverAlt: Purple cover with amber accent bars and the words Certification exam prep

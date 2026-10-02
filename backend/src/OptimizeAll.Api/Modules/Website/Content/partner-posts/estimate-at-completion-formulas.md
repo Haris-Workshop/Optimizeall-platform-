@@ -6,7 +6,7 @@ cluster: pci-ai
 primaryKeyword: estimate at completion
 categories: project-controls
 tags: estimate at completion, eac, etc, tcpi, earned value, forecasting
-related: earned-value-management-explained, earned-schedule-explained, project-controls-kpis-dashboard, schedule-risk-analysis-monte-carlo, ai-in-project-controls, project-controls-vs-project-management
+related: earned-value-management-explained, earned-schedule-explained, project-controls-kpis-dashboard, schedule-risk-analysis-monte-carlo, ai-in-project-controls, ai-cost-forecasting-for-projects
 publishedDaysAgo: 41
 cover: project-controls
 coverAlt: Dark blue cover with a forecast range band and the words Estimate at completion formulas

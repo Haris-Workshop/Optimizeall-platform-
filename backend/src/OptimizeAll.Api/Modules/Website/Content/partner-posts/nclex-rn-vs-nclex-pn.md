@@ -6,7 +6,7 @@ cluster: certuvo
 primaryKeyword: NCLEX-RN vs NCLEX-PN
 categories: exam-prep
 tags: nclex, nclex-rn, nclex-pn, nursing, exam prep
-related: nclex-ngn-question-types, spaced-repetition-and-active-recall-for-exams, how-to-use-an-ai-study-coach
+related: nclex-ngn-question-types, spaced-repetition-and-active-recall-for-exams, how-to-use-an-ai-study-coach, nclex-study-plan
 publishedDaysAgo: 10
 cover: exam-prep
 coverAlt: Purple cover with amber accent bars and the words Certification exam prep

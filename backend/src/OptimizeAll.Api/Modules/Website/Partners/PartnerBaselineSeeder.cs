@@ -68,6 +68,8 @@ public sealed class PartnerBaselineSeeder(TimeProvider clock) : ISeeder
 
             Exam preparation for all three PCI AI certifications is available from [Certuvo](/partners/certuvo).
 
+            Free guides from Optimize All for the disciplines PCL-AI covers: the [earned value management cheat sheet (PDF)](/downloads/earned-value-management-cheat-sheet.pdf), the [schedule health check template (PDF)](/downloads/schedule-health-check-template.pdf), the [AI in project controls playbook (PDF)](/downloads/ai-in-project-controls-playbook.pdf) and [choosing a project controls certification (PDF)](/downloads/choosing-a-project-controls-certification.pdf). All guides: [free project controls and exam prep PDF guides](/blog/free-project-controls-and-exam-prep-guides).
+
             PCI AI is an independent organization and a separate platform from Optimize All. Optimize All is its official marketing partner.
             """,
         Highlights = new() { "3 years' experience — any field", "Fully online · scenario-based exam", "AI governed throughout" },
@@ -121,6 +123,8 @@ public sealed class PartnerBaselineSeeder(TimeProvider clock) : ISeeder
             Its question bank holds thousands of exam-style questions, written and verified by qualified professionals and mapped to the official blueprint — then expanded with personalized AI practice, with every question validated by four independent AI judges.
 
             Stuck on a question? Learners can chat with or call Certuvo's **AI Coach** without leaving the practice screen. The coach uses the Socratic method to teach you to think, not memorize, and speaks six languages: English, Arabic, French, Spanish, Hindi and Russian. It is switched off during mock exams — practice with help, test without it.
+
+            Free study aids from Optimize All: the [PMP study plan: 8-week checklist (PDF)](/downloads/pmp-study-plan-8-week-checklist.pdf), the [certification exam day checklist (PDF)](/downloads/certification-exam-day-checklist.pdf) and the [exam readiness scorecard (PDF)](/downloads/exam-readiness-scorecard.pdf). All guides: [free project controls and exam prep PDF guides](/blog/free-project-controls-and-exam-prep-guides).
 
             Certuvo is an independent platform, separate from Optimize All. Optimize All is its official marketing partner.
             """,

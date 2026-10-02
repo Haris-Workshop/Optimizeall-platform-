@@ -6,7 +6,7 @@ cluster: certuvo
 primaryKeyword: study for certification while working
 categories: exam-prep
 tags: study skills, time management, working professionals, exam prep, burnout
-related: spaced-repetition-and-active-recall-for-exams, how-to-use-an-ai-study-coach, cfa-level-1-study-schedule, how-to-review-a-mock-exam, cpa-exam-sections-explained
+related: spaced-repetition-and-active-recall-for-exams, how-to-use-an-ai-study-coach, cfa-level-1-study-schedule, how-to-review-a-mock-exam, cpa-exam-sections-explained, certification-study-plan-template
 publishedDaysAgo: 52
 cover: exam-prep
 coverAlt: Purple cover with amber accent bars and the words Certification exam prep

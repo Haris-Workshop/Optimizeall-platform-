@@ -6,7 +6,7 @@ cluster: certuvo
 primaryKeyword: PMP exam prep
 categories: exam-prep
 tags: pmp, project management, pmbok, exam prep
-related: agile-vs-hybrid-project-delivery-with-ai, choosing-a-project-management-certification, how-to-use-an-ai-study-coach
+related: agile-vs-hybrid-project-delivery-with-ai, choosing-a-project-management-certification, how-to-use-an-ai-study-coach, pmp-exam-changes-2026, pmp-study-plan
 publishedDaysAgo: 16
 cover: exam-prep
 coverAlt: Purple cover with amber accent bars and the words Certification exam prep

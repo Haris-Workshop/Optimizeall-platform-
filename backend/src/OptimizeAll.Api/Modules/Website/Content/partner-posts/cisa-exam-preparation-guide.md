@@ -6,7 +6,7 @@ cluster: certuvo
 primaryKeyword: CISA exam preparation
 categories: exam-prep
 tags: cisa, it audit, governance, exam prep
-related: cia-exam-preparation-guide, spaced-repetition-and-active-recall-for-exams, how-to-use-an-ai-study-coach
+related: cia-exam-preparation-guide, spaced-repetition-and-active-recall-for-exams, how-to-use-an-ai-study-coach, cia-vs-cisa
 publishedDaysAgo: 7
 cover: exam-prep
 coverAlt: Purple cover with amber accent bars and the words Certification exam prep

@@ -222,6 +222,23 @@ export const routes: RouteObject[] = [
   },
 ];
 
+/**
+ * The route tree cut down to the branches that lead to server-rendered routes (the same route objects). A page the
+ * server rendered always matches one of them, and matching against these few dozen routes instead of every portal route
+ * keeps that work out of the browser's startup (src/start.tsx).
+ */
+export function serverRenderedRouteTree(tree: RouteObject[] = routes): RouteObject[] {
+  const keep: RouteObject[] = [];
+  for (const route of tree) {
+    if ((route.handle as { ssr?: boolean } | undefined)?.ssr) keep.push(route);
+    else if (route.children) {
+      const children = serverRenderedRouteTree(route.children);
+      if (children.length > 0) keep.push({ ...route, children } as RouteObject);
+    }
+  }
+  return keep;
+}
+
 /** Opt into React Router v7 behaviours now so the eventual upgrade is a no-op. */
 export const routerFuture = {
   v7_fetcherPersist: true,

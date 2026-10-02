@@ -249,6 +249,15 @@ test.describe('agency website', () => {
       return route.fulfill({ status: 200, contentType: 'text/javascript', body: '' });
     });
     await mockWebsite(page, {}, site({ ga4MeasurementId: 'G-TEST12345', gtmContainerId: null, metaPixelId: null }));
+    // A site that configures tags extends the policy with the vendor's host (docs/WEBSITE.md § Analytics and the CSP).
+    await page.route('**/*', async (route) => {
+      if (route.request().resourceType() !== 'document') return route.fallback();
+      const response = await route.fetch();
+      const policy = response.headers()['content-security-policy'] ?? '';
+      expect(policy).toContain("script-src 'self';");
+      const extended = policy.replace("script-src 'self';", "script-src 'self' https://www.googletagmanager.com;");
+      return route.fulfill({ response, headers: { ...response.headers(), 'content-security-policy': extended } });
+    });
     await page.goto('/');
     const banner = page.getByRole('region', { name: 'Your privacy choices' });
     await expect(banner).toBeVisible();

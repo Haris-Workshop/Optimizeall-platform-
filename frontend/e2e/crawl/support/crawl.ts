@@ -72,12 +72,15 @@ export interface Finding {
  * Problems the crawler provokes on purpose or that are the app's documented answer, never bugs:
  *  - the anonymous session probe (POST /auth/refresh → 401) before sign-in;
  *  - "Failed to load resource" console lines (each is already reported once as an `http` finding);
- *  - Chromium refusing Playwright's trace script in sandboxed srcdoc previews (only with tracing on).
+ *  - Chromium refusing Playwright's trace script in sandboxed srcdoc previews (only with tracing on);
+ *  - the Demo seed's social library images, which are external URLs (picsum.photos) that the production CSP's img-src
+ *    refuses unless the host is in IMG_SRC_EXTRA (docs/RELEASE_AUDIT.md, "Still left"). Nothing else is exempt.
  */
 const ignored: RegExp[] = [
   /^HTTP 401 POST .*\/api\/v1\/auth\/refresh$/,
   /^Failed to load resource/,
   /^Blocked script execution in 'about:srcdoc'/,
+  /^Refused to load the image 'https:\/\/picsum\.photos\/seed\/[a-z0-9-]+\/\d+\/\d+' because it violates the following Content Security Policy directive: "img-src /,
 ];
 
 /** Records problems on one page: console errors, page errors and failed (4xx/5xx or aborted) API calls. */

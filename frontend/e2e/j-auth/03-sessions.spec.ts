@@ -81,11 +81,15 @@ test.describe.serial('sessions and refresh tokens', () => {
     // A cross-site form post (another site's page) carries neither the header nor, with SameSite=Strict, the cookie.
     const cookieBefore = (await browserRefreshCookie(context))!.value;
     // The app's own port under another host name (127.0.0.1 vs localhost) is another site.
+    // The attacker's page is a plain page of its own (the app's pages forbid posting elsewhere: CSP form-action 'self').
     const app = new URL(test.info().project.use.baseURL!);
     const attackerOrigin = `http://127.0.0.1:${app.port}`;
     const logoutUrl = new URL('/api/v1/auth/logout', app).href;
     const attacker = await context.newPage();
-    await attacker.goto(`${attackerOrigin}/`);
+    await attacker.route(`${attackerOrigin}/evil`, (route) =>
+      route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>evil</title><h1>evil</h1>' }),
+    );
+    await attacker.goto(`${attackerOrigin}/evil`);
     const answer = attacker.waitForResponse((r) => r.url().includes('/api/v1/auth/logout'));
     await attacker.evaluate((action) => {
       const form = document.createElement('form');

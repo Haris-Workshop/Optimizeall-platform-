@@ -84,6 +84,9 @@ E2E_DB_PROVIDER="$(printf '%s' "${E2E_DB_PROVIDER:-mysql}" | tr '[:upper:]' '[:l
 E2E_WEB_SERVER="$(printf '%s' "${E2E_WEB_SERVER:-vite}" | tr '[:upper:]' '[:lower:]')"
 case "$E2E_WEB_SERVER" in vite|nginx) ;; *) die "E2E_WEB_SERVER must be vite or nginx" ;; esac
 [ "$E2E_WEB_SERVER" = nginx ] && { have nginx || die "E2E_WEB_SERVER=nginx needs nginx on PATH"; }
+# nginx's workers run as another user when started as root: they must reach their proxy temp files (large pages are
+# buffered to disk) under the work directory, which mktemp creates private.
+[ "$E2E_WEB_SERVER" = nginx ] && chmod 755 "$E2E_WORK_DIR"
 case "$E2E_DB_PROVIDER" in mysql|sqlite) ;; *) die "E2E_DB_PROVIDER must be mysql or sqlite" ;; esac
 SQLITE_FILE="$E2E_WORK_DIR/e2e.db"
 

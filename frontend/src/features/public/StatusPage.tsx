@@ -15,21 +15,18 @@ export interface StatusPageProps {
 
 /**
  * Full-width message page (404, 403, crash): a status code set large and faint behind an icon tile, the page's h1, a
- * short explanation and the ways forward. The large code is decorative (the small code above the title is the text).
+ * short explanation and the ways forward. The large code is decorative, drawn by CSS from `data-code`; the small code
+ * above the title is the text.
  */
 export function StatusPage({ code, icon, title, description, actions, footer, standalone }: StatusPageProps) {
   const content = (
     <div className="status-page">
       <div className="status-page__hero">
-        {code && (
-          <p className="status-page__art" aria-hidden="true">
-            {code}
-          </p>
-        )}
+        {code && <span className="status-page__art" data-code={code} aria-hidden="true" />}
         <span className="status-page__icon" aria-hidden="true">
           {icon}
         </span>
-        {code && <p className="status-page__code">Error {code}</p>}
+        {code && <p className="status-page__code">{code}</p>}
         <h1 className="status-page__title">{title}</h1>
         <p className="status-page__description">{description}</p>
         {actions && <div className="status-page__actions">{actions}</div>}

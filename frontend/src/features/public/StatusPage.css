@@ -43,6 +43,10 @@
 }
 
 /* The giant decorative code: outlined numerals fading downwards. */
+.status-page__art::before {
+  content: attr(data-code);
+}
+
 .status-page__art {
   position: absolute;
   top: -0.32em;

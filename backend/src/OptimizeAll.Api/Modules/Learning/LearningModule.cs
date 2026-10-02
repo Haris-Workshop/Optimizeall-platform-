@@ -85,7 +85,7 @@ public sealed class LearningSitemapContributor(AppDbContext db, CourseContentCac
             {
                 // Produced lectures go into the video sitemap (player_loc = the privacy-enhanced YouTube embed).
                 var video = l.Lesson.Lecture?.Src is null ? null
-                    : LearningJsonLd.SeoVideo(doc.Pack, l.Lesson, PublicLearningService.Truncate(PublicLearningService.PlainText(l.Lesson.Body), 300), links, course);
+                    : LearningJsonLd.SeoVideo(doc.Pack, l.Lesson, PublicLearningService.Truncate(PublicLearningService.LessonSummaryText(l.Lesson.Body), 300), links, course);
                 result.Add(new SitemapContribution(LearningLinks.LessonPath(course.Slug, l.Lesson.Slug), course.UpdatedAt, l.Lesson.Title,
                     Videos: video is null ? null : new[] { video }));
             }

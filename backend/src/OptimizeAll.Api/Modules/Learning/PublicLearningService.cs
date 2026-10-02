@@ -178,7 +178,7 @@ public sealed partial class PublicLearningService(AppDbContext db, CourseContent
         var next = r.Index < doc.Lessons.Count - 1 ? doc.Lessons[r.Index + 1].Lesson : null;
         var issuer = await issuers.GetAsync(ct);
         var links = new LearningLinks(issuer.BaseUrl);
-        var excerpt = Truncate(PlainText(lesson.Body), SeoDescriptionMax);
+        var excerpt = Truncate(LessonSummaryText(lesson.Body), SeoDescriptionMax);
         var path = LearningLinks.LessonPath(doc.Pack.Slug, lesson.Slug);
         var jsonLd = new List<JsonElement>
         {
@@ -213,7 +213,7 @@ public sealed partial class PublicLearningService(AppDbContext db, CourseContent
         var (course, doc) = await LoadPublishedAsync(slug, ct);
         if (!doc.LessonsBySlug.TryGetValue(lessonSlug, out var r)) return null;
         var links = new LearningLinks((await issuers.GetAsync(ct)).BaseUrl);
-        return LearningJsonLd.SeoVideo(doc.Pack, r.Lesson, Truncate(PlainText(r.Lesson.Body), SeoDescriptionMax), links, course);
+        return LearningJsonLd.SeoVideo(doc.Pack, r.Lesson, Truncate(LessonSummaryText(r.Lesson.Body), SeoDescriptionMax), links, course);
     }
 
     /// <summary>The lesson's lecture for the player: chapters from scenes (title = first on-screen line), planned times.</summary>
@@ -260,6 +260,21 @@ public sealed partial class PublicLearningService(AppDbContext db, CourseContent
         text = LinkRegex().Replace(text, "$1");
         text = MarkRegex().Replace(text, " ");
         return SpaceRegex().Replace(text, " ").Trim();
+    }
+
+    /// <summary>
+    /// A lesson's text for its description (meta description, JSON-LD): the body without a leading blockquote. Courses
+    /// open every lesson with the same callout (e.g. "Not legal advice. …"), which otherwise became the description of
+    /// each of those lessons (duplicate meta descriptions). A body that is only a blockquote keeps it.
+    /// </summary>
+    public static string LessonSummaryText(string? body)
+    {
+        var lines = (body ?? string.Empty).Replace("\r\n", "\n").Split('\n');
+        var start = 0;
+        while (start < lines.Length && lines[start].TrimStart().StartsWith('>')) start++;
+        if (start == 0) return PlainText(body ?? string.Empty);
+        var rest = PlainText(string.Join('\n', lines[start..]));
+        return rest.Length > 0 ? rest : PlainText(body ?? string.Empty);
     }
 
     /// <summary>Search-result limits of the site (docs/SEO_CRO.md § 9.3): titles ≤ 60 characters, descriptions ≤ 155.</summary>

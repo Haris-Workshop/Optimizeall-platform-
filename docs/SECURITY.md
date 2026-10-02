@@ -393,8 +393,8 @@ target's email to be typed) starts a time-boxed session:
 * **SQL injection**: all data access goes through EF Core with parameterized queries; `LIKE` searches escape
   wildcards (`PagingExtensions.LikePattern`); no string-concatenated SQL.
 * **XSS**: the React SPA renders text through JSX escaping (no `dangerouslySetInnerHTML` for user content); the
-  web tier sends a strict Content-Security-Policy (`script-src 'self'`, no inline scripts,
-  `object-src 'none'`, `frame-ancestors 'none'`); the API sends `default-src 'none'` on its responses,
+  web tier sends a strict Content-Security-Policy (`script-src 'self'` and `style-src 'self'`: no inline scripts, no
+  style attributes, no `'unsafe-inline'`; `object-src 'none'`, `frame-ancestors 'none'`; § 8); the API sends `default-src 'none'` on its responses,
   `X-Content-Type-Options: nosniff` and `Cache-Control: no-store` on `/api`.
 * **CSV exports** neutralize formula injection (`Csv.File`: non-numeric cells starting with `=`, `+`, `-`, `@`,
   tab or CR are prefixed with `'`).
@@ -470,6 +470,49 @@ target's email to be typed) starts a time-boxed session:
 * Headers: HSTS on HTTPS (API; enable for the SPA in nginx once HTTPS-only), CSP, `X-Frame-Options: DENY`,
   `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` disabling camera/microphone/geolocation,
   `Cross-Origin-Opener-Policy: same-origin`.
+
+### Content-Security-Policy
+
+nginx sends one policy on every page, the app shell and static files (`frontend/nginx/snippets/security-headers.conf`;
+`vite preview` sends the same header, built by `frontend/src/app/csp.ts`, and `csp.test.ts` keeps the two identical):
+
+```text
+default-src 'self'; script-src 'self'; style-src 'self' [page style hashes]; img-src 'self' data: blob: https://i.ytimg.com [IMG_SRC_EXTRA];
+font-src 'self' data:; connect-src 'self'; media-src 'self' blob: [MEDIA_SRC_EXTRA]; frame-src 'self' https://www.youtube-nocookie.com;
+worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+[; upgrade-insecure-requests on HTTPS]
+```
+
+* **Scripts and styles are strict**: only the site's own files. No inline script, no `style="…"` attribute in HTML,
+  no `<style>` element unless its SHA-256 hash is in the header; no `'unsafe-inline'`, `'unsafe-eval'` or
+  `'unsafe-hashes'` anywhere.
+* **Style hashes per response.** A page's server lists the hashes of the document's inline `<style>` elements in the
+  internal `X-OA-Style-Hashes` header; nginx copies them into `style-src` (only a list of `'sha256-…'` sources is
+  accepted) and never passes the header to the browser. Two elements exist: the API document's small block for its
+  plain, crawlable copy (`SeoDocumentWriter.StyleHash`) and the server renderer's per-page block (below).
+* **Server-rendered markup** (`frontend/src/entry-server.tsx`): React writes inline styles (`style={…}` props, e.g.
+  stagger indexes, progress widths, partner brand colors) as `style` attributes, which the policy refuses.
+  `extractInlineStyles` (`src/app/ssrDocument.ts`) renames each to `data-oa-style` and puts one rule per distinct value
+  into a `<style id="oa-ssr-styles">` block whose hash the renderer reports, so the page paints exactly as before
+  without JavaScript. Values are CSS-escaped so they can never leave their rule or the element. Before React hydrates,
+  `restoreInlineStyles` turns them back into element styles through the CSSOM (`element.style`), which CSP does not
+  restrict — the same way React sets styles in the browser — and removes the block.
+* **Email previews** (`HtmlPreviewFrame`): a `srcdoc` frame inherits the page's policy, so the email's style
+  attributes and `<style>` elements are taken out of the markup and applied through the CSSOM (a constructed
+  stylesheet) once the frame loads. The frame stays sandboxed without scripts (`sandbox="allow-same-origin"` only lets
+  the app reach the document to style it). External stylesheets in an email (web fonts) are dropped.
+* **Not used: Trusted Types** (`require-trusted-types-for 'script'`): the head manager writes JSON-LD into script
+  elements and the consent banner injects the vendors' analytics scripts, which Trusted Types would refuse without a
+  policy object; there is no HTML sink in the app (`dangerouslySetInnerHTML` is not used).
+* **Extending it**: analytics/marketing tags (docs/WEBSITE.md), captcha widgets and Vimeo embeds (docs/SEO_CRO.md § 5)
+  need their hosts added. Keep `style-src 'self'$oa_style_hashes` as it is: a vendor that needs inline styles is a
+  reason to reconsider the vendor, not to add `'unsafe-inline'`.
+* **Checked by** `scripts/test-web-nginx.sh` (exact header for the shell, static files, API documents and rendered
+  pages; bogus hash lists ignored; internal header hidden), the j-seo `08-content-security-policy` spec (every public
+  page and a sample of every sitemap: header equals the policy with the hashes of exactly the document's `<style>`
+  elements, no style attributes, styles applied without JavaScript, restored after hydration) and the
+  `e2e/support/csp.ts` guard, which fails smoke, a11y (every portal page at three widths), j-seo and j-auth tests on
+  any `securitypolicyviolation` event or CSP console error.
 
 ## 9. Audit trail
 

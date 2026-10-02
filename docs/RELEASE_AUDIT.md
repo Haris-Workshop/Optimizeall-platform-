@@ -38,7 +38,7 @@ this branch; fixes made during the audit are listed with before → after values
 | 2 | Clean URLs, heading order, alt text | **Pass** | exactly one h1 per page, 0 skipped levels, 0 images without alt (server HTML) |
 | 3 | WCAG 2.2 AA (axe `wcag22aa`) | **Pass** (fixed) | e2e `a11y` suite + Lighthouse A11y 100; fixed contrast and label-in-name findings |
 | 3 | Keyboard navigation, visible focus, SR labels | **Pass** | e2e `a11y/keyboard.spec.ts` (dialogs, menus, focus trap/restore) |
-| 4 | Security headers incl. strict CSP, HSTS, nosniff, Referrer-Policy | **Pass** (HSTS added) | `script-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'`; HSTS 1 year on HTTPS; header dumps below |
+| 4 | Security headers incl. strict CSP, HSTS, nosniff, Referrer-Policy | **Pass** (strict styles added) | `script-src 'self'` and `style-src 'self'` + per-response hashes only (no `'unsafe-inline'` anywhere), `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`, `upgrade-insecure-requests` on HTTPS; HSTS 1 year on HTTPS; 0 CSP violations across the e2e suites; header dumps below |
 | 4 | OWASP Top 10 review | **Pass with notes** | see Security |
 | 4 | 2FA for staff/admin | **Pass** (added after the audit) | RFC 6238 TOTP + recovery codes, sign-in challenge after password and Google, admin setting `security.requireTwoFactorForStaff` with forced set-up, admin reset; see "Two-step verification" below and SECURITY.md § 1.2 |
 | 4 | No secrets in code | **Pass** | pattern scan of all tracked files (AWS/Google/Stripe/GitHub/Slack/Anthropic/OpenAI keys, private keys, OAuth tokens): only test fakes; `tools/lecture-studio` holds no credentials (config/ledger files are git-ignored) |
@@ -181,15 +181,37 @@ maps stay disabled in production.
 ## Security
 
 **Headers** (production nginx with `X-Forwarded-Proto: https`): pages, the app shell and static files send
-`Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:
+`Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' [hashes]; img-src 'self' data:
 blob: https://i.ytimg.com; font-src 'self' data:; connect-src 'self'; media-src 'self' blob:; frame-src 'self'
 https://www.youtube-nocookie.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self';
-form-action 'self'; frame-ancestors 'none'`, `Strict-Transport-Security: max-age=31536000` (new; HTTPS only, sent once),
+form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests` (the last on HTTPS only; full design in
+[SECURITY.md § Content-Security-Policy](SECURITY.md#content-security-policy)), `Strict-Transport-Security: max-age=31536000` (new; HTTPS only, sent once),
 `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`,
 `Permissions-Policy`, `Cross-Origin-Opener-Policy: same-origin`; portals and sign-in pages add `X-Robots-Tag: noindex,
 nofollow`; gzip on HTML/JS/CSS; hashed assets `immutable`. API responses: `default-src 'none'` CSP, nosniff, DENY,
 Referrer-Policy, CORP, `Cache-Control: no-store`, HSTS (one year) on HTTPS outside Development. Checked in CI by
 `scripts/test-web-nginx.sh` (HSTS present once on https, absent on http).
+
+**Strict CSP for styles (2026-10-02).** `style-src` had `'unsafe-inline'` for the style attributes in server-rendered
+markup (React `style={…}` props: stagger indexes, bar widths, partner brand colours) and the API's plain-copy
+`<style>` block. Now no directive allows inline styles: the server renderer moves the markup's style attributes into
+one `<style>` block per page (`data-oa-style` + one rule per value, CSS-escaped), the API and the renderer list the
+SHA-256 of each `<style>` element in the internal `X-OA-Style-Hashes` header, nginx copies them into `style-src`
+(nothing but `'sha256-…'` sources accepted, header hidden), and the app turns the values back into element styles
+through the CSSOM before hydrating (CSP does not restrict CSSOM writes, which is also how React styles elements in the
+browser). First paint is unchanged without JavaScript (same declarations, specificity above class selectors; CLS 0.000
+on the six measured pages in j-seo). Email previews (`srcdoc` frames inherit the policy) apply the email's styles
+through the CSSOM. Trusted Types were not added: the head manager writes JSON-LD into script elements and consented
+analytics inject vendor scripts. Header dump, real API (Baseline + Demo) behind the production nginx + renderer:
+
+```text
+GET / (X-Forwarded-Proto: https)
+Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'sha256-fGbPkzzIRU34g82QLOsGqv+0nbVc4EFO164AOdhdTWg=' 'sha256-k9aMeXBMS9CLNjTMe4nyqhsJeZR863pVIUThJ0/abrs='; img-src 'self' data: blob: https://i.ytimg.com ; font-src 'self' data:; connect-src 'self'; media-src 'self' blob: ; frame-src 'self' https://www.youtube-nocookie.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  (2 inline <style> elements, both hashed above; 0 style attributes, 55 data-oa-style; before: 'unsafe-inline' and 29 style attributes)
+GET /services/seo, /pricing, /blog: the same policy with the page's own block hash; 0 style attributes (before: 6, 19, 5)
+GET /login, /app, /assets/ (https): style-src 'self'; … frame-ancestors 'none'; upgrade-insecure-requests (no inline styles at all)
+GET / (plain http): the same without upgrade-insecure-requests; X-OA-Style-Hashes never reaches the browser
+```
 
 **OWASP Top 10 review**
 
@@ -238,6 +260,17 @@ descriptions unique.
   22/22, `j-learning` 11/11, `j-partners` 4/4, `agency` 13/13; `scripts/test-web-nginx.sh` with a stub renderer
   (rendered page, renderer 503, API fallback). Docker could not be run in the sandbox (no daemon): the web image change
   (`apk add nodejs`, renderer files, entrypoint script) is unbuilt here.
+* Strict-CSP pass (every browser test now runs under the served policy and fails on any `securitypolicyviolation`
+  event or CSP console error, `frontend/e2e/support/csp.ts`): `npm run typecheck`, `npm run lint`, `npx vitest run`
+  (124 files, 969 tests, incl. `csp.test.ts`: the nginx snippet equals `src/app/csp.ts`), `npm run build`,
+  `npm run budget` (initial JS 165.1 KiB); backend build, unit tests 1,754/1,754, Website/Auth/Files/SEO/security
+  integration tests on SQLite 361/361; `scripts/test-web-nginx.sh` (exact CSP for shell, static files, API document,
+  rendered page, https, bogus hash list ignored, internal header hidden); E2E on SQLite with **0 CSP violations**:
+  `j-seo` 100/100 with vite preview and 100/100 with the production nginx + renderer (new `08-content-security-policy`:
+  every public page plus a sample of every sitemap — header equals the policy with exactly the document's style hashes,
+  no style attributes, styles applied without JavaScript, restored after hydration), `smoke` 40/40, `j-auth` 65/65,
+  `crawl` 20/20 (every portal page of every demo role; one listed finding: the Demo seed's external social images,
+  see "Still left").
 
 ## Two-step verification (added after the audit)
 
@@ -275,9 +308,10 @@ an independent decoder for every mask and versions 1–38) instead of a dependen
 3. **Demo accounts on the Render blueprint.** `render.yaml` seeds the `Demo` profile, whose accounts have documented
    passwords. Fine for a demo/staging site; a production deployment must drop `Database__Seed__1=Demo` (not changed
    here: deployment settings were out of scope).
-4. **CSP `style-src 'unsafe-inline'`.** Kept for style attributes (UI/chart libraries, server-rendered pages' inline
-   style block). Scripts are strict. Tightening means hashing the server style block (`style-src-elem`) and auditing
-   attribute styles.
+4. **CSP `style-src 'unsafe-inline'`** — done: styles are as strict as scripts (see Security). Related, not changed:
+   the Demo seed's social library images are external URLs (`picsum.photos`) that `img-src` refuses unless the host is
+   added to `IMG_SRC_EXTRA` (the crawl lists that one finding); the seed should upload them like the other demo images.
+   Landing-page Vimeo embeds need `https://player.vimeo.com` in `frame-src` (docs/SEO_CRO.md § 5).
 5. **react-router 6 advisory** (above): mitigated by `safeNextPath`; upgrade to react-router 7 when the router is next
    touched.
 6. **Mobile menu interaction latency** 232–432 ms at 4× CPU on a loaded machine (other interactions ≤ 176 ms): the drawer

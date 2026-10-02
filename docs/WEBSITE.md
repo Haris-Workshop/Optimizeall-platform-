@@ -268,16 +268,19 @@ for reading: write the value on a single line, because a header value must not c
 # GA4 (+ GTM and the Meta Pixel if used). Remove the hosts of tags you do not use.
 add_header Content-Security-Policy "default-src 'self';
   script-src 'self' https://www.googletagmanager.com https://connect.facebook.net;
-  style-src 'self' 'unsafe-inline';
-  img-src 'self' data: blob: $oa_img_src_extra https://www.google-analytics.com https://www.googletagmanager.com https://www.facebook.com;
+  style-src 'self'$oa_style_hashes;
+  img-src 'self' data: blob: https://i.ytimg.com $oa_img_src_extra https://www.google-analytics.com https://www.googletagmanager.com https://www.facebook.com;
   font-src 'self' data:;
   connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://www.facebook.com https://connect.facebook.net;
-  frame-src https://www.googletagmanager.com;
-  media-src 'self' blob:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none';
-  base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+  frame-src 'self' https://www.youtube-nocookie.com https://www.googletagmanager.com;
+  media-src 'self' blob: $oa_media_src_extra; worker-src 'self' blob:; manifest-src 'self'; object-src 'none';
+  base-uri 'self'; form-action 'self'; frame-ancestors 'none'$oa_csp_upgrade" always;
 ```
 
-Tags configured inside GTM may need further hosts; add only what you use. JSON-LD blocks are data (`type="application/ld+json"`),
+Keep `style-src 'self'$oa_style_hashes` unchanged: styles are strict (no `'unsafe-inline'`, see
+[SECURITY.md § Content-Security-Policy](SECURITY.md#content-security-policy)), so GTM "Custom HTML" tags that inject
+inline styles or scripts will not run. Tags configured inside GTM may need further hosts; add only what you use. Mirror
+the change in `frontend/src/app/csp.ts` (the unit test compares the two). JSON-LD blocks are data (`type="application/ld+json"`),
 not scripts, so they need no CSP change.
 
 ## SEO files and rendering

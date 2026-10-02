@@ -2972,6 +2972,11 @@ img.oa-co-member__portrait {
   font-size: clamp(1.5rem, 1rem + 2vw, 2.25rem);
 }
 
+/* Blank faces while the team loads (TeamMosaicPlaceholder). */
+.oa-co-mosaic--pending .oa-co-mosaic__face {
+  background: rgb(255 255 255 / 0.06);
+}
+
 .oa-co-mosaic > :nth-child(3n + 2) {
   transform: translateY(18px);
 }

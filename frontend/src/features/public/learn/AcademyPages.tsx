@@ -1120,12 +1120,13 @@ export function AcademyPathsPage() {
         <StageEyebrow>{copy.text('academy.pathsPage.eyebrow')}</StageEyebrow>
         <h1 className="ax-display ax-display--compact">{copy.text('academy.pathsPage.title')}</h1>
         <p className="ax-lead">{copy.text('academy.pathsPage.lead')}</p>
-        {all.length > 0 && (
+        {/* Shown with dashes while the paths load, so the hero does not grow (and push the page) when they arrive. */}
+        {(q.isPending || all.length > 0) && (
           <StageFigures
             label="Learning paths in numbers"
             items={[
-              { value: String(all.length), label: 'Learning paths' },
-              { value: String(courses), label: 'Course steps' },
+              { value: q.isPending ? '–' : String(all.length), label: 'Learning paths' },
+              { value: q.isPending ? '–' : String(courses), label: 'Course steps' },
               { value: '$0', label: 'Price, forever' },
             ]}
           />

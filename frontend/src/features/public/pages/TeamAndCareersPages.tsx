@@ -45,6 +45,20 @@ function TeamMosaic({ members }: { members: TeamMember[] }) {
   );
 }
 
+/**
+ * The hero art's room while the data loads (blank faces / a blank panel of the usual size): rendering nothing and then
+ * the art pushed the whole page down on phones when the data arrived (CLS ~0.2 on a slow device).
+ */
+function TeamMosaicPlaceholder() {
+  return (
+    <div className="oa-co-mosaic oa-co-mosaic--6 oa-co-mosaic--pending" aria-hidden="true">
+      {Array.from({ length: 6 }, (_, i) => (
+        <span key={i} className="oa-co-mosaic__face" />
+      ))}
+    </div>
+  );
+}
+
 function MemberCard({ member }: { member: TeamMember }) {
   const links = member.socialLinks.filter((l) => isExternalHref(l.url));
   return (
@@ -96,7 +110,7 @@ export function TeamPage() {
         title={copy.text('team.hero.title')}
         lead={copy.text('team.hero.lead')}
         breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Team' }]}
-        aside={members.length > 1 ? <TeamMosaic members={members} /> : undefined}
+        aside={isLoading ? <TeamMosaicPlaceholder /> : members.length > 1 ? <TeamMosaic members={members} /> : undefined}
       />
       <PublicQueryState error={error} isLoading={false} notFoundTitle="Team unavailable">
         <CoSection eyebrow={copy.text('team.people.eyebrow')} title={copy.text('team.people.title')}>
@@ -194,6 +208,25 @@ function RolesAtAGlance({ jobs }: { jobs: JobCard[] }) {
   );
 }
 
+/** RolesAtAGlance's room while the roles load (see TeamMosaicPlaceholder). */
+function RolesAtAGlancePlaceholder() {
+  return (
+    <div className="oa-co-glass oa-co-glance" aria-hidden="true">
+      <p className="oa-co-glance__count">
+        <span className="tabular">{'\u00a0'}</span>
+        {'\u00a0'}
+      </p>
+      <ul className="oa-co-glance__list">
+        {Array.from({ length: 3 }, (_, i) => (
+          <li key={i}>
+            <Skeleton height={16} width="60%" />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /** /careers */
 export function CareersPage() {
   const { data, isLoading, error } = useJobs();
@@ -210,14 +243,14 @@ export function CareersPage() {
         lead={copy.text('careers.hero.lead')}
         breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Careers' }]}
         actions={
-          jobs.length > 0 ? (
+          isLoading || jobs.length > 0 ? (
             <a href="#open-roles" className={buttonClasses('highlight', 'lg')}>
               {copy.text('careers.openRoles')}
               <ArrowRight aria-hidden="true" width={18} height={18} />
             </a>
           ) : undefined
         }
-        aside={jobs.length > 0 ? <RolesAtAGlance jobs={jobs} /> : undefined}
+        aside={isLoading ? <RolesAtAGlancePlaceholder /> : jobs.length > 0 ? <RolesAtAGlance jobs={jobs} /> : undefined}
       />
       <CoSection eyebrow={copy.text('careers.why.eyebrow')} title={copy.text('careers.why.title')}>
         <ul className="oa-co-features oa-co-features--4" data-reveal="stagger">

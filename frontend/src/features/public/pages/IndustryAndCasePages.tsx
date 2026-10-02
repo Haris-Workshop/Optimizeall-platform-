@@ -1,7 +1,7 @@
 import { ArrowRight, ArrowUpRight, Quote } from 'lucide-react';
 import { useId, useRef } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ButtonLink, EmptyState, FormField, Select } from '@/components/ui';
+import { ButtonLink, EmptyState, FormField, Select, Skeleton } from '@/components/ui';
 import { useCaseStudies, useCaseStudy, useIndustries, useIndustry, useServices, type CaseStudyCard, type PublicCaseStudy } from '../site/api';
 import { MonogramArt, SectorArt } from '../site/AgencyArt';
 import { AgencyHero, AgencySection, CaseGrid, ClosingCta, Figure, NumberedGrid, ServiceRows, type TocItem } from '../site/AgencyKit';
@@ -46,7 +46,10 @@ export function IndustriesPage() {
             </ButtonLink>
           </>
         }
-        aside={items.length > 0 ? <SectorArt sectors={items.map((i) => ({ name: i.name, icon: i.icon }))} /> : undefined}
+        // The art keeps its room while the sectors load (its fixed aspect ratio), so the page does not jump when they arrive.
+        aside={
+          isLoading || items.length > 0 ? <SectorArt sectors={items.map((i) => ({ name: i.name, icon: i.icon }))} /> : undefined
+        }
       />
       <PublicQueryState error={error} isLoading={isLoading} notFoundTitle="Industries unavailable">
         <section className="oa-a-section" aria-labelledby={listId}>
@@ -217,6 +220,23 @@ function ProofLedger({ items }: { items: CaseStudyCard[] }) {
   );
 }
 
+/** ProofLedger's room while the case studies load (three blank rows), so the hero does not grow when they arrive. */
+function ProofLedgerPlaceholder() {
+  return (
+    <div className="oa-a-panel oa-a-ledger" aria-hidden="true">
+      <p className="oa-a-panel__kicker">{'\u00a0'}</p>
+      <ul>
+        {Array.from({ length: 3 }, (_, i) => (
+          <li key={i}>
+            <Skeleton height={44} width="45%" />
+            <Skeleton height={14} width="70%" />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /** /case-studies — filter by service and industry (kept in the URL). */
 export function CaseStudiesPage() {
   const [params, setParams] = useSearchParams();
@@ -259,7 +279,13 @@ export function CaseStudiesPage() {
             {copy.text('agency.cta.primary')}
           </ButtonLink>
         }
-        aside={all.data && all.data.some((c) => c.highlights.length > 0) ? <ProofLedger items={all.data} /> : undefined}
+        aside={
+          all.isLoading ? (
+            <ProofLedgerPlaceholder />
+          ) : all.data && all.data.some((c) => c.highlights.length > 0) ? (
+            <ProofLedger items={all.data} />
+          ) : undefined
+        }
       />
       <div className="oa-a-filterbar">
         <div className="container oa-a-filters" role="search" aria-label={copy.text('caseStudies.filter.label')}>

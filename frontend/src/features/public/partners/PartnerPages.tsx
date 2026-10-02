@@ -81,6 +81,17 @@ function LogoConstellation({ partners }: { partners: PartnerCard[] }) {
   );
 }
 
+/** LogoConstellation's room while the partners load, so the hero does not grow when they arrive. */
+function LogoConstellationPlaceholder() {
+  return (
+    <div className="oa-co-glass partner-hero-logos" aria-hidden="true">
+      {Array.from({ length: 4 }, (_, i) => (
+        <span key={i} className="partner-hero-logos__item partner-hero-logos__item--pending" />
+      ))}
+    </div>
+  );
+}
+
 /** /partners — every active partner with the partnership statement. */
 export function PartnersPage() {
   const { data, isLoading, error } = usePartners();
@@ -102,7 +113,9 @@ export function PartnersPage() {
             : 'Organizations Optimize All is the official marketing partner of.'
         }
         breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Partners' }]}
-        aside={partners.length > 0 ? <LogoConstellation partners={partners} /> : undefined}
+        aside={
+          isLoading ? <LogoConstellationPlaceholder /> : partners.length > 0 ? <LogoConstellation partners={partners} /> : undefined
+        }
       />
       <div className="oa-co-section">
         <div className="container">

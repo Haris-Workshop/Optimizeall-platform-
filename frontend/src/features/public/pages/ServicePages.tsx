@@ -69,14 +69,24 @@ export function ServicesPage() {
             </ButtonLink>
           </>
         }
+        // While the service lines load, the hero keeps the room of its final layout (the meta line and the art, whose
+        // tiles fill in): growing it when the data arrived pushed the whole page down on phones (CLS 0.18).
         meta={
-          all.length > 0 && (
-            <p className="oa-a-hero__meta">
-              {copy.text('services.hero.meta', { lines: all.length, services: serviceCount })}
+          isLoading ? (
+            <p className="oa-a-hero__meta" aria-hidden="true">
+              {'\u00a0'}
             </p>
+          ) : (
+            all.length > 0 && (
+              <p className="oa-a-hero__meta">
+                {copy.text('services.hero.meta', { lines: all.length, services: serviceCount })}
+              </p>
+            )
           )
         }
-        aside={all.length > 0 ? <CapabilityArt lines={all.map((g) => ({ name: g.name, icon: g.icon }))} /> : undefined}
+        aside={
+          isLoading || all.length > 0 ? <CapabilityArt lines={all.map((g) => ({ name: g.name, icon: g.icon }))} /> : undefined
+        }
       />
 
       <div className="oa-a-filterbar">

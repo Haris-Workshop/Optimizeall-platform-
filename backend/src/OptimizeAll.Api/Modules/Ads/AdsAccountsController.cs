@@ -45,13 +45,13 @@ public sealed class CampaignInput
     [MaxLength(100)] public string? Objective { get; set; }
     public AdEntityStatus Status { get; set; } = AdEntityStatus.Draft;
     public BudgetType BudgetType { get; set; } = BudgetType.Daily;
-    [Range(typeof(decimal), "0", "1000000000")] public decimal? BudgetAmount { get; set; }
+    [DecimalRange("0", "1000000000")] public decimal? BudgetAmount { get; set; }
     [MaxLength(100)] public string? BidStrategy { get; set; }
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
     [MaxLength(2000)] public string? TargetingSummary { get; set; }
-    [Range(typeof(decimal), "0", "1000000")] public decimal? TargetCpa { get; set; }
-    [Range(typeof(decimal), "0", "1000")] public decimal? TargetRoas { get; set; }
+    [DecimalRange("0", "1000000")] public decimal? TargetCpa { get; set; }
+    [DecimalRange("0", "1000")] public decimal? TargetRoas { get; set; }
     public Guid? ConcurrencyStamp { get; set; }
 }
 
@@ -59,7 +59,7 @@ public sealed class AdGroupInput
 {
     [Required, MaxLength(300)] public string Name { get; set; } = string.Empty;
     [DefinedEnum] public AdEntityStatus Status { get; set; } = AdEntityStatus.Draft;
-    [Range(typeof(decimal), "0", "1000000000")] public decimal? BudgetAmount { get; set; }
+    [DecimalRange("0", "1000000000")] public decimal? BudgetAmount { get; set; }
     [MaxLength(100)] public string? BidStrategy { get; set; }
     [MaxLength(2000)] public string? TargetingSummary { get; set; }
     public Guid? ConcurrencyStamp { get; set; }

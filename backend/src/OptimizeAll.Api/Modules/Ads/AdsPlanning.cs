@@ -10,6 +10,7 @@ using OptimizeAll.Domain.Common;
 using OptimizeAll.Domain.Marketing;
 using OptimizeAll.Domain.SocialMedia;
 using OptimizeAll.Infrastructure.Persistence;
+using OptimizeAll.Api.Common.Http;
 
 namespace OptimizeAll.Api.Modules.Ads;
 
@@ -107,14 +108,14 @@ public sealed class MediaPlanLineInput
     [Required] public AdPlatform? Platform { get; set; }
     [Required, MaxLength(150)] public string Channel { get; set; } = string.Empty;
     [MaxLength(100)] public string? Objective { get; set; }
-    [Range(typeof(decimal), "0", "1000000000")] public decimal PlannedBudget { get; set; }
+    [DecimalRange("0", "1000000000")] public decimal PlannedBudget { get; set; }
     [Required] public DateOnly? FlightStart { get; set; }
     [Required] public DateOnly? FlightEnd { get; set; }
     [Required, RegularExpression("^(CPA|ROAS|CPC|CPM|CTR|Conversions|Clicks|Impressions)$")] public string KpiName { get; set; } = "CPA";
-    [Range(typeof(decimal), "0", "1000000000")] public decimal? KpiTarget { get; set; }
+    [DecimalRange("0", "1000000000")] public decimal? KpiTarget { get; set; }
     [Range(0, long.MaxValue)] public long? PlannedImpressions { get; set; }
     [Range(0, long.MaxValue)] public long? PlannedClicks { get; set; }
-    [Range(typeof(decimal), "0", "1000000000")] public decimal? PlannedConversions { get; set; }
+    [DecimalRange("0", "1000000000")] public decimal? PlannedConversions { get; set; }
 }
 
 public sealed class MediaPlanInput
@@ -175,8 +176,8 @@ public sealed class ExperimentVariantInput
     [MaxLength(1000)] public string? Description { get; set; }
     [Range(0, long.MaxValue)] public long Impressions { get; set; }
     [Range(0, long.MaxValue)] public long Clicks { get; set; }
-    [Range(typeof(decimal), "0", "1000000000")] public decimal Conversions { get; set; }
-    [Range(typeof(decimal), "0", "1000000000")] public decimal Spend { get; set; }
+    [DecimalRange("0", "1000000000")] public decimal Conversions { get; set; }
+    [DecimalRange("0", "1000000000")] public decimal Spend { get; set; }
 }
 
 public sealed class ExperimentInput
@@ -193,7 +194,7 @@ public sealed class ExperimentInput
     public AdExperimentStatus Status { get; set; } = AdExperimentStatus.Planned;
     [MaxLength(2000)] public string? Result { get; set; }
     [MaxLength(100)] public string? WinnerVariant { get; set; }
-    [Range(typeof(decimal), "0", "1")] public decimal? EnteredPValue { get; set; }
+    [DecimalRange("0", "1")] public decimal? EnteredPValue { get; set; }
     [MinLength(2), MaxLength(6)] public List<ExperimentVariantInput> Variants { get; set; } = new();
     public Guid? ConcurrencyStamp { get; set; }
 }

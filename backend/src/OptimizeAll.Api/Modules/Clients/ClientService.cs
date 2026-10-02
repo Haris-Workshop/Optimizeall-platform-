@@ -110,7 +110,15 @@ public sealed class ClientService(
         {
             if (!string.IsNullOrWhiteSpace(request.Slug))
                 throw DeliveryRules.Invalid("client.slug_taken", "slug", "Another client already uses this slug.");
-            slug = $"{slug}-{RandomNumberGenerator.GetInt32(1000, 9999)}";
+            // A random suffix that is not taken yet. A single blind draw could collide (a unique violation, reported as
+            // slug_taken): about 2% of the time for twenty clients with the same name.
+            var taken = slug;
+            for (var attempt = 0; attempt < 20 && slug == taken; attempt++)
+            {
+                var candidate = $"{taken}-{RandomNumberGenerator.GetInt32(1000, 9999)}";
+                if (!await db.Set<ClientAccount>().AnyAsync(c => c.Slug == candidate, ct)) slug = candidate;
+            }
+            if (slug == taken) throw DeliveryRules.Invalid("client.slug_taken", "slug", "Another client already uses this slug.");
         }
         var client = new ClientAccount { Slug = slug, Status = request.Status };
         await ApplyProfileAsync(client, request, ct);

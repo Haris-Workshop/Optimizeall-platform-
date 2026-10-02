@@ -7,6 +7,7 @@ using OptimizeAll.Api.Modules.Marketing.Shared;
 using OptimizeAll.Domain.Common;
 using OptimizeAll.Domain.Marketing;
 using OptimizeAll.Infrastructure.Persistence;
+using OptimizeAll.Api.Common.Http;
 
 namespace OptimizeAll.Api.Modules.Marketing.Achievements;
 
@@ -36,7 +37,7 @@ public sealed class AchievementRequest
     [Required]
     public AchievementCriterion? Criterion { get; set; }
 
-    [Range(typeof(decimal), "0.0001", "1000000000")]
+    [DecimalRange("0.0001", "1000000000")]
     public decimal Threshold { get; set; }
 
     [Range(0, 100000)]

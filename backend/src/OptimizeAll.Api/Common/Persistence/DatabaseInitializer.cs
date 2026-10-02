@@ -155,9 +155,15 @@ public static class DatabaseInitializer
         {
             try
             {
-                // Connects to the server without requiring the schema to exist yet.
+                // Connects to the server without requiring the schema to exist yet. Unpooled: a one-off probe needs no pool,
+                // and MySqlConnector's pools live for the whole process with a reaper timer that captures the execution
+                // context they were created in (in the integration tests, the first test host, kept alive for good).
                 await using var connection = new MySqlConnector.MySqlConnection(
-                    new MySqlConnector.MySqlConnectionStringBuilder(db.Database.GetConnectionString() ?? string.Empty) { Database = string.Empty }.ConnectionString);
+                    new MySqlConnector.MySqlConnectionStringBuilder(db.Database.GetConnectionString() ?? string.Empty)
+                    {
+                        Database = string.Empty,
+                        Pooling = false,
+                    }.ConnectionString);
                 await connection.OpenAsync(ct);
                 return;
             }

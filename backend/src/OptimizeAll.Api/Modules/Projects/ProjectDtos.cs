@@ -47,13 +47,13 @@ public class ProjectRequestBase
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
 
-    [Range(typeof(decimal), "0", "100000")]
+    [DecimalRange("0", "100000")]
     public decimal? BudgetHours { get; set; }
 
-    [Range(typeof(decimal), "0", "1000000000")]
+    [DecimalRange("0", "1000000000")]
     public decimal? BudgetAmount { get; set; }
 
-    [Range(typeof(decimal), "0", "100000")]
+    [DecimalRange("0", "100000")]
     public decimal? DefaultHourlyRate { get; set; }
 
     public Guid? OwnerUserId { get; set; }
@@ -147,7 +147,7 @@ public class TaskRequestBase
     public TaskPriority Priority { get; set; } = TaskPriority.Normal;
     public DateOnly? DueDate { get; set; }
 
-    [Range(typeof(decimal), "0", "1000")]
+    [DecimalRange("0", "1000")]
     public decimal? EstimateHours { get; set; }
 
     public List<string> Labels { get; set; } = new();
@@ -224,7 +224,7 @@ public sealed class RecurringRuleRequest
 
     public Guid? AssigneeUserId { get; set; }
 
-    [Range(typeof(decimal), "0", "1000")]
+    [DecimalRange("0", "1000")]
     public decimal? EstimateHours { get; set; }
 
     public List<string> Labels { get; set; } = new();
@@ -255,7 +255,7 @@ public sealed class ProjectTemplateRequest
 
     public List<string> ServiceLines { get; set; } = new();
 
-    [Range(typeof(decimal), "0", "100000")]
+    [DecimalRange("0", "100000")]
     public decimal? DefaultBudgetHours { get; set; }
 
     [Range(1, 3650)]
@@ -461,7 +461,7 @@ public sealed class HourlyRateRequest
     public Guid? UserId { get; set; }
     public Domain.Identity.Role? Role { get; set; }
 
-    [Required, Range(typeof(decimal), "0", "100000")]
+    [Required, DecimalRange("0", "100000")]
     public decimal? Rate { get; set; }
 
     [Required, StringLength(3, MinimumLength = 3)]

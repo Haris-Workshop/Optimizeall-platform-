@@ -123,7 +123,7 @@ public sealed class CreateAdjustmentRequest
     public Guid? UserId { get; set; }
 
     /// <summary>Signed amount: positive credits, negative debits. Must not be zero.</summary>
-    [Required, Range(typeof(decimal), "-1000000", "1000000")]
+    [Required, DecimalRange("-1000000", "1000000")]
     public decimal? Amount { get; set; }
 
     [Required, StringLength(3, MinimumLength = 3)]

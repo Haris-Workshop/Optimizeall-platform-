@@ -34,8 +34,8 @@ public sealed class JobInput : StampedInput
     [Required, MaxLength(30000)] public string DescriptionMarkdown { get; set; } = string.Empty;
     public List<string?>? Requirements { get; set; }
     public List<string?>? Benefits { get; set; }
-    [Range(typeof(decimal), "0", "100000000")] public decimal? SalaryMin { get; set; }
-    [Range(typeof(decimal), "0", "100000000")] public decimal? SalaryMax { get; set; }
+    [DecimalRange("0", "100000000")] public decimal? SalaryMin { get; set; }
+    [DecimalRange("0", "100000000")] public decimal? SalaryMax { get; set; }
     [MaxLength(3)] public string? SalaryCurrency { get; set; }
     public SalaryPeriod? SalaryPeriod { get; set; }
     [Required] public JobOpeningStatus? Status { get; set; }

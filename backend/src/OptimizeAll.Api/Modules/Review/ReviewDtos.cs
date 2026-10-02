@@ -55,7 +55,7 @@ public sealed class DecisionRequest
     [MaxLength(ReasonText.MaxInputLength)]
     public string? Reason { get; set; }
 
-    [Range(typeof(decimal), "0", "1000000")]
+    [DecimalRange("0", "1000000")]
     public decimal? QualityBonusAmount { get; set; }
 
     [Required]

@@ -163,7 +163,7 @@ public sealed class RecordInvoicePaymentRequest
     [Required]
     public Guid? RequestId { get; set; }
 
-    [Range(typeof(decimal), "0.001", "1000000000")]
+    [DecimalRange("0.001", "1000000000")]
     public decimal Amount { get; set; }
 
     public PaymentMethod Method { get; set; } = PaymentMethod.BankTransfer;
@@ -263,7 +263,7 @@ public sealed class SubmitPaymentClaimRequest
     [Required]
     public Guid? RequestId { get; set; }
 
-    [Range(typeof(decimal), "0.001", "1000000000")]
+    [DecimalRange("0.001", "1000000000")]
     public decimal Amount { get; set; }
 
     public PaymentMethod Method { get; set; } = PaymentMethod.BankTransfer;
@@ -281,7 +281,7 @@ public sealed class SubmitPaymentClaimRequest
 public sealed class ConfirmPaymentClaimRequest
 {
     /// <summary>Amount actually received (defaults to the claimed amount).</summary>
-    [Range(typeof(decimal), "0.001", "1000000000")]
+    [DecimalRange("0.001", "1000000000")]
     public decimal? Amount { get; set; }
 
     /// <summary>Date the money arrived (defaults to the claimed date).</summary>

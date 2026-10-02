@@ -344,7 +344,7 @@ if (app.Configuration.GetValue("Swagger:Enabled", !app.Environment.IsProduction(
 app.UseCors();
 app.UseAuthentication();
 app.UseMiddleware<ImpersonationAuditMiddleware>();
-app.UseRateLimiter();
+app.UseAppRateLimiting();
 app.UseAuthorization();
 
 app.MapControllers();

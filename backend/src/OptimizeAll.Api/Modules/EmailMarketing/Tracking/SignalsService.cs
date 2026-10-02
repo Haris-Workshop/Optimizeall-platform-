@@ -7,6 +7,7 @@ using OptimizeAll.Api.Modules.EmailMarketing.Shared;
 using OptimizeAll.Domain.Common;
 using OptimizeAll.Domain.EmailMarketing;
 using OptimizeAll.Infrastructure.Persistence;
+using OptimizeAll.Api.Common.Http;
 
 namespace OptimizeAll.Api.Modules.EmailMarketing.Tracking;
 
@@ -18,7 +19,7 @@ public sealed class ConversionRequest
     [Required, MaxLength(254)] public string Email { get; set; } = string.Empty;
     /// <summary>Order id; conversions are idempotent per workspace + reference.</summary>
     [Required, MaxLength(150)] public string ExternalReference { get; set; } = string.Empty;
-    [Range(typeof(decimal), "0", "1000000000")] public decimal? Value { get; set; }
+    [DecimalRange("0", "1000000000")] public decimal? Value { get; set; }
     [MaxLength(3)] public string? Currency { get; set; }
     public DateTime? OccurredAt { get; set; }
 }

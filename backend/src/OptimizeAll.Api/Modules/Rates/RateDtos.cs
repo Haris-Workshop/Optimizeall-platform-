@@ -17,7 +17,7 @@ public sealed class RateCardLineInput
     [RegularExpression("^[A-Za-z]{2}$", ErrorMessage = "Use a two-letter country code.")]
     public string? CountryCode { get; set; }
 
-    [Range(typeof(decimal), "0", "1000000")]
+    [DecimalRange("0", "1000000")]
     public decimal Amount { get; set; }
 
     [MaxLength(150)]
@@ -30,13 +30,13 @@ public class RateCardRatesInput
     [Required, StringLength(3, MinimumLength = 3)]
     public string Currency { get; set; } = "USD";
 
-    [Range(typeof(decimal), "0.0001", "100000000")]
+    [DecimalRange("0.0001", "100000000")]
     public decimal? DailyCapPerParticipant { get; set; }
 
-    [Range(typeof(decimal), "0.0001", "100000000")]
+    [DecimalRange("0.0001", "100000000")]
     public decimal? WeeklyCapPerParticipant { get; set; }
 
-    [Range(typeof(decimal), "0.0001", "100000000")]
+    [DecimalRange("0.0001", "100000000")]
     public decimal? CampaignCapPerParticipant { get; set; }
 
     public bool StackCampaignBonuses { get; set; } = true;

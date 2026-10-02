@@ -24,13 +24,13 @@ public sealed class CodeTierInput
     [Range(1, 100_000)]
     public int ThresholdSales { get; set; }
 
-    [Range(typeof(decimal), "0.0001", "1000000")]
+    [DecimalRange("0.0001", "1000000")]
     public decimal? FlatAmount { get; set; }
 
-    [Range(typeof(decimal), "0.0001", "100")]
+    [DecimalRange("0.0001", "100")]
     public decimal? Percent { get; set; }
 
-    [Range(typeof(decimal), "0.0001", "1000000")]
+    [DecimalRange("0.0001", "1000000")]
     public decimal? BonusAmount { get; set; }
 }
 
@@ -40,22 +40,22 @@ public class CodePayoutRulesInput
     [Required, DefinedEnum]
     public CodePayoutType? PayoutType { get; set; }
 
-    [Range(typeof(decimal), "0.0001", "1000000")]
+    [DecimalRange("0.0001", "1000000")]
     public decimal? FlatAmount { get; set; }
 
-    [Range(typeof(decimal), "0.0001", "100")]
+    [DecimalRange("0.0001", "100")]
     public decimal? Percent { get; set; }
 
     [MaxLength(20)]
     public List<CodeTierInput> Tiers { get; set; } = new();
 
-    [Range(typeof(decimal), "0.0001", "100000000")]
+    [DecimalRange("0.0001", "100000000")]
     public decimal? DailyCapPerPerson { get; set; }
 
-    [Range(typeof(decimal), "0.0001", "100000000")]
+    [DecimalRange("0.0001", "100000000")]
     public decimal? ProgramCapPerPerson { get; set; }
 
-    [Range(typeof(decimal), "0.0001", "1000000000")]
+    [DecimalRange("0.0001", "1000000000")]
     public decimal? BudgetAmount { get; set; }
 }
 
@@ -146,10 +146,10 @@ public sealed class CreatePayoutOverrideRequest
     [Required, DefinedEnum]
     public CodePayoutType? PayoutType { get; set; }
 
-    [Range(typeof(decimal), "0.0001", "1000000")]
+    [DecimalRange("0.0001", "1000000")]
     public decimal? FlatAmount { get; set; }
 
-    [Range(typeof(decimal), "0.0001", "100")]
+    [DecimalRange("0.0001", "100")]
     public decimal? Percent { get; set; }
 
     [Required, StringLength(500, MinimumLength = 5)]
@@ -327,10 +327,10 @@ public sealed class CreateCodeSaleForm
     [Required]
     public DateTimeOffset? OrderDate { get; set; }
 
-    [Required, Range(typeof(decimal), "0.01", "100000000")]
+    [Required, DecimalRange("0.01", "100000000")]
     public decimal? NetAmount { get; set; }
 
-    [Range(typeof(decimal), "0", "100000000")]
+    [DecimalRange("0", "100000000")]
     public decimal? DiscountAmount { get; set; }
 
     [Required, StringLength(3, MinimumLength = 3)]
@@ -350,10 +350,10 @@ public sealed class UpdateCodeSaleForm
 
     public DateTimeOffset? OrderDate { get; set; }
 
-    [Range(typeof(decimal), "0.01", "100000000")]
+    [DecimalRange("0.01", "100000000")]
     public decimal? NetAmount { get; set; }
 
-    [Range(typeof(decimal), "0", "100000000")]
+    [DecimalRange("0", "100000000")]
     public decimal? DiscountAmount { get; set; }
 
     [StringLength(3, MinimumLength = 3)]
@@ -388,10 +388,10 @@ public sealed class AdminCreateSaleRequest
     [Required]
     public DateTimeOffset? OrderDate { get; set; }
 
-    [Required, Range(typeof(decimal), "0.01", "100000000")]
+    [Required, DecimalRange("0.01", "100000000")]
     public decimal? NetAmount { get; set; }
 
-    [Range(typeof(decimal), "0", "100000000")]
+    [DecimalRange("0", "100000000")]
     public decimal? DiscountAmount { get; set; }
 
     [Required, StringLength(3, MinimumLength = 3)]

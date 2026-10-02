@@ -27,7 +27,7 @@ public sealed class CampaignBrowseQuery : PageQuery
     [MaxLength(40)]
     public string? Topic { get; set; }
 
-    [Range(typeof(decimal), "0", "100000000")]
+    [DecimalRange("0", "100000000")]
     public decimal? MinReward { get; set; }
 
     public DateTime? DeadlineBefore { get; set; }
@@ -144,7 +144,7 @@ public class CampaignFieldsInput
     [MaxLength(300)]
     public string? RequiredMentions { get; set; }
 
-    [Range(typeof(decimal), "0.01", "1000000000")]
+    [DecimalRange("0.01", "1000000000")]
     public decimal? BudgetAmount { get; set; }
 
     [StringLength(3, MinimumLength = 3)]

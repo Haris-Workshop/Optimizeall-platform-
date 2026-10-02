@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, CheckSquare, MessageSquare } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type DragEvent, type KeyboardEvent } from 'react';
+import { useId, useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent } from 'react';
 import { Alert, Avatar, Badge, FormField, Select } from '@/components/ui';
 import { api } from '@/lib/api/client';
 import { errorMessage } from '@/lib/api/errors';
@@ -99,7 +99,10 @@ export function Kanban({ projectId, tasks, onOpen, canEdit }: Props) {
   const queued = useRef<{ taskId: string; key: string }[]>([]);
   const saving = useRef(false);
 
-  useEffect(() => {
+  // A layout effect, not a passive one: a move to another column unmounts the focused card, and focus must land on the
+  // new card in the same commit. With useEffect the browser could paint the card in its new column (and handle the next
+  // arrow key) before the effect ran, while focus was still on <body>, so that key press was lost.
+  useLayoutEffect(() => {
     if (!focus) return;
     // Wait until the board shows the saved position (the card may still sit in its old column for a render).
     const shown = tasks.find((t) => t.id === focus.id);

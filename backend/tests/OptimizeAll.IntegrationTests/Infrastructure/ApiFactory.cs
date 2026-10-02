@@ -59,10 +59,13 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     /// <summary>Test clock. Starts at the real current time; advance it to cross cutoffs, holds and expiries.</summary>
     public FakeTimeProvider Clock { get; } = new(DateTimeOffset.UtcNow);
 
-    // Each test host gets a small pool so many parallel test classes stay under MySQL's max_connections.
+    // Each test host gets a small pool so many parallel test classes stay under MySQL's max_connections. The options
+    // Pomelo adds (the ones it requires, and the API's 60 s command timeout) are included, so the API's connections use
+    // exactly this connection string and therefore the pool created by CreateConnectionPool (HostLifetimeTests checks).
     public string ConnectionString => IsSqlite
         ? new SqliteConnectionStringBuilder { DataSource = _sqliteFile, Pooling = true }.ConnectionString
-        : $"{_serverConnection.TrimEnd(';')};Database={_databaseName};Maximum Pool Size=20;Connection Idle Timeout=5;";
+        : $"{_serverConnection.TrimEnd(';')};Database={_databaseName};Maximum Pool Size=20;Connection Idle Timeout=5;" +
+          "Allow User Variables=True;Use Affected Rows=False;Default Command Timeout=60;";
 
     /// <summary>For CREATE/DROP DATABASE only: unpooled, so these one-off admin connections never linger idle.</summary>
     /// <summary>A generous command timeout: on a busy shared server DROP DATABASE can exceed the 30 s default (class cleanup failures).</summary>
@@ -117,6 +120,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = $"CREATE DATABASE `{_databaseName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci";
         await cmd.ExecuteNonQueryAsync();
+        CreateConnectionPool();
         await this.StartAsync(); // boot the host (runs migrations + baseline seed); see HostStartup
     }
 
@@ -145,6 +149,21 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = $"DROP DATABASE IF EXISTS `{_databaseName}`";
         await cmd.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>
+    /// Creates this host's MySQL connection pool before the host starts, without the current execution context.
+    /// MySqlConnector keeps a pool per connection string for the life of the process, with a reaper timer that captures
+    /// the execution context the pool was created in. Created by the host itself, that context holds the
+    /// WebApplicationFactory host it was started from, so no stopped MySQL test host could ever be collected.
+    /// </summary>
+    private void CreateConnectionPool()
+    {
+        using (ExecutionContext.SuppressFlow())
+        {
+            using var connection = new MySqlConnection(ConnectionString);
+            connection.Open();
+        }
     }
 
     /// <summary>Runs an action with a scoped DbContext (for arranging data or asserting on the database).</summary>

@@ -59,90 +59,98 @@ public static class RateLimitPolicies
     /// <summary>Policies whose endpoints bypass the global per-IP limiter (they carry their own, higher limits).</summary>
     private static readonly HashSet<string> HighVolumePolicies = new(StringComparer.Ordinal) { Tracking, Webhooks, Documents };
 
+    /// <summary>
+    /// Registers the rate limiters. They are owned by <see cref="AppRateLimiter"/>, a singleton the container disposes
+    /// when the host stops, and applied by <see cref="AppRateLimitingMiddleware"/> (<see cref="UseAppRateLimiting"/>).
+    /// <para>
+    /// Not ASP.NET Core's <c>AddRateLimiter</c>/<c>UseRateLimiter</c>: on .NET 8 its middleware builds a partitioned
+    /// limiter for the endpoint policies (and takes <c>RateLimiterOptions.GlobalLimiter</c>) and never disposes either.
+    /// Each runs a 100 ms timer that holds the limiter, the rest of the request pipeline and the execution context the
+    /// host started in, so a stopped host could never be collected: the integration tests, which start ~400 hosts,
+    /// grew to ~10 GB and requests began failing under memory pressure.
+    /// </para>
+    /// The same semantics: <c>[DisableRateLimiting]</c> skips every limiter; otherwise the global per-IP limiter applies,
+    /// then the endpoint's <c>[EnableRateLimiting(policy)]</c> limiter, partitioned per policy and key; a rejection is a
+    /// 429 problem with <c>Retry-After</c> when the limiter knows it.
+    /// </summary>
     public static IServiceCollection AddAppRateLimiting(this IServiceCollection services)
     {
-        services.AddRateLimiter(_ => { });
-        services.AddOptions<RateLimiterOptions>().Configure<IConfiguration>((options, config) =>
+        services.AddSingleton<AppRateLimiter>();
+        return services;
+    }
+
+    public static IApplicationBuilder UseAppRateLimiting(this IApplicationBuilder app) => app.UseMiddleware<AppRateLimitingMiddleware>();
+
+    /// <summary>The endpoint policies: policy name → partition (limit and key) for a request.</summary>
+    internal static Dictionary<string, Func<HttpContext, RateLimitPartition<string>>> Policies(IConfiguration config)
+    {
+        var enabled = Enabled(config);
+        RateLimitPartition<string> Off() => RateLimitPartition.GetNoLimiter("off");
+        return new Dictionary<string, Func<HttpContext, RateLimitPartition<string>>>(StringComparer.Ordinal)
         {
-            var enabled = config.GetValue("RateLimiting:Enabled", true);
-            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-            options.OnRejected = async (context, ct) =>
-            {
-                context.HttpContext.Response.ContentType = "application/problem+json";
-                if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
-                    context.HttpContext.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
-                await context.HttpContext.Response.WriteAsync(
-                    "{\"status\":429,\"title\":\"Too many requests. Please wait and try again.\",\"code\":\"rate_limited\"}", ct);
-            };
-
-            // Global safety net per client IP (RateLimiting:GlobalPerMinute, default 300).
-            var globalPerMinute = GlobalPerMinute(config);
-            options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
-                !enabled || IsHighVolume(ctx) ? RateLimitPartition.GetNoLimiter("off")
-                    : RateLimitPartition.GetTokenBucketLimiter(ClientKey(ctx), _ => new TokenBucketRateLimiterOptions
-                    {
-                        TokenLimit = globalPerMinute, TokensPerPeriod = globalPerMinute, ReplenishmentPeriod = TimeSpan.FromMinutes(1),
-                        QueueLimit = 0,
-                    }));
-
-            options.AddPolicy(Auth, ctx => !enabled ? RateLimitPartition.GetNoLimiter("off")
+            [Auth] = ctx => !enabled ? Off()
                 : RateLimitPartition.GetFixedWindowLimiter(ClientKey(ctx), _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = config.GetValue("RateLimiting:AuthPerMinute", 10), Window = TimeSpan.FromMinutes(1), QueueLimit = 0,
-                }));
-
-            options.AddPolicy(Refresh, ctx => !enabled ? RateLimitPartition.GetNoLimiter("off")
+                }),
+            [Refresh] = ctx => !enabled ? Off()
                 : RateLimitPartition.GetFixedWindowLimiter(ClientKey(ctx), _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = config.GetValue("RateLimiting:RefreshPerMinute", 240), Window = TimeSpan.FromMinutes(1), QueueLimit = 0,
-                }));
-
-            options.AddPolicy(Submissions, ctx => !enabled ? RateLimitPartition.GetNoLimiter("off")
+                }),
+            [Submissions] = ctx => !enabled ? Off()
                 : RateLimitPartition.GetSlidingWindowLimiter(UserKey(ctx), _ => new SlidingWindowRateLimiterOptions
                 {
                     PermitLimit = 30, Window = TimeSpan.FromMinutes(1), SegmentsPerWindow = 6, QueueLimit = 0,
-                }));
-
-            options.AddPolicy(Search, ctx => !enabled ? RateLimitPartition.GetNoLimiter("off")
+                }),
+            [Search] = ctx => !enabled ? Off()
                 : RateLimitPartition.GetSlidingWindowLimiter("search:" + UserKey(ctx), _ => new SlidingWindowRateLimiterOptions
                 {
                     PermitLimit = config.GetValue("RateLimiting:SearchPerMinute", 60), Window = TimeSpan.FromMinutes(1),
                     SegmentsPerWindow = 6, QueueLimit = 0,
-                }));
-
-            options.AddPolicy(Learning, ctx => !enabled ? RateLimitPartition.GetNoLimiter("off")
+                }),
+            [Learning] = ctx => !enabled ? Off()
                 : RateLimitPartition.GetSlidingWindowLimiter("learning:" + UserKey(ctx), _ => new SlidingWindowRateLimiterOptions
                 {
                     PermitLimit = config.GetValue("RateLimiting:LearningPerMinute", 120), Window = TimeSpan.FromMinutes(1),
                     SegmentsPerWindow = 6, QueueLimit = 0,
-                }));
-
-            options.AddPolicy(Public, ctx => !enabled ? RateLimitPartition.GetNoLimiter("off")
+                }),
+            [Public] = ctx => !enabled ? Off()
                 : RateLimitPartition.GetFixedWindowLimiter(ClientKey(ctx), _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = config.GetValue("RateLimiting:PublicPerMinute", 240), Window = TimeSpan.FromMinutes(1), QueueLimit = 0,
-                }));
-
-            options.AddPolicy(Tracking, ctx => !enabled ? RateLimitPartition.GetNoLimiter("off")
+                }),
+            [Tracking] = ctx => !enabled ? Off()
                 : RateLimitPartition.GetFixedWindowLimiter(ClientKey(ctx), _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = config.GetValue("RateLimiting:TrackingPerMinute", 1200), Window = TimeSpan.FromMinutes(1), QueueLimit = 0,
-                }));
-
-            options.AddPolicy(Documents, ctx => !enabled ? RateLimitPartition.GetNoLimiter("off")
+                }),
+            [Documents] = ctx => !enabled ? Off()
                 : RateLimitPartition.GetFixedWindowLimiter("documents:" + ClientKey(ctx), _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = config.GetValue("RateLimiting:DocumentsPerMinute", 600), Window = TimeSpan.FromMinutes(1), QueueLimit = 0,
-                }));
-
-            options.AddPolicy(Webhooks, ctx => !enabled ? RateLimitPartition.GetNoLimiter("off")
+                }),
+            [Webhooks] = ctx => !enabled ? Off()
                 : RateLimitPartition.GetFixedWindowLimiter("webhook:" + ctx.Request.Path.Value?.ToLowerInvariant(), _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = config.GetValue("RateLimiting:WebhooksPerMinute", 6000), Window = TimeSpan.FromMinutes(1), QueueLimit = 0,
-                }));
-        });
-        return services;
+                }),
+        };
     }
+
+    /// <summary>Global safety net per client IP (<c>RateLimiting:GlobalPerMinute</c>, default 300); high-volume policies are exempt.</summary>
+    internal static Func<HttpContext, RateLimitPartition<string>> GlobalPartitioner(IConfiguration config)
+    {
+        var enabled = Enabled(config);
+        var perMinute = GlobalPerMinute(config);
+        return ctx => !enabled || IsHighVolume(ctx) ? RateLimitPartition.GetNoLimiter("off")
+            : RateLimitPartition.GetTokenBucketLimiter(ClientKey(ctx), _ => new TokenBucketRateLimiterOptions
+            {
+                TokenLimit = perMinute, TokensPerPeriod = perMinute, ReplenishmentPeriod = TimeSpan.FromMinutes(1), QueueLimit = 0,
+            });
+    }
+
+    private static bool Enabled(IConfiguration config) => config.GetValue("RateLimiting:Enabled", true);
 
     /// <summary>Global per-IP budget (<c>RateLimiting:GlobalPerMinute</c>, default 300; the e2e harness, where every actor shares 127.0.0.1, raises it).</summary>
     private static int GlobalPerMinute(IConfiguration config) => Math.Max(1, config.GetValue("RateLimiting:GlobalPerMinute", 300));

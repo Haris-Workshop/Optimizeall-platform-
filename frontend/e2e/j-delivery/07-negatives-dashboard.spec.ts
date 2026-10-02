@@ -115,9 +115,13 @@ test('an upload interrupted by a reload leaves nothing behind and can be redone'
   const before = await api.get<{ subject: string }[]>(`/client/orgs/${clientId}/threads`);
   const subject = `Interrupted ${runId()}`;
   await owner.goto('/client/messages');
-  // Hold the file upload so the reload happens mid-upload.
+  // Hold the first file upload so the reload happens mid-upload; later uploads go through. The route stays in place
+  // for the rest of the test: removing it while the reloaded page boots switches request interception off while that
+  // page's first requests (the session refresh) are paused, and Playwright then never resumes them (the page hangs on
+  // "Loading").
   let held: Route | null = null;
   await owner.route('**/api/v1/client/orgs/*/files', (route) => {
+    if (held) return route.continue();
     held = route; // not answered: the reload cancels it
   });
   const compose = owner.getByRole('form', { name: 'New conversation' });
@@ -130,7 +134,6 @@ test('an upload interrupted by a reload leaves nothing behind and can be redone'
   // The browser drops the in-flight upload when the page goes away.
   await (held as Route | null)?.abort('aborted').catch(() => undefined);
   await reloading;
-  await owner.unroute('**/api/v1/client/orgs/*/files');
   const after = await api.get<{ subject: string }[]>(`/client/orgs/${clientId}/threads`);
   expect(after.length, 'no half-sent conversation').toBe(before.length);
   // The form is fresh; sending again works once.

@@ -143,7 +143,7 @@ public sealed class RecordPaymentRequest
     [Required]
     public Guid? RequestId { get; set; }
 
-    [Range(typeof(decimal), "0.001", "1000000000")]
+    [DecimalRange("0.001", "1000000000")]
     public decimal Amount { get; set; }
 
     public PaymentMethod Method { get; set; } = PaymentMethod.BankTransfer;
@@ -234,7 +234,7 @@ public sealed class CreateCreditNoteRequest
     [StringLength(3, MinimumLength = 3)]
     public string? Currency { get; set; }
 
-    [Range(typeof(decimal), "0.001", "1000000000")]
+    [DecimalRange("0.001", "1000000000")]
     public decimal Amount { get; set; }
 
     [Required, StringLength(1000, MinimumLength = 5)]
@@ -246,7 +246,7 @@ public sealed class ApplyCreditNoteRequest
     [Required]
     public Guid? InvoiceId { get; set; }
 
-    [Range(typeof(decimal), "0.001", "1000000000")]
+    [DecimalRange("0.001", "1000000000")]
     public decimal Amount { get; set; }
 }
 
@@ -338,7 +338,7 @@ public sealed class TaxRateRequest
     [Required, StringLength(80, MinimumLength = 2)]
     public string Name { get; set; } = string.Empty;
 
-    [Range(typeof(decimal), "0", "100")]
+    [DecimalRange("0", "100")]
     public decimal RatePercent { get; set; }
 
     public bool Inclusive { get; set; }

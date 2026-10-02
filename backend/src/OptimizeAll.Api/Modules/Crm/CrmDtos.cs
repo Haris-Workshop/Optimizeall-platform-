@@ -161,7 +161,7 @@ public sealed class DealRequest
     /// <summary>Defaults to the first open stage on create; ignored on update (use the move endpoint).</summary>
     public Guid? StageId { get; set; }
 
-    [Range(typeof(decimal), "0", "1000000000")]
+    [DecimalRange("0", "1000000000")]
     public decimal Value { get; set; }
 
     [Required, StringLength(3, MinimumLength = 3)]

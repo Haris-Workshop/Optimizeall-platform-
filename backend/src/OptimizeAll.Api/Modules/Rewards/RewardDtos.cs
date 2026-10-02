@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using OptimizeAll.Domain.Common;
 using OptimizeAll.Domain.Ledger;
 using OptimizeAll.Domain.Rewards;
+using OptimizeAll.Api.Common.Http;
 
 namespace OptimizeAll.Api.Modules.Rewards;
 
@@ -9,7 +10,7 @@ public sealed class RewardRuleInput
 {
     public RewardRuleType Type { get; set; }
 
-    [Range(typeof(decimal), "0", "1000000")]
+    [DecimalRange("0", "1000000")]
     public decimal Amount { get; set; }
 
     public SocialPlatform? Platform { get; set; }
@@ -35,20 +36,20 @@ public class RewardRuleSetInput
     [Required, StringLength(3, MinimumLength = 3)]
     public string Currency { get; set; } = "USD";
 
-    [Range(typeof(decimal), "0.0001", "100000000")]
+    [DecimalRange("0.0001", "100000000")]
     public decimal? DailyCapPerParticipant { get; set; }
 
-    [Range(typeof(decimal), "0.0001", "100000000")]
+    [DecimalRange("0.0001", "100000000")]
     public decimal? WeeklyCapPerParticipant { get; set; }
 
-    [Range(typeof(decimal), "0.0001", "100000000")]
+    [DecimalRange("0.0001", "100000000")]
     public decimal? CampaignCapPerParticipant { get; set; }
 
     /// <summary>Whether person-level rates (rate cards, groups, custom deals) may replace the campaign rate.</summary>
     public PersonalRatesMode PersonalRatesMode { get; set; } = PersonalRatesMode.Allowed;
 
     /// <summary>Optional ceiling on person-level rates as a multiple of the campaign rate (e.g. 3).</summary>
-    [Range(typeof(decimal), "0.01", "100")]
+    [DecimalRange("0.01", "100")]
     public decimal? PersonalRateMaxMultiplier { get; set; }
 
     [Required, MinLength(1), MaxLength(50)]
@@ -82,16 +83,16 @@ public sealed class RewardPreviewRequest
     public DateTime? PostedAt { get; set; }
     public bool IsFirstApprovedPost { get; set; }
 
-    [Range(typeof(decimal), "0", "100000000")]
+    [DecimalRange("0", "100000000")]
     public decimal EarnedToday { get; set; }
 
-    [Range(typeof(decimal), "0", "100000000")]
+    [DecimalRange("0", "100000000")]
     public decimal EarnedThisWeek { get; set; }
 
-    [Range(typeof(decimal), "0", "100000000")]
+    [DecimalRange("0", "100000000")]
     public decimal EarnedInCampaign { get; set; }
 
-    [Range(typeof(decimal), "0", "100000000")]
+    [DecimalRange("0", "100000000")]
     public decimal? QualityBonusRequested { get; set; }
 
     /// <summary>Saved version to price with; default = the current version.</summary>
@@ -101,7 +102,7 @@ public sealed class RewardPreviewRequest
     public RewardRuleSetInput? Draft { get; set; }
 
     /// <summary>Budget remaining to assume; default = the campaign's actual remaining budget.</summary>
-    [Range(typeof(decimal), "0", "1000000000")]
+    [DecimalRange("0", "1000000000")]
     public decimal? CampaignBudgetRemaining { get; set; }
 }
 

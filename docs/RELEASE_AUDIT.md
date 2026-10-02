@@ -155,12 +155,13 @@ descriptions unique.
 
 ## Tests run on the final code
 
-* Frontend: `npm run typecheck`, `npm run lint`, `npx vitest run` (118 files, 934+ tests), `npm run build`,
+* Frontend: `npm run typecheck`, `npm run lint`, `npx vitest run` (118 files, 936 tests), `npm run build`,
   `npm run budget`.
 * Backend: integration tests Auth/SecurityHeaders/Impersonation on SQLite (92 incl. the new session-hint test), new
   unit tests `LessonSummaryTextTests`.
-* E2E (SQLite, prebuilt API + web): `j-auth` 60/60, `j-seo` 71/71 with vite and with the production nginx, `smoke`
-  40/40, `a11y`, `j-learning` — see the final report for the last run's counts.
+* E2E (SQLite, prebuilt API + web), final code: `smoke` 40/40, `j-seo` 71/71 with vite and 71/71 with the production
+  nginx, `a11y` 37/37 (failed 3/37 in CI on the same pages — /team, /careers, /blog, /get-a-quote — before the fixes
+  above), `j-learning` 11/11, `j-auth` 60/60, `j-partners` 4/4, `j-content` 22/22, `crawl` 20/20.
 * `scripts/test-web-nginx.sh` (nginx error mapping + security headers).
 
 ## Still left

@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { ChevronDown, Menu } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, ChevronDown, Menu } from 'lucide-react';
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { defaultLandingPath } from '@/app/portals';
@@ -9,6 +9,7 @@ import { ButtonLink, Drawer, IconButton } from '@/components/ui';
 import { useAuth } from '@/lib/auth/useAuth';
 import { isInternalHref } from '@/lib/safeHref';
 import { type MenuCategory, type MenuItem, useSite } from './api';
+import { useSiteCopy } from './copy';
 import { SiteIcon } from './icons';
 import type { ChromeVariant } from './variant';
 
@@ -180,20 +181,27 @@ function Dropdown({
   );
 }
 
+/**
+ * The services mega-menu: every service line with its services, beside a dark "start here" card (free audit, all
+ * services, pricing). Words on the card come from the editable page copy (`shared.header.mega*`).
+ */
 function ServicesMega({ categories, onNavigate }: { categories: MenuCategory[]; onNavigate: () => void }) {
+  const copy = useSiteCopy();
   if (categories.length === 0)
     return (
       <Link to="/services" className="site-mega__all" onClick={onNavigate}>
-        Explore all services
+        Explore all services <ArrowRight aria-hidden="true" />
       </Link>
     );
   return (
-    <>
+    <div className="site-mega">
       <div className="site-mega__grid">
         {categories.map((category) => (
           <div key={category.slug} className="site-mega__col">
             <p className="site-mega__heading">
-              <SiteIcon name={category.icon} className="site-mega__icon" />
+              <span className="site-mega__icon" aria-hidden="true">
+                <SiteIcon name={category.icon} />
+              </span>
               {category.name}
             </p>
             <ul>
@@ -201,6 +209,7 @@ function ServicesMega({ categories, onNavigate }: { categories: MenuCategory[]; 
                 <li key={service.slug}>
                   <Link to={`/services/${service.slug}`} onClick={onNavigate} className="site-mega__link">
                     {service.name}
+                    <ArrowRight aria-hidden="true" />
                   </Link>
                 </li>
               ))}
@@ -208,18 +217,27 @@ function ServicesMega({ categories, onNavigate }: { categories: MenuCategory[]; 
           </div>
         ))}
       </div>
-      <div className="site-mega__footer">
-        <Link to="/services" onClick={onNavigate} className="site-mega__all">
-          All services
-        </Link>
-        <Link to="/pricing" onClick={onNavigate} className="site-mega__all">
-          Pricing
-        </Link>
-        <Link to="/free-audit" onClick={onNavigate} className="site-mega__all">
-          Get a free marketing audit
+      <div className="site-mega__feature">
+        <p className="site-mega__eyebrow">{copy.text('shared.header.megaEyebrow')}</p>
+        <p className="site-mega__title">{copy.text('shared.header.megaTitle')}</p>
+        <p className="site-mega__text">{copy.text('shared.header.megaText')}</p>
+        <ul className="site-mega__more">
+          <li>
+            <Link to="/services" onClick={onNavigate} className="site-mega__all">
+              All services <ArrowUpRight aria-hidden="true" />
+            </Link>
+          </li>
+          <li>
+            <Link to="/pricing" onClick={onNavigate} className="site-mega__all">
+              Pricing <ArrowUpRight aria-hidden="true" />
+            </Link>
+          </li>
+        </ul>
+        <Link to="/free-audit" onClick={onNavigate} className="site-mega__cta">
+          {copy.text('shared.header.megaCta')} <ArrowRight aria-hidden="true" />
         </Link>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -255,6 +273,21 @@ function NavItem({ url, label, className = 'public-header__link' }: { url: strin
 }
 
 /**
+ * True once the page has scrolled past the top: the header then gains its frosted backdrop and hairline. Only paint
+ * changes (the header keeps its height, so nothing below it shifts).
+ */
+function useScrolled(threshold = 8) {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const update = () => setScrolled(window.scrollY > threshold);
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    return () => window.removeEventListener('scroll', update);
+  }, [threshold]);
+  return scrolled;
+}
+
+/**
  * The shared header frame: brand, a "Main" navigation, actions and the mobile sheet. Each variant fills the slots, so
  * focus order is always brand, navigation, actions, menu button.
  */
@@ -273,9 +306,10 @@ function HeaderShell({
 }) {
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const scrolled = useScrolled();
   useEffect(() => setDrawerOpen(false), [location.pathname]);
   return (
-    <header className={clsx('public-header site-header', `site-header--${variant}`)}>
+    <header className={clsx('public-header site-header', `site-header--${variant}`)} data-scrolled={scrolled ? '' : undefined}>
       <div className="container public-header__inner">
         {brand}
         <nav aria-label="Main" className="public-header__nav site-nav">
@@ -292,7 +326,14 @@ function HeaderShell({
           />
         </div>
       </div>
-      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title="Menu" side="right" headerContent={<Logo size={26} title="" />}>
+      <Drawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title="Menu"
+        side="right"
+        className="site-drawer-panel"
+        headerContent={<Logo size={26} title="" />}
+      >
         <nav aria-label="Mobile" className="public-drawer site-drawer">
           {drawer(() => setDrawerOpen(false))}
         </nav>
@@ -383,7 +424,7 @@ function AgencyHeader() {
                   ) : (
                     <ul className="site-nav__list">
                       {item.children!.map((child) => (
-                        <li key={child.label}>
+                        <li key={child.label} className="site-nav__entry">
                           <MenuLink item={child} className="site-nav__sublink" onClick={closeAll} />
                           {child.description && <span className="site-nav__desc">{child.description}</span>}
                         </li>
@@ -505,7 +546,8 @@ function AcademyHeader() {
         <>
           <ThemeToggle />
           <Link to="/" className="site-header__product">
-            <span aria-hidden="true">← </span>Optimize All
+            <ArrowLeft aria-hidden="true" className="site-header__back" />
+            Optimize All
           </Link>
           <SignInAction to={account.to} label={account.label} />
           <ButtonLink to={ACADEMY_CTA.url} variant="highlight" size="sm" className="site-header__cta">
@@ -563,7 +605,8 @@ function CreatorsHeader() {
         <>
           <ThemeToggle />
           <Link to="/" className="site-header__product">
-            <span aria-hidden="true">← </span>Optimize All
+            <ArrowLeft aria-hidden="true" className="site-header__back" />
+            Optimize All
           </Link>
           <SignInAction to={account.to} label={account.signedIn ? account.label : 'Creator sign in'} />
           {!account.signedIn && (

@@ -9,7 +9,7 @@ import { headFromSeo, useDocumentHead } from '../site/head';
 
 /**
  * Generic CMS page at /:slug (About, How we work, legal pages, and any page staff create). A page without a hero block
- * gets a standard title header; legal pages show their last-updated date.
+ * gets the standard page hero; legal pages show their last-updated date in it and read as one narrow column.
  */
 export function CmsPage({ slug: fixedSlug }: { slug?: string }) {
   const params = useParams();
@@ -30,6 +30,13 @@ export function CmsPage({ slug: fixedSlug }: { slug?: string }) {
               title={page.title}
               lead={page.summary}
               breadcrumbs={[{ label: 'Home', to: '/' }, { label: page.title }]}
+              actions={
+                page.kind === 'Legal' ? (
+                  <p className="site-legal__updated">
+                    Last updated <time dateTime={page.updatedAt}>{formatDate(page.updatedAt)}</time>
+                  </p>
+                ) : undefined
+              }
             />
           )}
           <Blocks
@@ -42,8 +49,10 @@ export function CmsPage({ slug: fixedSlug }: { slug?: string }) {
               pageTitle: page.title,
             }}
           />
-          {page.kind === 'Legal' && (
-            <p className="container site-narrow text-small text-muted site-legal__updated">Last updated {formatDate(page.updatedAt)}</p>
+          {page.kind === 'Legal' && startsWithHero && (
+            <p className="container site-narrow site-legal__updated site-legal__updated--end">
+              Last updated <time dateTime={page.updatedAt}>{formatDate(page.updatedAt)}</time>
+            </p>
           )}
         </article>
       )}

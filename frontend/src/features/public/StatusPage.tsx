@@ -7,21 +7,34 @@ export interface StatusPageProps {
   title: string;
   description: ReactNode;
   actions?: ReactNode;
+  /** Extra content under the actions (the website 404's helpful links). */
+  footer?: ReactNode;
   /** Render as the page's main landmark (for pages outside any layout). */
   standalone?: boolean;
 }
 
-/** Full-width message page (404, 403, crash). */
-export function StatusPage({ code, icon, title, description, actions, standalone }: StatusPageProps) {
+/**
+ * Full-width message page (404, 403, crash): a status code set large and faint behind an icon tile, the page's h1, a
+ * short explanation and the ways forward. The large code is decorative (the small code above the title is the text).
+ */
+export function StatusPage({ code, icon, title, description, actions, footer, standalone }: StatusPageProps) {
   const content = (
     <div className="status-page">
-      <span className="status-page__icon" aria-hidden="true">
-        {icon}
-      </span>
-      {code && <p className="status-page__code">{code}</p>}
-      <h1 className="status-page__title">{title}</h1>
-      <p className="status-page__description">{description}</p>
-      {actions && <div className="status-page__actions">{actions}</div>}
+      <div className="status-page__hero">
+        {code && (
+          <p className="status-page__art" aria-hidden="true">
+            {code}
+          </p>
+        )}
+        <span className="status-page__icon" aria-hidden="true">
+          {icon}
+        </span>
+        {code && <p className="status-page__code">Error {code}</p>}
+        <h1 className="status-page__title">{title}</h1>
+        <p className="status-page__description">{description}</p>
+        {actions && <div className="status-page__actions">{actions}</div>}
+      </div>
+      {footer}
     </div>
   );
   return standalone ? (

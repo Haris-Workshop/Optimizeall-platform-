@@ -112,7 +112,12 @@
         { "key": "shared.cookies.analytics", "label": "Analytics cookies description", "type": "text", "default": "Google Analytics 4: anonymous usage statistics." },
         { "key": "shared.cookies.marketing", "label": "Marketing cookies description", "type": "text", "default": "Google Tag Manager and Meta Pixel: ad measurement." },
         { "key": "shared.page404.title", "label": "Page not found title", "type": "text", "default": "We couldn’t find that page" },
-        { "key": "shared.page404.description", "label": "Page not found text", "type": "text", "default": "The link may be out of date, or the page may have moved." }
+        { "key": "shared.page404.description", "label": "Page not found text", "type": "text", "default": "The link may be out of date, or the page may have moved." },
+        { "key": "shared.page404.linksTitle", "label": "Page not found: helpful links heading", "type": "text", "default": "Helpful links" },
+        { "key": "shared.header.megaEyebrow", "label": "Services menu: feature card eyebrow", "type": "text", "default": "Not sure where to start?" },
+        { "key": "shared.header.megaTitle", "label": "Services menu: feature card title", "type": "text", "default": "Start with a free marketing audit" },
+        { "key": "shared.header.megaText", "label": "Services menu: feature card text", "type": "textarea", "default": "An honest look at your marketing, tracking and competitors, shared with you whether or not you hire us." },
+        { "key": "shared.header.megaCta", "label": "Services menu: feature card link (opens the free audit)", "type": "text", "default": "Get a free marketing audit" }
       ]
     },
     {
@@ -326,7 +331,11 @@
         { "key": "faq.hero.title", "label": "Headline", "type": "text", "default": "Frequently asked questions" },
         { "key": "faq.hero.lead", "label": "Introduction", "type": "textarea", "default": "How campaigns, reviews and payouts work on Optimize All. Can’t find an answer? Sign in and contact support." },
         { "key": "faq.empty.title", "label": "No questions title", "type": "text", "default": "Answers are on their way" },
-        { "key": "faq.empty.description", "label": "No questions text", "type": "textarea", "default": "We’re updating our help articles. In the meantime, the home page explains how campaigns, review and payouts work." }
+        { "key": "faq.empty.description", "label": "No questions text", "type": "textarea", "default": "We’re updating our help articles. In the meantime, the home page explains how campaigns, review and payouts work." },
+        { "key": "faq.nav.label", "label": "Topics list heading", "type": "text", "default": "Topics" },
+        { "key": "faq.help.title", "label": "Help box title", "type": "text", "default": "Still have a question?" },
+        { "key": "faq.help.text", "label": "Help box text", "type": "textarea", "default": "Sign in to your creator account and contact support." },
+        { "key": "faq.help.cta", "label": "Help box button (opens creator sign-in)", "type": "text", "default": "Creator sign in" }
       ]
     },
     {

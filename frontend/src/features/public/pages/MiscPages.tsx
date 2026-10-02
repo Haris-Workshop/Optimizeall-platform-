@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { MailCheck, MailX } from 'lucide-react';
+import { ArrowUpRight, MailCheck, MailX, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Alert, Button, ButtonLink, EmptyState, Input } from '@/components/ui';
@@ -31,44 +31,49 @@ function NewsletterTokenPage({ action }: { action: 'confirm' | 'unsubscribe' }) 
   return (
     <>
       <PageHero title={title} breadcrumbs={[{ label: 'Home', to: '/' }, { label: title }]} />
-      <div className="container site-section site-narrow">
-        {!token ? (
-          <Alert tone="warning" title="This link is incomplete">
-            Open the link from your email again, or copy the whole address into your browser.
-          </Alert>
-        ) : mutation.isPending || mutation.isIdle ? (
-          <div>
-            <p>
-              {action === 'confirm'
-                ? 'Confirm that you want to receive our newsletter.'
-                : 'Unsubscribe this email address from our newsletter?'}
-            </p>
-            <Button onClick={send} loading={mutation.isPending}>
-              {action === 'confirm' ? 'Confirm subscription' : 'Unsubscribe'}
-            </Button>
-          </div>
-        ) : mutation.isSuccess ? (
-          <EmptyState
-            icon={action === 'confirm' ? <MailCheck /> : <MailX />}
-            headingLevel={2}
-            title={action === 'confirm' ? "You're subscribed" : "You've been unsubscribed"}
-            description={mutation.data.message}
-            action={
-              <ButtonLink to="/blog" variant="secondary">
-                Read the latest articles
-              </ButtonLink>
-            }
-          />
-        ) : (
-          <Alert tone="danger" title={action === 'confirm' ? "We couldn't confirm your subscription" : "We couldn't unsubscribe you"}>
-            {errorMessage(mutation.error)}{' '}
-            {action === 'confirm' && (
-              <>
-                You can <Link to="/blog">sign up again</Link>.
-              </>
-            )}
-          </Alert>
-        )}
+      <div className="container site-section">
+        <div className="site-panel site-narrow">
+          {!token ? (
+            <Alert tone="warning" title="This link is incomplete">
+              Open the link from your email again, or copy the whole address into your browser.
+            </Alert>
+          ) : mutation.isPending || mutation.isIdle ? (
+            <div className="site-panel__body">
+              <span className="site-panel__icon" aria-hidden="true">
+                {action === 'confirm' ? <MailCheck /> : <MailX />}
+              </span>
+              <p className="site-panel__text">
+                {action === 'confirm'
+                  ? 'Confirm that you want to receive our newsletter.'
+                  : 'Unsubscribe this email address from our newsletter?'}
+              </p>
+              <Button onClick={send} loading={mutation.isPending}>
+                {action === 'confirm' ? 'Confirm subscription' : 'Unsubscribe'}
+              </Button>
+            </div>
+          ) : mutation.isSuccess ? (
+            <EmptyState
+              icon={action === 'confirm' ? <MailCheck /> : <MailX />}
+              headingLevel={2}
+              title={action === 'confirm' ? "You're subscribed" : "You've been unsubscribed"}
+              description={mutation.data.message}
+              action={
+                <ButtonLink to="/blog" variant="secondary">
+                  Read the latest articles
+                </ButtonLink>
+              }
+            />
+          ) : (
+            <Alert tone="danger" title={action === 'confirm' ? "We couldn't confirm your subscription" : "We couldn't unsubscribe you"}>
+              {errorMessage(mutation.error)}{' '}
+              {action === 'confirm' && (
+                <>
+                  You can <Link to="/blog">sign up again</Link>.
+                </>
+              )}
+            </Alert>
+          )}
+        </div>
       </div>
     </>
   );
@@ -89,13 +94,14 @@ function Hits({ title, hits }: { title: string; hits: SearchHit[] }) {
       <ul className="site-grid site-grid--2">
         {hits.map((hit) => (
           <li key={hit.url}>
-            <article className="site-card">
+            <article className="site-card site-card--hit">
               <h3 className="site-card__title">
                 <Link to={hit.url} className="site-card__link">
                   {hit.title}
                 </Link>
               </h3>
               <p className="site-card__text">{hit.summary}</p>
+              <ArrowUpRight className="site-card__go" aria-hidden="true" />
             </article>
           </li>
         ))}
@@ -119,11 +125,18 @@ export function SearchPage() {
   return (
     <>
       <PageHero title="Search" breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Search' }]}>
-        <form role="search" onSubmit={(e) => e.preventDefault()}>
+        <form role="search" className="site-search" onSubmit={(e) => e.preventDefault()}>
           <label htmlFor="site-search" className="visually-hidden">
             Search services, articles and case studies
           </label>
-          <Input id="site-search" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search services, articles and case studies" />
+          <Input
+            id="site-search"
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            leading={<Search />}
+            placeholder="Search services, articles and case studies"
+          />
         </form>
       </PageHero>
       <div aria-live="polite" aria-busy={isFetching}>

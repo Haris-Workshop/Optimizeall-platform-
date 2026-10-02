@@ -42,6 +42,10 @@ describe('site copy', () => {
     expect(copy.text('home.cta.primary')).toBe(copy.text('home.hero.primaryCta'));
     expect(copy.list('home.cta.points')).toHaveLength(3);
     expect(makeSiteCopy({ 'home.more.creators.text': 'Get paid to post.' }).text('home.more.creators.text')).toBe('Get paid to post.');
+    // The services menu's feature card links to the free audit with the same words the menu always used.
+    expect(copy.text('shared.header.megaCta')).toBe('Get a free marketing audit');
+    // The website 404's links heading matches the server-rendered 404 ("Helpful links").
+    expect(copy.text('shared.page404.linksTitle')).toBe('Helpful links');
   });
 
   it('renders the shipped wording when overrides cannot be loaded, and editor overrides once they are', async () => {

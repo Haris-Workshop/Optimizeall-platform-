@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { ArrowRight, X } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { isInternalHref } from '@/lib/safeHref';
@@ -22,10 +22,12 @@ function AnnouncementBar() {
   return (
     <div className="site-announcement" role="region" aria-label="Announcement">
       <p className="container site-announcement__inner">
+        <span className="site-announcement__dot" aria-hidden="true" />
         <span>{bar.text}</span>
         {bar.linkUrl && bar.linkLabel && isInternalHref(bar.linkUrl) && (
           <Link to={bar.linkUrl} className="site-announcement__link">
             {bar.linkLabel}
+            <ArrowRight aria-hidden="true" />
           </Link>
         )}
         <button

@@ -85,6 +85,10 @@ export function Section({
   );
 }
 
+/**
+ * A page's opening: an inset rounded panel with breadcrumbs, eyebrow, the page's h1, lead and actions, and an optional
+ * aside (`children`). `tone="stage"` renders it on the home page's dark navy stage (both themes).
+ */
 export function PageHero({
   eyebrow,
   title,
@@ -92,6 +96,7 @@ export function PageHero({
   actions,
   breadcrumbs,
   children,
+  tone = 'default',
 }: {
   eyebrow?: ReactNode;
   title: ReactNode;
@@ -99,9 +104,10 @@ export function PageHero({
   actions?: ReactNode;
   breadcrumbs?: Crumb[];
   children?: ReactNode;
+  tone?: 'default' | 'stage';
 }) {
   return (
-    <header className="site-hero">
+    <header className={clsx('site-hero', tone === 'stage' && 'site-hero--stage')}>
       <div className="container site-hero__inner">
         <div className="site-hero__copy">
           {breadcrumbs && <Breadcrumbs items={breadcrumbs} />}

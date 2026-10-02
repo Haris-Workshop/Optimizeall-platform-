@@ -134,30 +134,33 @@ function ProductFooter({
 }) {
   return (
     <footer className={`public-footer site-footer site-footer--${product}`}>
-      <div className="container site-footer__mini">
-        <div className="site-footer__mini-brand">
-          <Link to={homeUrl} className="public-header__brand site-header__product-brand" aria-label={`${name} home`}>
-            <Logo size={26} title="" />
-            <span className="site-header__wordmark">{product === 'academy' ? 'Academy' : 'Creators'}</span>
-          </Link>
-          <p className="site-footer__note">
-            {note}{' '}
-            <Link to={noteLink.url} className="site-footer__note-link">
-              {noteLink.label} <ArrowRight aria-hidden="true" />
+      <div className="site-footer__stage">
+        <div className="site-footer__backdrop" aria-hidden="true" />
+        <div className="container site-footer__mini">
+          <div className="site-footer__mini-brand">
+            <Link to={homeUrl} className="public-header__brand site-header__product-brand" aria-label={`${name} home`}>
+              <Logo size={28} title="" />
+              <span className="site-header__wordmark">{product === 'academy' ? 'Academy' : 'Creators'}</span>
             </Link>
-          </p>
+            <p className="site-footer__note">
+              {note}{' '}
+              <Link to={noteLink.url} className="site-footer__note-link">
+                {noteLink.label} <ArrowRight aria-hidden="true" />
+              </Link>
+            </p>
+          </div>
+          <nav aria-label="Footer" className="site-footer__mini-nav">
+            <ul>
+              {links.map((link) => (
+                <li key={link.label}>
+                  <FooterLink link={link} />
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
-        <nav aria-label="Footer" className="site-footer__mini-nav">
-          <ul>
-            {links.map((link) => (
-              <li key={link.label}>
-                <FooterLink link={link} />
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <LegalRow onCookieSettings={onCookieSettings} />
       </div>
-      <LegalRow onCookieSettings={onCookieSettings} />
     </footer>
   );
 }
@@ -212,62 +215,72 @@ export function SiteFooter({ onCookieSettings, variant = 'agency' }: { onCookieS
   const contact = site?.contact;
 
   return (
-    <footer className="public-footer site-footer">
-      <div className="container site-footer__top">
-        <div className="site-footer__brand">
-          <Logo size={30} title={`Optimize All — ${BRAND_TAGLINE}`} />
-          <p className="site-footer__blurb">
-            {site?.footer.blurb ??
-              'A full-service digital marketing agency: strategy, search, paid media, content, creative and web, run as one accountable team.'}
-          </p>
-          <PartnerSlot slot="footer.partners" />
-          {contact && (
-            <ul className="site-footer__contact">
-              {contact.email && (
-                <li>
-                  <Mail aria-hidden="true" />
-                  <a href={`mailto:${contact.email}`}>{contact.email}</a>
-                </li>
-              )}
-              {contact.phone && (
-                <li>
-                  <Phone aria-hidden="true" />
-                  <a href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}>{contact.phone}</a>
-                </li>
-              )}
-              {contact.whatsApp && (
-                <li>
-                  <MessageCircle aria-hidden="true" />
-                  <a href={`https://wa.me/${contact.whatsApp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
-                    WhatsApp<span className="visually-hidden"> (opens in a new tab)</span>
-                  </a>
-                </li>
-              )}
-              {contact.address && (
-                <li>
-                  <MapPin aria-hidden="true" />
-                  <span>{contact.address}</span>
-                </li>
-              )}
-            </ul>
-          )}
-        </div>
-        <nav aria-label="Footer" className="site-footer__nav">
-          {columns.map((column) => (
-            <LinkGroup key={column.title} title={column.title} links={column.links} />
-          ))}
-          <LinkGroup title="More from Optimize All" links={MORE_FROM_OPTIMIZE_ALL} />
-          <LinkGroup title="Sign in" links={SIGN_IN_LINKS} />
-        </nav>
-        <section className="site-footer__newsletter" aria-labelledby="footer-newsletter">
-          <h2 id="footer-newsletter" className="public-footer__heading">
-            {copy.text('shared.footer.newsletterTitle')}
-          </h2>
-          <p className="text-small text-muted">{copy.text('shared.footer.newsletterText')}</p>
-          <NewsletterSignup source="footer" compact />
+    <footer className="public-footer site-footer site-footer--agency">
+      <div className="site-footer__stage">
+        <div className="site-footer__backdrop" aria-hidden="true" />
+        <section className="container site-footer__lead" aria-labelledby="footer-newsletter">
+          <div className="site-footer__lead-copy">
+            <h2 id="footer-newsletter" className="site-footer__lead-title">
+              {copy.text('shared.footer.newsletterTitle')}
+            </h2>
+            <p className="site-footer__lead-text">{copy.text('shared.footer.newsletterText')}</p>
+          </div>
+          <div className="site-footer__newsletter">
+            <NewsletterSignup source="footer" compact />
+          </div>
         </section>
+        <div className="container site-footer__top">
+          <div className="site-footer__brand">
+            <Logo size={30} title={`Optimize All — ${BRAND_TAGLINE}`} />
+            <p className="site-footer__blurb">
+              {site?.footer.blurb ??
+                'A full-service digital marketing agency: strategy, search, paid media, content, creative and web, run as one accountable team.'}
+            </p>
+            <PartnerSlot slot="footer.partners" />
+            {contact && (
+              <ul className="site-footer__contact">
+                {contact.email && (
+                  <li>
+                    <Mail aria-hidden="true" />
+                    <a href={`mailto:${contact.email}`}>{contact.email}</a>
+                  </li>
+                )}
+                {contact.phone && (
+                  <li>
+                    <Phone aria-hidden="true" />
+                    <a href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}>{contact.phone}</a>
+                  </li>
+                )}
+                {contact.whatsApp && (
+                  <li>
+                    <MessageCircle aria-hidden="true" />
+                    <a href={`https://wa.me/${contact.whatsApp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                      WhatsApp<span className="visually-hidden"> (opens in a new tab)</span>
+                    </a>
+                  </li>
+                )}
+                {contact.address && (
+                  <li>
+                    <MapPin aria-hidden="true" />
+                    <span>{contact.address}</span>
+                  </li>
+                )}
+              </ul>
+            )}
+          </div>
+          <nav aria-label="Footer" className="site-footer__nav">
+            {columns.map((column) => (
+              <LinkGroup key={column.title} title={column.title} links={column.links} />
+            ))}
+            <LinkGroup title="More from Optimize All" links={MORE_FROM_OPTIMIZE_ALL} />
+            <LinkGroup title="Sign in" links={SIGN_IN_LINKS} />
+          </nav>
+        </div>
+        <LegalRow onCookieSettings={onCookieSettings} social />
+        <p className="site-footer__wordmark" aria-hidden="true">
+          Optimize All
+        </p>
       </div>
-      <LegalRow onCookieSettings={onCookieSettings} social />
     </footer>
   );
 }

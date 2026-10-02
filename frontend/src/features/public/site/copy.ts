@@ -10,7 +10,7 @@ import catalog from './siteCopy.json';
  * Pages render the defaults immediately and swap in overrides once they load, so nothing flashes or breaks offline.
  */
 
-export type CopyType = 'text' | 'textarea' | 'list' | 'pairs';
+export type CopyType = 'text' | 'textarea' | 'list' | 'pairs' | 'link';
 
 export interface CopyCatalogEntry {
   key: string;

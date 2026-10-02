@@ -1,9 +1,10 @@
 import { ArrowRight, Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { BRAND_TAGLINE, Logo } from '@/components/brand/Logo';
+import { BRAND_TAGLINE } from '@/components/brand/Logo';
 import { isExternalHref, isInternalHref } from '@/lib/safeHref';
 import { type SiteLink, useSite } from './api';
 import { useSiteCopy } from './copy';
+import { DEFAULT_PRODUCT_LINKS, DEFAULT_SIGN_IN_LINKS, productChrome, SiteLogo } from './layout';
 import { PartnerSlot } from '../partners/PartnerSlot';
 import { NewsletterSignup } from './NewsletterSignup';
 import type { ChromeVariant } from './variant';
@@ -34,18 +35,10 @@ const FALLBACK_COLUMNS: { title: string; links: SiteLink[] }[] = [
   },
 ];
 
-/** The other two products, one small link each. */
-const MORE_FROM_OPTIMIZE_ALL: SiteLink[] = [
-  { label: 'Optimize All Academy', url: '/learn' },
-  { label: 'Optimize All Creators', url: '/creators' },
-];
-
-/** One sign-in group, labelled by audience. All three open /login; the audience only chooses the page's wording. */
-const SIGN_IN_LINKS: SiteLink[] = [
-  { label: 'Client login', url: '/login' },
-  { label: 'Creator sign in', url: '/login?audience=creator' },
-  { label: 'Academy sign in', url: '/login?audience=learner' },
-];
+/*
+ * The other two products ("More from Optimize All") and the one sign-in group labelled by audience (all open /login;
+ * the audience only chooses the page's wording) come from Site settings → Footer (defaults: ./layout.tsx).
+ */
 
 const FALLBACK_LEGAL: SiteLink[] = [
   { label: 'Privacy policy', url: '/privacy-policy' },
@@ -138,7 +131,7 @@ function ProductFooter({
   homeUrl: string;
   links: SiteLink[];
   note: string;
-  noteLink: SiteLink;
+  noteLink?: SiteLink;
   onCookieSettings: () => void;
 }) {
   return (
@@ -148,14 +141,16 @@ function ProductFooter({
         <div className="container site-footer__mini">
           <div className="site-footer__mini-brand">
             <Link to={homeUrl} className="public-header__brand site-header__product-brand" aria-label={`${name} home`}>
-              <Logo size={28} title="" />{' '}
+              <SiteLogo size={28} />{' '}
               <span className="site-header__wordmark">{product === 'academy' ? 'Academy' : 'Creators'}</span>
             </Link>
             <p className="site-footer__note">
               {note}{' '}
-              <Link to={noteLink.url} className="site-footer__note-link">
-                {noteLink.label} <ArrowRight aria-hidden="true" />
-              </Link>
+              {noteLink && isInternalHref(noteLink.url) && (
+                <Link to={noteLink.url} className="site-footer__note-link">
+                  {noteLink.label} <ArrowRight aria-hidden="true" />
+                </Link>
+              )}
             </p>
           </div>
           <nav aria-label="Footer" className="site-footer__mini-nav">
@@ -181,41 +176,22 @@ function ProductFooter({
 export function SiteFooter({ onCookieSettings, variant = 'agency' }: { onCookieSettings: () => void; variant?: ChromeVariant }) {
   const { data: site } = useSite();
   const copy = useSiteCopy();
-  if (variant === 'academy')
+  if (variant === 'academy' || variant === 'creators') {
+    // The product's links and note: Site settings → Academy & Creators.
+    const product = productChrome(site, variant);
+    const siteName = site?.siteName ?? 'Optimize All';
     return (
       <ProductFooter
-        product="academy"
-        name="Optimize All Academy"
-        homeUrl="/learn"
-        links={[
-          { label: 'Courses', url: '/learn' },
-          { label: 'Learning paths', url: '/learn/paths' },
-          { label: 'Certificates', url: '/learn#certificates' },
-          { label: 'Verify a certificate', url: '/verify' },
-        ]}
-        note="Optimize All Academy is run by Optimize All, a marketing agency."
-        noteLink={{ label: 'Work with us', url: '/services' }}
+        product={variant}
+        name={`${siteName} ${variant === 'academy' ? 'Academy' : 'Creators'}`}
+        homeUrl={variant === 'academy' ? '/learn' : '/creators'}
+        links={product.footerLinks}
+        note={product.footerNote ?? ''}
+        noteLink={product.footerNoteLink ?? undefined}
         onCookieSettings={onCookieSettings}
       />
     );
-  if (variant === 'creators')
-    return (
-      <ProductFooter
-        product="creators"
-        name="Optimize All Creators"
-        homeUrl="/creators"
-        links={[
-          { label: 'How it works', url: '/creators#how-it-works' },
-          { label: 'FAQ', url: '/creators/faq' },
-          { label: 'Campaign rules', url: '/creators#rules' },
-          { label: 'Create a creator account', url: '/register?audience=creator' },
-          { label: 'Creator sign in', url: '/login?audience=creator' },
-        ]}
-        note="Optimize All Creators is run by Optimize All, a marketing agency."
-        noteLink={{ label: 'Visit Optimize All', url: '/' }}
-        onCookieSettings={onCookieSettings}
-      />
-    );
+  }
 
   const columns = (site?.footer.columns.length ? site.footer.columns : FALLBACK_COLUMNS).filter(
     // Stored footers from before the academy became its own product may still lead with an Academy column.
@@ -240,7 +216,7 @@ export function SiteFooter({ onCookieSettings, variant = 'agency' }: { onCookieS
         </section>
         <div className="container site-footer__top">
           <div className="site-footer__brand">
-            <Logo size={30} title={`Optimize All — ${BRAND_TAGLINE}`} />
+            <SiteLogo size={30} title={`${site?.siteName ?? 'Optimize All'} — ${site?.tagline ?? BRAND_TAGLINE}`} />
             <p className="site-footer__blurb">
               {site?.footer.blurb ??
                 'A full-service digital marketing agency: strategy, search, paid media, content, creative and web, run as one accountable team.'}
@@ -281,8 +257,8 @@ export function SiteFooter({ onCookieSettings, variant = 'agency' }: { onCookieS
             {columns.map((column) => (
               <LinkGroup key={column.title} title={column.title} links={column.links} />
             ))}
-            <LinkGroup title="More from Optimize All" links={MORE_FROM_OPTIMIZE_ALL} />
-            <LinkGroup title="Sign in" links={SIGN_IN_LINKS} />
+            <LinkGroup title={copy.text('shared.footer.productLinksTitle')} links={site?.footer.productLinks ?? DEFAULT_PRODUCT_LINKS} />
+            <LinkGroup title={copy.text('shared.footer.signInTitle')} links={site?.footer.signInLinks ?? DEFAULT_SIGN_IN_LINKS} />
           </nav>
         </div>
         <LegalRow onCookieSettings={onCookieSettings} social />

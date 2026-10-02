@@ -1,10 +1,11 @@
 import { ArrowRight, BadgeCheck, CalendarClock, Check, Eye, Hash, Megaphone, ReceiptText, Upload, UserCheck, Wallet } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { Fragment, useEffect, useRef, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ButtonLink } from '@/components/ui/ButtonLink';
 import { CreatorsHeroArt } from './landing/CreatorsArt';
 import { useSiteCopy } from './site/copy';
 import { useDocumentHead } from './site/head';
+import { type CreatorsSectionKey, useSections } from './site/layout';
 import { useReveal } from './site/motion';
 import './site/marketing.css';
 import './LandingPage.css';
@@ -25,6 +26,7 @@ export function LandingPage() {
   const { hash } = useLocation();
   const copy = useSiteCopy();
   const root = useRef<HTMLDivElement>(null);
+  const sections = useSections('creators');
   useReveal(root);
   useDocumentHead({ title: copy.text('creators.seo.title'), description: copy.text('creators.seo.description') });
 
@@ -38,44 +40,10 @@ export function LandingPage() {
     }
   }, [hash]);
 
-  return (
-    <div ref={root} className="cr">
-      <section className="cr-stage cr-hero" aria-labelledby="hero-title">
-        <div className="cr-stage__panel">
-          <div className="cr-stage__backdrop" aria-hidden="true" />
-          <div className="container cr-hero__inner">
-            <div className="cr-hero__copy">
-              <p className="cr-pill">
-                <span className="cr-pill__dot" aria-hidden="true" />
-                {copy.text('creators.hero.eyebrow')}
-              </p>
-              <h1 id="hero-title" className="cr-display">
-                {copy.text('creators.hero.title')} <span className="cr-accent">{copy.text('creators.hero.titleAccent')}</span>
-              </h1>
-              <p className="cr-lead">{copy.text('creators.hero.lead')}</p>
-              <div className="cr-actions">
-                <ButtonLink to="/register?audience=creator" variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
-                  {copy.text('creators.hero.primaryCta')}
-                </ButtonLink>
-                <ButtonLink to="/creators#how-it-works" variant="secondary" size="lg">
-                  {copy.text('creators.hero.secondaryCta')}
-                </ButtonLink>
-              </div>
-              <ul className="cr-trust">
-                {copy.list('creators.hero.trust').map((item) => (
-                  <li key={item}>
-                    <Check aria-hidden="true" /> {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="cr-hero__visual">
-              <CreatorsHeroArt payoutSchedule={copy.text('creators.hero.payoutSchedule')} />
-            </div>
-          </div>
-        </div>
-      </section>
-
+  // The sections after the hero, in the order and visibility of Site settings → Page layout (as the server-rendered
+  // copy, SeoPageResolver.CreatorsPage). Hiding “How it works” or “Rules” also hides the #how-it-works / #rules targets.
+  const blocks: Record<CreatorsSectionKey, ReactNode> = {
+    how: (
       <section id="how-it-works" tabIndex={-1} className="cr-section" aria-labelledby="how-title">
         <div className="container">
           <div className="cr-head" data-reveal="">
@@ -108,7 +76,8 @@ export function LandingPage() {
           </ol>
         </div>
       </section>
-
+    ),
+    earnings: (
       <section id="earnings" className="cr-section cr-section--tint" aria-labelledby="earn-title">
         <div className="container cr-split">
           <div className="cr-head cr-head--side" data-reveal="">
@@ -137,7 +106,8 @@ export function LandingPage() {
           </ol>
         </div>
       </section>
-
+    ),
+    rules: (
       <section id="rules" tabIndex={-1} className="cr-chapter" aria-labelledby="rules-title">
         <div className="cr-stage__panel">
           <div className="cr-stage__backdrop" aria-hidden="true" />
@@ -166,7 +136,8 @@ export function LandingPage() {
           </div>
         </div>
       </section>
-
+    ),
+    faq: (
       <section className="cr-section" aria-labelledby="faq-title">
         <div className="container cr-split">
           <div className="cr-head cr-head--side" data-reveal="">
@@ -189,7 +160,8 @@ export function LandingPage() {
           </dl>
         </div>
       </section>
-
+    ),
+    cta: (
       <section className="cr-stage cr-cta" aria-labelledby="cta-title">
         <div className="cr-stage__panel">
           <div className="cr-stage__backdrop" aria-hidden="true" />
@@ -199,16 +171,61 @@ export function LandingPage() {
             </h2>
             <p className="cr-cta__text">{copy.text('creators.cta.text')}</p>
             <div className="cr-actions cr-actions--center">
-              <ButtonLink to="/register?audience=creator" variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
+              <ButtonLink to={copy.text('creators.cta.buttonUrl')} variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
                 {copy.text('creators.cta.button')}
               </ButtonLink>
-              <ButtonLink to="/login" variant="secondary" size="lg">
+              <ButtonLink to={copy.text('creators.cta.secondaryUrl')} variant="secondary" size="lg">
                 {copy.text('creators.cta.secondary')}
               </ButtonLink>
             </div>
           </div>
         </div>
       </section>
+
+    ),
+  };
+
+  return (
+    <div ref={root} className="cr">
+      <section className="cr-stage cr-hero" aria-labelledby="hero-title">
+        <div className="cr-stage__panel">
+          <div className="cr-stage__backdrop" aria-hidden="true" />
+          <div className="container cr-hero__inner">
+            <div className="cr-hero__copy">
+              <p className="cr-pill">
+                <span className="cr-pill__dot" aria-hidden="true" />
+                {copy.text('creators.hero.eyebrow')}
+              </p>
+              <h1 id="hero-title" className="cr-display">
+                {copy.text('creators.hero.title')} <span className="cr-accent">{copy.text('creators.hero.titleAccent')}</span>
+              </h1>
+              <p className="cr-lead">{copy.text('creators.hero.lead')}</p>
+              <div className="cr-actions">
+                <ButtonLink to={copy.text('creators.hero.primaryCtaUrl')} variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
+                  {copy.text('creators.hero.primaryCta')}
+                </ButtonLink>
+                <ButtonLink to={copy.text('creators.hero.secondaryCtaUrl')} variant="secondary" size="lg">
+                  {copy.text('creators.hero.secondaryCta')}
+                </ButtonLink>
+              </div>
+              <ul className="cr-trust">
+                {copy.list('creators.hero.trust').map((item) => (
+                  <li key={item}>
+                    <Check aria-hidden="true" /> {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="cr-hero__visual">
+              <CreatorsHeroArt payoutSchedule={copy.text('creators.hero.payoutSchedule')} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {sections.map((key) => (
+        <Fragment key={key}>{blocks[key]}</Fragment>
+      ))}
     </div>
   );
 }

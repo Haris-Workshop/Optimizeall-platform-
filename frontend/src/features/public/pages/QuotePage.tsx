@@ -156,7 +156,7 @@ export function QuotePage() {
                             label={`${service.name} — ${p.name}`}
                             description={
                               p.isCustomQuote || p.price === null
-                                ? 'Custom quote'
+                                ? copy.text('shared.pricing.customQuote')
                                 : `${siteMoney(p.price, p.currency, { currencyDisplay: 'narrowSymbol' })} ${PERIOD_SUFFIX[p.billingPeriod]}`
                             }
                             checked={packageIds.includes(p.id)}

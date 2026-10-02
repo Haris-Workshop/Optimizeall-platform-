@@ -56,11 +56,35 @@ export interface HomeStat {
   context: string | null;
 }
 
+/** A section of a built-in page and whether it is shown (Site settings → Page layout); the list order is the page order. */
+export interface PageSection {
+  key: string;
+  visible: boolean;
+}
+
+/** A sibling product site's chrome (Academy, Creators): header navigation and call to action, footer links and note. */
+export interface ProductChrome {
+  nav: SiteLink[];
+  cta: SiteLink;
+  footerLinks: SiteLink[];
+  footerNote: string | null;
+  footerNoteLink: SiteLink | null;
+}
+
 export interface PublicSite {
   siteName: string;
   tagline: string;
-  header: { menu: MenuItem[]; cta: SiteLink | null };
-  footer: { blurb: string | null; columns: { title: string; links: SiteLink[] }[]; legalLinks: SiteLink[] };
+  /** `secondaryLink`: the quiet link next to the header button ("Free Academy" by default). */
+  header: { menu: MenuItem[]; cta: SiteLink | null; secondaryLink?: SiteLink | null };
+  footer: {
+    blurb: string | null;
+    columns: { title: string; links: SiteLink[] }[];
+    legalLinks: SiteLink[];
+    /** "More from Optimize All" (absent from older APIs: the defaults apply). */
+    productLinks?: SiteLink[] | null;
+    /** The one sign-in group, labelled by audience. */
+    signInLinks?: SiteLink[] | null;
+  };
   contact: { email: string | null; phone: string | null; whatsApp: string | null; address: string | null; hours: string | null };
   social: { platform: string; url: string }[];
   trustLogos: TrustLogo[];
@@ -79,6 +103,12 @@ export interface PublicSite {
   bookingEnabled: boolean;
   /** Whether /llms.txt is published (the footer links it; absent from older APIs). */
   llmsTxt?: boolean;
+  /** Uploaded logo (light / dark backgrounds) and browser icon; null: the built-in brand assets. */
+  brand?: { logoUrl: string | null; logoDarkUrl: string | null; faviconUrl: string | null } | null;
+  /** Section order and visibility of the home and creators pages. */
+  layouts?: { home: PageSection[]; creators: PageSection[] } | null;
+  /** The Academy's and the Creators programme's header and footer. */
+  products?: { academy: ProductChrome; creators: ProductChrome } | null;
 }
 
 export interface Price {

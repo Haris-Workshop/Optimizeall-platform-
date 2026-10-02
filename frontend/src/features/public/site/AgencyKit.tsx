@@ -144,7 +144,7 @@ export function ClosingCta({
 }) {
   const copy = useSiteCopy();
   const id = useId();
-  const second = secondary ?? { label: copy.text('agency.cta.secondary'), to: '/free-audit' };
+  const second = secondary ?? { label: copy.text('agency.cta.secondary'), to: copy.text('agency.cta.secondaryUrl') };
   return (
     <section className="oa-a-cta" aria-labelledby={id}>
       <div className="oa-a-stage oa-a-stage--cta">
@@ -157,7 +157,7 @@ export function ClosingCta({
             </h2>
             {text && <p className="oa-a-cta__text">{text}</p>}
             <div className="oa-a-actions">
-              <ButtonLink to="/book-a-consultation" variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
+              <ButtonLink to={copy.text('agency.cta.primaryUrl')} variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
                 {copy.text('agency.cta.primary')}
               </ButtonLink>
               <ButtonLink to={second.to} variant="secondary" size="lg">

@@ -32,7 +32,7 @@ public sealed class SiteStructureSettingsTests(ApiFactory api) : IClassFixture<A
     {
         var site = await api.Anonymous().GetJsonAsync("/api/v1/public/site");
         var home = site.GetProperty("layouts").GetProperty("home").EnumerateArray().Select(s => s.GetProperty("key").GetString()).ToList();
-        Assert.Equal(new[] { "logos", "partners", "services", "proof", "process", "industries", "testimonials", "insights", "more", "cta", "newsletter" }, home);
+        Assert.Equal(new[] { "logos", "partners", "services", "proof", "process", "industries", "testimonials", "insights", "band", "more", "cta", "newsletter" }, home);
         Assert.Equal("Start learning free", site.GetProperty("products").GetProperty("academy").GetProperty("cta").GetProperty("label").GetString());
         Assert.Equal("/login?audience=creator", site.GetProperty("footer").GetProperty("signInLinks")[1].GetProperty("url").GetString());
         Assert.Equal(JsonValueKind.Null, site.GetProperty("brand").GetProperty("logoUrl").ValueKind);
@@ -69,7 +69,7 @@ public sealed class SiteStructureSettingsTests(ApiFactory api) : IClassFixture<A
         {
             // Missing sections are appended (shown) in the catalog order.
             var home = saved.GetProperty("settings").GetProperty("layouts").GetProperty("home").EnumerateArray().ToList();
-            Assert.Equal(11, home.Count);
+            Assert.Equal(12, home.Count);
             Assert.Equal("newsletter", home[0].GetProperty("key").GetString());
             var site = await api.Anonymous().GetJsonAsync("/api/v1/public/site");
             Assert.Equal("Join the academy", site.GetProperty("products").GetProperty("academy").GetProperty("cta").GetProperty("label").GetString());

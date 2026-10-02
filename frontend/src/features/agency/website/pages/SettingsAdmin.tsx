@@ -7,6 +7,7 @@ import { errorMessage, isApiError } from '@/lib/api/errors';
 import { type SiteSettings, type SiteSettingsEnvelope, W } from '../api';
 import { AreaField, type Errors, errorFor, ImageField, LinesField, ListEditor, SelectField, SwitchField, TextField, toErrors } from '../shared/fields';
 import '../website.css';
+import { BrandTab, FooterGroups, HeaderQuietLink, LayoutTab, ProductsTab } from './SiteStructureSettings';
 
 const SOCIAL_PLATFORMS = ['LinkedIn', 'Instagram', 'Facebook', 'X', 'TikTok', 'YouTube', 'Pinterest', 'Threads', 'WhatsApp', 'GitHub', 'Behance', 'Dribbble'];
 const EMPTY_LINK: SiteLink = { label: '', url: '' };
@@ -111,6 +112,7 @@ export function SiteSettingsPage() {
         <legend>Header button</legend>
         <LinkFields value={draft.header.cta ?? EMPTY_LINK} onChange={(cta) => set('header', { ...draft.header, cta })} errors={e} field="header.cta" />
       </fieldset>
+      <HeaderQuietLink draft={draft} set={set} errors={e} defaults={query.data?.defaults} />
     </div>
   );
 
@@ -147,6 +149,7 @@ export function SiteSettingsPage() {
         onChange={(legalLinks) => set('footer', { ...draft.footer, legalLinks })}
         render={(link, update, j) => <LinkFields value={link} onChange={update} errors={e} field={`footer.legalLinks[${j}]`} />}
       />
+      <FooterGroups draft={draft} set={set} errors={e} defaults={query.data?.defaults} />
     </div>
   );
 
@@ -283,7 +286,7 @@ export function SiteSettingsPage() {
     <div className="cms-page">
       <PageHeader
         title="Site settings"
-        description="Navigation, footer, contact details, SEO defaults and analytics for the public website."
+        description="Navigation, footer, contact details, SEO defaults and analytics for the public website — plus brand assets, page layout and the Academy and Creators menus."
         actions={
           <Button onClick={() => save.mutate(draft)} loading={save.isPending}>
             Save settings
@@ -305,6 +308,13 @@ export function SiteSettingsPage() {
           { id: 'seo', label: `SEO & organization${tabError(['seo', 'organization'])}`, content: seo },
           { id: 'analytics', label: `Analytics${tabError(['analytics'])}`, content: analytics },
           { id: 'home', label: `Home stats & logos${tabError(['homeStats', 'trustLogos'])}`, content: home },
+          { id: 'brand', label: `Brand${tabError(['brand'])}`, content: <BrandTab draft={draft} set={set} errors={e} defaults={query.data?.defaults} /> },
+          { id: 'layout', label: `Page layout${tabError(['layouts'])}`, content: <LayoutTab draft={draft} set={set} /> },
+          {
+            id: 'products',
+            label: `Academy & Creators${tabError(['products'])}`,
+            content: <ProductsTab draft={draft} set={set} errors={e} defaults={query.data?.defaults} />,
+          },
         ]}
       />
     </div>

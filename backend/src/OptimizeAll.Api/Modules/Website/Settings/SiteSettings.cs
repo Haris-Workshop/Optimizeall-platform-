@@ -60,7 +60,7 @@ public static class PageLayoutCatalog
     public static readonly IReadOnlyList<(string Key, string Label)> Home = new[]
     {
         ("logos", "Client logos"), ("partners", "Partner placements"), ("services", "Services"), ("proof", "Results and case studies"),
-        ("process", "How we work"), ("industries", "Industries"), ("testimonials", "Testimonials"), ("insights", "Latest articles"),
+        ("process", "How we work"), ("industries", "Industries"), ("testimonials", "Testimonials"), ("insights", "Latest articles"), ("band", "Partner band"),
         ("more", "More from Optimize All (Academy, Creators)"), ("cta", "Closing call to action and pricing"), ("newsletter", "Newsletter"),
     };
 

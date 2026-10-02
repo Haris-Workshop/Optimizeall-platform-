@@ -27,8 +27,10 @@ describe('site copy', () => {
     expect(new Set(keys).size).toBe(keys.length);
     for (const group of COPY_GROUPS)
       for (const entry of group.entries) {
-        expect(['text', 'textarea', 'list', 'pairs']).toContain(entry.type);
+        expect(['text', 'textarea', 'list', 'pairs', 'link']).toContain(entry.type);
         expect(entry.default.trim()).not.toBe('');
+        // A link is a same-site path or an https address (the API rejects anything else).
+        if (entry.type === 'link') expect(entry.default).toMatch(/^(\/(?!\/)\S*|https:\/\/\S+)$/);
         if (entry.type === 'pairs') expect(splitPairs(entry.default).every((p) => p.title && p.text)).toBe(true);
       }
   });

@@ -5,6 +5,7 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 import { ButtonLink, Skeleton } from '@/components/ui';
 import { isInternalHref } from '@/lib/safeHref';
 import { PublicQueryState } from '../site/components';
+import { useSiteCopy } from '../site/copy';
 import { headFromSeo, useDocumentHead } from '../site/head';
 import { Markdown } from '../site/Markdown';
 import { useReveal } from '../site/motion';
@@ -99,23 +100,20 @@ function LogoConstellationPlaceholder() {
 /** /partners — every active partner with the partnership statement. */
 export function PartnersPage() {
   const { data, isLoading, error } = usePartners();
+  const copy = useSiteCopy();
   const root = useRef<HTMLDivElement>(null);
   useReveal(root);
   const partners = data?.partners ?? [];
   const names = partners.map((p) => p.name);
   useDocumentHead(
-    data ? headFromSeo(data.seo, data.jsonLd) : { title: 'Our partners', description: 'Organizations Optimize All is the official marketing partner of.' },
+    data ? headFromSeo(data.seo, data.jsonLd) : { title: copy.text('partners.index.title'), description: copy.text('partners.index.leadEmpty') },
   );
   return (
     <div ref={root} className="oa-co-page">
       <CoHero
-        eyebrow="Partners"
-        title="Our partners"
-        lead={
-          names.length > 0
-            ? `Optimize All is the official marketing partner of ${joinNames(names)}. Each is an independent platform; here is what they offer.`
-            : 'Organizations Optimize All is the official marketing partner of.'
-        }
+        eyebrow={copy.text('partners.index.eyebrow')}
+        title={copy.text('partners.index.title')}
+        lead={names.length > 0 ? copy.text('partners.index.lead', { names: joinNames(names) }) : copy.text('partners.index.leadEmpty')}
         breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Partners' }]}
         aside={
           isLoading ? <LogoConstellationPlaceholder /> : partners.length > 0 ? <LogoConstellation partners={partners} /> : undefined
@@ -168,11 +166,12 @@ function OfferingCard({ item, index }: { item: PartnerOffering; index: number })
 }
 
 function Offerings({ partner }: { partner: PartnerProfile }) {
+  const copy = useSiteCopy();
   const cards = partner.offerings.filter((o) => o.summary || o.facts.length > 0);
   const chips = partner.offerings.filter((o) => !o.summary && o.facts.length === 0);
   if (partner.offerings.length === 0) return null;
   return (
-    <CoSection tone="muted" eyebrow="Offerings" title={`What ${partner.name} offers`}>
+    <CoSection tone="muted" eyebrow={copy.text('partners.profile.offeringsEyebrow')} title={`What ${partner.name} offers`}>
       {cards.length > 0 && (
         <ul className="partner-offerings" data-reveal="stagger">
           {cards.map((o, i) => (
@@ -205,6 +204,7 @@ export function PartnerProfilePage() {
   const { pathname } = useLocation();
   const aboutId = useId();
   const glanceId = useId();
+  const copy = useSiteCopy();
   useImpression(ref, p ? { partner: p.slug, slot: 'partners.profile', path: pathname } : null);
   useReveal(ref);
 
@@ -213,7 +213,7 @@ export function PartnerProfilePage() {
       {p && (
         <div ref={ref} className="oa-co-page">
           <CoHero
-            eyebrow="Official marketing partner"
+            eyebrow={copy.text('partners.profile.eyebrow')}
             title={p.name}
             lead={p.tagline}
             breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Partners', to: '/partners' }, { label: p.name }]}
@@ -223,7 +223,7 @@ export function PartnerProfilePage() {
                   Visit {p.websiteHost}
                 </SponsoredLink>
                 <ButtonLink to="/partners" variant="secondary" size="lg">
-                  All partners
+                  {copy.text('partners.profile.allPartners')}
                 </ButtonLink>
                 <PartnerShare partner={{ slug: p.slug, name: p.name, tagline: p.tagline, profilePath: `/partners/${p.slug}` }} className="partner-hero-share" />
               </>
@@ -270,7 +270,7 @@ export function PartnerProfilePage() {
                     <div className="partner-offer-box">
                       <PartnerOfferNote partner={{ ...p, profilePath: '', slots: [] }} />
                       <SponsoredLink partner={p} slot="partners.profile" variant="secondary" size="sm">
-                        Get the offer
+                        {copy.text('partners.profile.offerCta')}
                       </SponsoredLink>
                     </div>
                   )}
@@ -282,7 +282,7 @@ export function PartnerProfilePage() {
           <Offerings partner={p} />
 
           {p.related.length > 0 && (
-            <CoSection title="Related partners">
+            <CoSection title={copy.text('partners.profile.related')}>
               <ul className="partner-grid">
                 {p.related.map((r) => (
                   <li key={r.slug}>
@@ -302,7 +302,7 @@ export function PartnerProfilePage() {
           )}
 
           {p.visitUrl && (
-            <CoCta eyebrow="Official marketing partner" title={`Learn more at ${p.websiteHost}`}>
+            <CoCta eyebrow={copy.text('partners.profile.eyebrow')} title={`Learn more at ${p.websiteHost}`}>
               <div className="oa-co-hero__actions">
                 <SponsoredLink partner={p} slot="partners.profile" variant="highlight" size="lg">
                   Visit {p.websiteHost}

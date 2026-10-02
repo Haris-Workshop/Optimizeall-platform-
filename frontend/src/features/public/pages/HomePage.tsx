@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 import { ArrowRight, ArrowUpRight, Check } from 'lucide-react';
-import { useId, useRef, type CSSProperties, type ReactNode } from 'react';
+import { Fragment, useId, useRef, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ButtonLink, Skeleton } from '@/components/ui';
 import { siteDate } from '@/features/public/site/format';
@@ -13,6 +13,7 @@ import { headFromSeo, useDocumentHead } from '../site/head';
 import { AcademyArt, CreatorsArt, GrowthOrbit } from '../site/HomeArt';
 import { SiteIcon } from '../site/icons';
 import { trackGlow, useReveal } from '../site/motion';
+import { type HomeSectionKey, useSections } from '../site/layout';
 import { NewsletterSignup } from '../site/NewsletterSignup';
 import { PartnerSlot } from '../partners/PartnerSlot';
 
@@ -180,7 +181,7 @@ function PricingNote({ items }: { items: PricingTeaser[] }) {
             </span>
             <span className="oa-h-cta__price">
               {pkg.price === null || pkg.isCustomQuote ? (
-                'Custom quote'
+                copy.text('shared.pricing.customQuote')
               ) : (
                 <PriceText price={{ amount: pkg.price, currency: pkg.currency, billingPeriod: pkg.billingPeriod }} />
               )}
@@ -207,57 +208,24 @@ export function HomePage() {
   const cases = data?.featuredCaseStudies ?? [];
   const ctaId = useId();
   const moreId = useId();
+  const sections = useSections('home');
 
-  return (
-    <div ref={root} className="oa-home">
-      {/* ------------------------------------------------------------ Hero */}
-      <header className="oa-h-hero">
-        <div className="oa-h-hero__stage">
-          <div className="oa-h-hero__backdrop" aria-hidden="true" />
-          <div className="container oa-h-hero__inner">
-            <div className="oa-h-hero__copy">
-              <p className="oa-h-hero__eyebrow">
-                <span className="oa-h-hero__dot" aria-hidden="true" />
-                {copy.text('home.hero.eyebrow')}
-              </p>
-              <h1 className="oa-h-hero__title">
-                {copy.text('home.hero.title')} <span className="oa-h-hero__highlight">{copy.text('home.hero.titleHighlight')}</span>
-              </h1>
-              <p className="oa-h-hero__lead">{copy.text('home.hero.lead')}</p>
-              <div className="oa-h-hero__actions">
-                <ButtonLink to="/book-a-consultation" variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
-                  {copy.text('home.hero.primaryCta')}
-                </ButtonLink>
-                <ButtonLink to="/case-studies" variant="secondary" size="lg">
-                  {copy.text('home.hero.secondaryCta')}
-                </ButtonLink>
-              </div>
-              <ul className="oa-h-hero__proof">
-                {copy.list('home.hero.proof').map((item) => (
-                  <li key={item}>
-                    <Check aria-hidden="true" /> {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="oa-h-hero__visual">
-              <GrowthOrbit channels={categories.map((c) => ({ name: c.name, icon: c.icon }))} />
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {data && data.trustLogos.length > 0 && (
+  // The sections after the hero, in the order and visibility of Site settings → Page layout (the server-rendered copy,
+  // SeoPageResolver.HomeAsync, follows the same settings).
+  const blocks: Record<HomeSectionKey, ReactNode> = {
+    logos: (
+      data && data.trustLogos.length > 0 && (
         <div className="oa-h-logos">
           <div className="container">
             <LogoCloud logos={data.trustLogos} title={copy.text('home.logos.title')} />
           </div>
         </div>
-      )}
-
+      )
+    ),
+    partners: (
       <PartnerSlot slot="home.partners" />
-
-      {/* ------------------------------------------------------------ Services */}
+    ),
+    services: (
       <HomeSection
         id="services"
         eyebrow={copy.text('home.services.eyebrow')}
@@ -308,9 +276,9 @@ export function HomePage() {
           </ul>
         )}
       </HomeSection>
-
-      {/* ------------------------------------------------------------ Results and case studies (one dark chapter) */}
-      {data && (data.stats.length > 0 || cases.length > 0) && (
+    ),
+    proof: (
+      data && (data.stats.length > 0 || cases.length > 0) && (
         <div className="oa-h-proof">
           {data.stats.length > 0 && (
             <HomeSection
@@ -351,9 +319,9 @@ export function HomePage() {
             </HomeSection>
           )}
         </div>
-      )}
-
-      {/* ------------------------------------------------------------ Process */}
+      )
+    ),
+    process: (
       <HomeSection
         id="how-we-work"
         className="oa-h-process"
@@ -381,9 +349,9 @@ export function HomePage() {
           ))}
         </ol>
       </HomeSection>
-
-      {/* ------------------------------------------------------------ Industries */}
-      {data && data.industries.length > 0 && (
+    ),
+    industries: (
+      data && data.industries.length > 0 && (
         <HomeSection
           className="oa-h-industries"
           eyebrow={copy.text('home.industries.eyebrow')}
@@ -416,19 +384,19 @@ export function HomePage() {
             ))}
           </ul>
         </HomeSection>
-      )}
-
-      {/* ------------------------------------------------------------ Testimonials */}
-      {data && data.testimonials.length > 0 && (
+      )
+    ),
+    testimonials: (
+      data && data.testimonials.length > 0 && (
         <HomeSection className="oa-h-voices" center eyebrow={copy.text('home.testimonials.eyebrow')} title={copy.text('home.testimonials.title')}>
           <div className="oa-h-voices__stage" data-reveal="">
             <TestimonialCarousel items={data.testimonials} />
           </div>
         </HomeSection>
-      )}
-
-      {/* ------------------------------------------------------------ Insights */}
-      {data && data.latestPosts.length > 0 && (
+      )
+    ),
+    insights: (
+      data && data.latestPosts.length > 0 && (
         <HomeSection
           className="oa-h-insights"
           eyebrow={copy.text('home.blog.eyebrow')}
@@ -448,12 +416,12 @@ export function HomePage() {
             ))}
           </ul>
         </HomeSection>
-      )}
-
-      {/* ------------------------------------------------------------ Partner band (the page's only hero-size placement) */}
+      )
+    ),
+    band: (
       <PartnerSlot slot="home.band" />
-
-      {/* ------------------------------------------------------------ Sibling products */}
+    ),
+    more: (
       <section className="oa-h-section oa-h-more" aria-labelledby={moreId}>
         <div className="container">
           <div className="oa-h-head oa-h-head--center" data-reveal="">
@@ -502,8 +470,8 @@ export function HomePage() {
           </ul>
         </div>
       </section>
-
-      {/* ------------------------------------------------------------ Closing call to action */}
+    ),
+    cta: (
       <section className="oa-h-cta" aria-labelledby={ctaId}>
         <div className="oa-h-cta__stage">
           <div className="oa-h-cta__backdrop" aria-hidden="true" />
@@ -515,10 +483,10 @@ export function HomePage() {
               </h2>
               <p className="oa-h-cta__text">{copy.text('home.cta.text')}</p>
               <div className="oa-h-hero__actions">
-                <ButtonLink to="/book-a-consultation" variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
+                <ButtonLink to={copy.text('home.cta.primaryUrl')} variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
                   {copy.text('home.cta.primary')}
                 </ButtonLink>
-                <ButtonLink to="/free-audit" variant="secondary" size="lg">
+                <ButtonLink to={copy.text('home.cta.secondaryUrl')} variant="secondary" size="lg">
                   {copy.text('home.cta.secondary')}
                 </ButtonLink>
               </div>
@@ -534,13 +502,58 @@ export function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* ------------------------------------------------------------ Newsletter */}
+    ),
+    newsletter: (
       <HomeSection className="oa-h-newsletter" title={copy.text('home.newsletter.title')} intro={copy.text('home.newsletter.intro')} layout="split">
         <div className="oa-h-newsletter__form">
           <NewsletterSignup source="home" />
         </div>
       </HomeSection>
+    ),
+  };
+
+  return (
+    <div ref={root} className="oa-home">
+      {/* ------------------------------------------------------------ Hero */}
+      <header className="oa-h-hero">
+        <div className="oa-h-hero__stage">
+          <div className="oa-h-hero__backdrop" aria-hidden="true" />
+          <div className="container oa-h-hero__inner">
+            <div className="oa-h-hero__copy">
+              <p className="oa-h-hero__eyebrow">
+                <span className="oa-h-hero__dot" aria-hidden="true" />
+                {copy.text('home.hero.eyebrow')}
+              </p>
+              <h1 className="oa-h-hero__title">
+                {copy.text('home.hero.title')} <span className="oa-h-hero__highlight">{copy.text('home.hero.titleHighlight')}</span>
+              </h1>
+              <p className="oa-h-hero__lead">{copy.text('home.hero.lead')}</p>
+              <div className="oa-h-hero__actions">
+                <ButtonLink to={copy.text('home.hero.primaryCtaUrl')} variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
+                  {copy.text('home.hero.primaryCta')}
+                </ButtonLink>
+                <ButtonLink to={copy.text('home.hero.secondaryCtaUrl')} variant="secondary" size="lg">
+                  {copy.text('home.hero.secondaryCta')}
+                </ButtonLink>
+              </div>
+              <ul className="oa-h-hero__proof">
+                {copy.list('home.hero.proof').map((item) => (
+                  <li key={item}>
+                    <Check aria-hidden="true" /> {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="oa-h-hero__visual">
+              <GrowthOrbit channels={categories.map((c) => ({ name: c.name, icon: c.icon }))} />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {sections.map((key) => (
+        <Fragment key={key}>{blocks[key]}</Fragment>
+      ))}
     </div>
   );
 }

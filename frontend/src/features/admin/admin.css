@@ -925,3 +925,9 @@
     overflow-wrap: anywhere;
   }
 }
+
+/* "View page" next to the page picker (CopyEditor previewPaths). */
+.admin-copy__view {
+  align-self: end;
+  padding-block-end: var(--space-2);
+}

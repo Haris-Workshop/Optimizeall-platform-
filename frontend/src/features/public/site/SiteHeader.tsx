@@ -3,13 +3,13 @@ import { ArrowLeft, ArrowRight, ArrowUpRight, ChevronDown } from 'lucide-react';
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { defaultLandingPath } from '@/app/portals';
-import { Logo } from '@/components/brand/Logo';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ButtonLink } from '@/components/ui';
 import { useAuth } from '@/lib/auth/useAuth';
 import { isInternalHref } from '@/lib/safeHref';
 import { type MenuCategory, type MenuItem, useSite } from './api';
 import { useSiteCopy } from './copy';
+import { DEFAULT_PRODUCT_LINKS, DEFAULT_SECONDARY_LINK, productChrome, SiteLogo } from './layout';
 import { SiteIcon } from './icons';
 import { MobileMenu } from './MobileMenu';
 import type { ChromeVariant } from './variant';
@@ -39,12 +39,15 @@ export const FALLBACK_MENU: MenuItem[] = [
   },
 ];
 
+/** Hints shown under the sibling products in the mobile menu (by link target). */
+const PRODUCT_HINTS: Record<string, string> = { '/learn': 'Free courses', '/creators': 'Earn from campaigns' };
+
 /** The agency's one primary call to action. */
 export const AGENCY_CTA = { label: 'Book a consultation', url: '/book-a-consultation' };
 export const ACADEMY_CTA = { label: 'Start learning free', url: '/learn' };
 export const CREATORS_CTA = { label: 'Create a creator account', url: '/register?audience=creator' };
 
-/** Academy navigation: Courses | Learning paths | Certificates | Verify a certificate. */
+/** Academy navigation: Courses | Learning paths | Certificates | Verify a certificate (defaults; Site settings → Academy & Creators). */
 export const ACADEMY_NAV: { label: string; url: string }[] = [
   { label: 'Courses', url: '/learn' },
   { label: 'Learning paths', url: '/learn/paths' },
@@ -316,7 +319,7 @@ function HeaderShell({
         </nav>
         <div className="public-header__actions">
           {actions}
-          <MobileMenu title="Menu" headerContent={<Logo size={26} title="" />}>
+          <MobileMenu title="Menu" headerContent={<SiteLogo size={26} />}>
             <nav aria-label="Mobile" className="public-drawer site-drawer">
               {drawer}
             </nav>
@@ -378,6 +381,10 @@ function AgencyHeader() {
   const menu = agencyMenu(site?.header.menu?.length ? site.header.menu : FALLBACK_MENU);
   const categories = site?.serviceMenu ?? [];
   const cta = agencyCta(site?.header.cta);
+  // The quiet link next to the button (Site settings → Navigation); only same-site links (the Link router).
+  const quiet = site?.header.secondaryLink && isInternalHref(site.header.secondaryLink.url) ? site.header.secondaryLink : DEFAULT_SECONDARY_LINK;
+  const productLinks = site?.footer.productLinks ?? DEFAULT_PRODUCT_LINKS;
+  const copy = useSiteCopy();
   const account = useAccountLink();
   const closeAll = useCallback(() => setOpenMenu(null), []);
   useEffect(() => setOpenMenu(null), [location.pathname]);
@@ -390,7 +397,7 @@ function AgencyHeader() {
       variant="agency"
       brand={
         <Link to="/" className="public-header__brand" aria-label="Optimize All home">
-          <Logo size={30} title="" />
+          <SiteLogo size={30} />
         </Link>
       }
       nav={
@@ -427,8 +434,8 @@ function AgencyHeader() {
       actions={
         <>
           <ThemeToggle />
-          <Link to="/learn" className="site-header__product">
-            Free Academy
+          <Link to={quiet.url} className="site-header__product">
+            {quiet.label}
           </Link>
           <SignInAction to={account.to} label={account.label} />
           <ButtonLink to={cta.url} variant="highlight" size="sm" className="site-header__cta">
@@ -493,11 +500,8 @@ function AgencyHeader() {
             </ButtonLink>
           </div>
           <DrawerLinks
-            title="More from Optimize All"
-            links={[
-              { label: 'Optimize All Academy', url: '/learn', hint: 'Free courses' },
-              { label: 'Optimize All Creators', url: '/creators', hint: 'Earn from campaigns' },
-            ]}
+            title={copy.text('shared.header.productsTitle')}
+            links={productLinks.filter((l) => isInternalHref(l.url)).map((l) => ({ ...l, hint: PRODUCT_HINTS[l.url] }))}
           />
         </>
       }
@@ -508,19 +512,22 @@ function AgencyHeader() {
 // ---------------------------------------------------------------------------------------------------- academy
 
 function AcademyHeader() {
+  const { data: site } = useSite();
+  const { nav, cta } = productChrome(site, 'academy');
+  const siteName = site?.siteName ?? 'Optimize All';
   const account = useAccountLink({ path: '/app/learning', label: 'My learning' });
   return (
     <HeaderShell
       variant="academy"
       brand={
         <Link to="/learn" className="public-header__brand site-header__product-brand" aria-label="Optimize All Academy home">
-          <Logo size={30} title="" />{' '}
+          <SiteLogo size={30} />{' '}
           <span className="site-header__wordmark">Academy</span>
         </Link>
       }
       nav={
         <ul>
-          {ACADEMY_NAV.map((item) => (
+          {nav.map((item) => (
             <li key={item.label}>
               <NavItem url={item.url} label={item.label} />
             </li>
@@ -532,32 +539,32 @@ function AcademyHeader() {
           <ThemeToggle />
           <Link to="/" className="site-header__product">
             <ArrowLeft aria-hidden="true" className="site-header__back" />
-            Optimize All
+            {siteName}
           </Link>
           <SignInAction to={account.to} label={account.label} />
-          <ButtonLink to={ACADEMY_CTA.url} variant="highlight" size="sm" className="site-header__cta">
-            {ACADEMY_CTA.label}
+          <ButtonLink to={cta.url} variant="highlight" size="sm" className="site-header__cta">
+            {cta.label}
           </ButtonLink>
         </>
       }
       drawer={
         <>
           <ul>
-            {ACADEMY_NAV.map((item) => (
+            {nav.map((item) => (
               <li key={item.label}>
                 <NavItem url={item.url} label={item.label} className="public-drawer__link" />
               </li>
             ))}
           </ul>
           <div className="public-drawer__actions">
-            <ButtonLink to={ACADEMY_CTA.url} variant="highlight" fullWidth>
-              {ACADEMY_CTA.label}
+            <ButtonLink to={cta.url} variant="highlight" fullWidth>
+              {cta.label}
             </ButtonLink>
             <ButtonLink to={account.to} variant="secondary" fullWidth>
               {account.label}
             </ButtonLink>
           </div>
-          <DrawerLinks title="Optimize All" links={[{ label: '← Optimize All', url: '/', hint: 'Marketing agency' }]} />
+          <DrawerLinks title={siteName} links={[{ label: `← ${siteName}`, url: '/', hint: 'Marketing agency' }]} />
         </>
       }
     />
@@ -567,19 +574,24 @@ function AcademyHeader() {
 // ---------------------------------------------------------------------------------------------------- creators
 
 function CreatorsHeader() {
+  const { data: site } = useSite();
+  const copy = useSiteCopy();
+  const { nav, cta } = productChrome(site, 'creators');
+  const siteName = site?.siteName ?? 'Optimize All';
+  const creatorSignIn = copy.text('shared.header.creatorSignIn');
   const account = useAccountLink();
   return (
     <HeaderShell
       variant="creators"
       brand={
         <Link to="/creators" className="public-header__brand site-header__product-brand" aria-label="Optimize All Creators home">
-          <Logo size={30} title="" />{' '}
+          <SiteLogo size={30} />{' '}
           <span className="site-header__wordmark">Creators</span>
         </Link>
       }
       nav={
         <ul>
-          {CREATORS_NAV.map((item) => (
+          {nav.map((item) => (
             <li key={item.label}>
               <NavItem url={item.url} label={item.label} />
             </li>
@@ -591,12 +603,12 @@ function CreatorsHeader() {
           <ThemeToggle />
           <Link to="/" className="site-header__product">
             <ArrowLeft aria-hidden="true" className="site-header__back" />
-            Optimize All
+            {siteName}
           </Link>
-          <SignInAction to={account.to} label={account.signedIn ? account.label : 'Creator sign in'} />
+          <SignInAction to={account.to} label={account.signedIn ? account.label : creatorSignIn} />
           {!account.signedIn && (
-            <ButtonLink to={CREATORS_CTA.url} variant="highlight" size="sm" className="site-header__cta">
-              {CREATORS_CTA.label}
+            <ButtonLink to={cta.url} variant="highlight" size="sm" className="site-header__cta">
+              {cta.label}
             </ButtonLink>
           )}
         </>
@@ -604,7 +616,7 @@ function CreatorsHeader() {
       drawer={
         <>
           <ul>
-            {CREATORS_NAV.map((item) => (
+            {nav.map((item) => (
               <li key={item.label}>
                 <NavItem url={item.url} label={item.label} className="public-drawer__link" />
               </li>
@@ -617,16 +629,16 @@ function CreatorsHeader() {
               </ButtonLink>
             ) : (
               <>
-                <ButtonLink to={CREATORS_CTA.url} variant="highlight" fullWidth>
-                  {CREATORS_CTA.label}
+                <ButtonLink to={cta.url} variant="highlight" fullWidth>
+                  {cta.label}
                 </ButtonLink>
                 <ButtonLink to={account.to} variant="secondary" fullWidth>
-                  Creator sign in
+                  {creatorSignIn}
                 </ButtonLink>
               </>
             )}
           </div>
-          <DrawerLinks title="Optimize All" links={[{ label: '← Optimize All', url: '/', hint: 'Marketing agency' }]} />
+          <DrawerLinks title={siteName} links={[{ label: `← ${siteName}`, url: '/', hint: 'Marketing agency' }]} />
         </>
       }
     />

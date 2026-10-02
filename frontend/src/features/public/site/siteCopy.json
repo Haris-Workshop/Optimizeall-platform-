@@ -1,5 +1,5 @@
 {
-  "description": "Editable page copy (CMS). The shipped defaults below are what visitors see until an editor overrides a key in the admin panel. The backend holds an identical copy (backend/src/OptimizeAll.Api/Modules/Content/Copy/site-copy.json); the unit test SiteCopyCatalogTests fails when the two differ. Types: text (one line), textarea (paragraph), list (one item per line), pairs (one item per line as 'Title | Text'). Placeholders such as {timeZone} are filled in by the page.",
+  "description": "Editable page copy (CMS). The shipped defaults below are what visitors see until an editor overrides a key in the admin panel. The backend holds an identical copy (backend/src/OptimizeAll.Api/Modules/Content/Copy/site-copy.json); the unit test SiteCopyCatalogTests fails when the two differ. Types: text (one line), textarea (paragraph), list (one item per line), pairs (one item per line as 'Title | Text'), link (a path on this site such as /contact, or an https:// address). Placeholders such as {timeZone} are filled in by the page.",
   "groups": [
     {
       "id": "home",
@@ -13,6 +13,8 @@
         { "key": "home.hero.lead", "label": "Hero introduction", "type": "textarea", "default": "Optimize All plans, runs and reports your search, paid media, content, creative and web work together, with a senior strategist on every account and every result labelled measured or estimated." },
         { "key": "home.hero.primaryCta", "label": "Hero main button (books a consultation)", "type": "text", "default": "Book a consultation" },
         { "key": "home.hero.secondaryCta", "label": "Hero second button (opens the case studies)", "type": "text", "default": "See our work" },
+        { "key": "home.hero.primaryCtaUrl", "label": "Hero main button link", "type": "link", "default": "/book-a-consultation" },
+        { "key": "home.hero.secondaryCtaUrl", "label": "Hero second button link", "type": "link", "default": "/case-studies" },
         { "key": "home.hero.proof", "label": "Hero proof points", "type": "list", "default": "No long lock-ins\nYour accounts, your data\nSenior strategists on every account" },
         { "key": "home.logos.title", "label": "Client logos title", "type": "text", "default": "Trusted by growing brands" },
         { "key": "home.academy.eyebrow", "label": "Academy eyebrow", "type": "text", "default": "Optimize All Academy" },
@@ -86,6 +88,8 @@
         { "key": "home.cta.text", "label": "Closing call to action: text", "type": "textarea", "default": "Book a consultation with a senior strategist. We will look at your channels, your numbers and where your next stage of growth is most likely to come from. No obligation." },
         { "key": "home.cta.primary", "label": "Closing call to action: main button (books a consultation)", "type": "text", "default": "Book a consultation" },
         { "key": "home.cta.secondary", "label": "Closing call to action: second button (requests a free audit)", "type": "text", "default": "Get a free audit" },
+        { "key": "home.cta.primaryUrl", "label": "Closing call to action: main button link", "type": "link", "default": "/book-a-consultation" },
+        { "key": "home.cta.secondaryUrl", "label": "Closing call to action: second button link", "type": "link", "default": "/free-audit" },
         { "key": "home.cta.points", "label": "Closing call to action: points", "type": "list", "default": "A senior strategist, not a sales script\nAn honest read on what is and is not working\nA clear next step, whether or not you hire us" },
         { "key": "home.newsletter.title", "label": "Newsletter title", "type": "text", "default": "Get marketing insights in your inbox" },
         { "key": "home.newsletter.intro", "label": "Newsletter introduction", "type": "textarea", "default": "Two practical emails a month from our strategists. Unsubscribe any time." }
@@ -100,6 +104,8 @@
         { "key": "shared.cta.text", "label": "Closing call-to-action text", "type": "textarea", "default": "Get a free, no-obligation marketing audit from a senior strategist — or book a 30-minute call." },
         { "key": "shared.cta.primary", "label": "Closing call-to-action main button", "type": "text", "default": "Get a free audit" },
         { "key": "shared.cta.secondary", "label": "Closing call-to-action second button", "type": "text", "default": "Book a call" },
+        { "key": "shared.cta.primaryUrl", "label": "Call-to-action band: main button link", "type": "link", "default": "/free-audit" },
+        { "key": "shared.cta.secondaryUrl", "label": "Call-to-action band: second button link", "type": "link", "default": "/book-a-consultation" },
         { "key": "shared.notFound.description", "label": "Missing item message", "type": "text", "default": "It may have moved or been unpublished." },
         { "key": "shared.footer.newsletterTitle", "label": "Footer newsletter title", "type": "text", "default": "Marketing insights, twice a month" },
         { "key": "shared.footer.newsletterText", "label": "Footer newsletter text", "type": "text", "default": "Practical playbooks from our strategists. No spam, unsubscribe any time." },
@@ -117,7 +123,13 @@
         { "key": "shared.header.megaEyebrow", "label": "Services menu: feature card eyebrow", "type": "text", "default": "Not sure where to start?" },
         { "key": "shared.header.megaTitle", "label": "Services menu: feature card title", "type": "text", "default": "Start with a free marketing audit" },
         { "key": "shared.header.megaText", "label": "Services menu: feature card text", "type": "textarea", "default": "An honest look at your marketing, tracking and competitors, shared with you whether or not you hire us." },
-        { "key": "shared.header.megaCta", "label": "Services menu: feature card link (opens the free audit)", "type": "text", "default": "Get a free marketing audit" }
+        { "key": "shared.header.megaCta", "label": "Services menu: feature card link (opens the free audit)", "type": "text", "default": "Get a free marketing audit" },
+        { "key": "shared.pricing.mostPopular", "label": "Package badge for the most popular package", "type": "text", "default": "Most popular" },
+        { "key": "shared.pricing.customQuote", "label": "Price label of a package without a fixed price", "type": "text", "default": "Custom quote" },
+        { "key": "shared.footer.productLinksTitle", "label": "Footer: title of the sibling-products group", "type": "text", "default": "More from Optimize All" },
+        { "key": "shared.footer.signInTitle", "label": "Footer: title of the sign-in group", "type": "text", "default": "Sign in" },
+        { "key": "shared.header.productsTitle", "label": "Mobile menu: title of the sibling-products group", "type": "text", "default": "More from Optimize All" },
+        { "key": "shared.header.creatorSignIn", "label": "Creators header: sign-in link (signed out)", "type": "text", "default": "Creator sign in" }
       ]
     },
     {
@@ -251,6 +263,8 @@
         { "key": "agency.cta.eyebrow", "label": "Closing call to action: eyebrow", "type": "text", "default": "Start a conversation" },
         { "key": "agency.cta.primary", "label": "Closing call to action and hero: main button (books a consultation)", "type": "text", "default": "Book a consultation" },
         { "key": "agency.cta.secondary", "label": "Closing call to action: second button (requests a free audit)", "type": "text", "default": "Get a free audit" },
+        { "key": "agency.cta.primaryUrl", "label": "Closing call to action: main button link", "type": "link", "default": "/book-a-consultation" },
+        { "key": "agency.cta.secondaryUrl", "label": "Closing call to action: second button link (default)", "type": "link", "default": "/free-audit" },
         { "key": "agency.cta.points", "label": "Closing call to action: points", "type": "list", "default": "A senior strategist, not a sales script\nAn honest read on what is and is not working\nA clear next step, whether or not you hire us" },
         { "key": "agency.onThisPage", "label": "Label of the on-this-page navigation", "type": "text", "default": "On this page" },
         { "key": "agency.measured", "label": "Tag on a measured figure", "type": "text", "default": "Measured" },
@@ -261,6 +275,23 @@
         { "key": "agency.tier.cta", "label": "Package button", "type": "text", "default": "Get started" },
         { "key": "agency.tier.quoteCta", "label": "Package button (custom quote)", "type": "text", "default": "Request a quote" },
         { "key": "agency.tier.setup", "label": "Package setup fee", "type": "text", "default": "+ {amount} one-time setup", "placeholders": ["amount"] }
+      ]
+    },
+    {
+      "id": "partners",
+      "label": "Partners pages",
+      "scope": "Website",
+      "entries": [
+        { "key": "partners.index.eyebrow", "label": "Partners page: eyebrow", "type": "text", "default": "Partners" },
+        { "key": "partners.index.title", "label": "Partners page: headline (and search title)", "type": "text", "default": "Our partners" },
+        { "key": "partners.index.lead", "label": "Partners page: introduction ({names} lists the active partners)", "type": "textarea", "default": "Optimize All is the official marketing partner of {names}. Each is an independent platform; here is what they offer.", "placeholders": ["names"] },
+        { "key": "partners.index.leadEmpty", "label": "Partners page: introduction while no partner is active", "type": "textarea", "default": "Organizations Optimize All is the official marketing partner of." },
+        { "key": "partners.index.description", "label": "Partners page: search description ({names} lists the active partners)", "type": "textarea", "default": "Optimize All is the official marketing partner of {names}. Learn about each platform and what it offers.", "placeholders": ["names"] },
+        { "key": "partners.profile.eyebrow", "label": "Partner profile: eyebrow", "type": "text", "default": "Official marketing partner" },
+        { "key": "partners.profile.allPartners", "label": "Partner profile: link back to all partners", "type": "text", "default": "All partners" },
+        { "key": "partners.profile.offerCta", "label": "Partner profile: offer button", "type": "text", "default": "Get the offer" },
+        { "key": "partners.profile.offeringsEyebrow", "label": "Partner profile: offerings eyebrow", "type": "text", "default": "Offerings" },
+        { "key": "partners.profile.related", "label": "Partner profile: related partners title", "type": "text", "default": "Related partners" }
       ]
     },
     {
@@ -451,6 +482,8 @@
         { "key": "creators.hero.lead", "label": "Hero introduction", "type": "textarea", "default": "Optimize All connects creators and everyday influencers with companies that want authentic reach. Share approved content from your own established accounts, submit proof, and get paid for every approved post." },
         { "key": "creators.hero.primaryCta", "label": "Hero main button", "type": "text", "default": "Create your free account" },
         { "key": "creators.hero.secondaryCta", "label": "Hero second button", "type": "text", "default": "See how it works" },
+        { "key": "creators.hero.primaryCtaUrl", "label": "Hero main button link", "type": "link", "default": "/register?audience=creator" },
+        { "key": "creators.hero.secondaryCtaUrl", "label": "Hero second button link", "type": "link", "default": "/creators#how-it-works" },
         { "key": "creators.hero.trust", "label": "Hero trust points", "type": "list", "default": "Free to join\nEvery post reviewed by a person\nPaid every two weeks" },
         { "key": "creators.hero.payoutSchedule", "label": "Hero card: payout schedule", "type": "text", "default": "Every other Friday" },
         { "key": "creators.how.eyebrow", "label": "How it works eyebrow", "type": "text", "default": "How it works" },
@@ -474,6 +507,8 @@
         { "key": "creators.earn.stages", "label": "Earnings: from post to payout", "type": "pairs", "default": "Reward shown up front | Every campaign lists its reward per approved post before you join it.\nReviewed by a person | Each submission is checked against the campaign’s rules, with specific feedback if anything needs fixing.\nAdded to your next payout | Approved earnings join the next biweekly payout once you reach the minimum payout amount.\nA complete history | See what is pending, approved, scheduled and paid, with every amount on record." },
         { "key": "creators.earn.note", "label": "Earnings: small print", "type": "textarea", "default": "Rewards differ by campaign and are paid only for approved posts. We never promise a set income." },
         { "key": "creators.cta.secondary", "label": "Closing call-to-action second button", "type": "text", "default": "I already have an account" },
+        { "key": "creators.cta.buttonUrl", "label": "Closing call to action: main button link", "type": "link", "default": "/register?audience=creator" },
+        { "key": "creators.cta.secondaryUrl", "label": "Closing call to action: second button link", "type": "link", "default": "/login" },
         { "key": "creators.landing.howTitle", "label": "Invitation and campaign pages: how taking part works", "type": "text", "default": "How taking part works" },
         { "key": "creators.landing.more", "label": "Invitation and campaign pages: link to the Creators page", "type": "text", "default": "More about Optimize All Creators" }
       ]

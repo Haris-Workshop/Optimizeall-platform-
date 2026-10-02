@@ -24,7 +24,7 @@ import { QueryError } from '../shared/common';
 import { adminErrorMessage, isConflict } from '../shared/errors';
 
 /** Server shape of `GET /agency/website/copy` and `GET /admin/content/copy`. */
-export type CopyEntryType = 'Text' | 'Textarea' | 'List' | 'Pairs';
+export type CopyEntryType = 'Text' | 'Textarea' | 'List' | 'Pairs' | 'Link';
 
 export interface CopyEntry {
   key: string;
@@ -61,6 +61,7 @@ const TYPE_HINT: Record<CopyEntryType, string> = {
   Textarea: 'A paragraph; line breaks are kept.',
   List: 'One item per line.',
   Pairs: 'One item per line, written as “Title | Text”.',
+  Link: 'Where the button goes: a path on this site (e.g. /contact) or an https:// address.',
 };
 
 function hintFor(entry: CopyEntry) {
@@ -103,6 +104,8 @@ export interface CopyEditorProps {
   endpoint: string;
   title: string;
   description: string;
+  /** Group id → the public page that shows its texts ("View page" link next to the page picker). */
+  previewPaths?: Record<string, string>;
 }
 
 /**
@@ -110,7 +113,7 @@ export interface CopyEditorProps {
  * to its shipped default, then save every change of the page in one request. A stale edit (someone else saved the
  * same text meanwhile) is rejected with a reload prompt instead of overwriting their work.
  */
-export function CopyEditor({ endpoint, title, description }: CopyEditorProps) {
+export function CopyEditor({ endpoint, title, description, previewPaths }: CopyEditorProps) {
   const toast = useToast();
   const client = useQueryClient();
   const searchId = useId();
@@ -197,6 +200,11 @@ export function CopyEditor({ endpoint, title, description }: CopyEditorProps) {
                 disabled={!!term}
               />
             </FormField>
+            {active && previewPaths?.[active.id] && !term && (
+              <a className="admin-copy__view" href={previewPaths[active.id]} target="_blank" rel="noreferrer">
+                View page<span className="visually-hidden"> (opens in a new tab)</span>
+              </a>
+            )}
             <FormField label="Search all texts" id={searchId}>
               <Input
                 type="search"

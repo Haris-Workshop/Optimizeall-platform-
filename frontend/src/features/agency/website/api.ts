@@ -1,4 +1,15 @@
-import type { BillingPeriod, FaqEntry, HomeStat, MenuItem, MetricMeasurement, PageBlock, SiteLink, TrustLogo } from '@/features/public/site/api';
+import type {
+  BillingPeriod,
+  FaqEntry,
+  HomeStat,
+  MenuItem,
+  MetricMeasurement,
+  PageBlock,
+  PageSection,
+  ProductChrome,
+  SiteLink,
+  TrustLogo,
+} from '@/features/public/site/api';
 
 /** Staff CMS types (`/api/v1/agency/website/...`). See docs/api/website.md. */
 
@@ -458,8 +469,14 @@ export interface Subscriber {
 export interface SiteSettings {
   siteName: string;
   tagline: string;
-  header: { menu: MenuItem[]; cta: SiteLink | null };
-  footer: { blurb: string | null; columns: { title: string; links: SiteLink[] }[]; legalLinks: SiteLink[] };
+  header: { menu: MenuItem[]; cta: SiteLink | null; secondaryLink?: SiteLink | null };
+  footer: {
+    blurb: string | null;
+    columns: { title: string; links: SiteLink[] }[];
+    legalLinks: SiteLink[];
+    productLinks?: SiteLink[] | null;
+    signInLinks?: SiteLink[] | null;
+  };
   contact: { email: string | null; phone: string | null; whatsApp: string | null; address: string | null; hours: string | null };
   social: { platform: string; url: string }[];
   trustLogos: TrustLogo[];
@@ -485,12 +502,17 @@ export interface SiteSettings {
   };
   analytics: { ga4MeasurementId: string | null; gtmContainerId: string | null; metaPixelId: string | null };
   homeStats: HomeStat[];
+  brand?: { logoUrl: string | null; logoDarkUrl: string | null; faviconUrl: string | null } | null;
+  layouts?: { home: PageSection[]; creators: PageSection[] } | null;
+  products?: { academy: ProductChrome; creators: ProductChrome } | null;
 }
 
 export interface SiteSettingsEnvelope {
   settings: SiteSettings;
   updatedAt: string;
   concurrencyStamp: string;
+  /** The shipped defaults ("Reset to default"). */
+  defaults?: SiteSettings | null;
 }
 
 export const W = '/agency/website';

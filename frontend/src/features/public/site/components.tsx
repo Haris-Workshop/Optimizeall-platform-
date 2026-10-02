@@ -253,10 +253,11 @@ export function PostCard({ post, headingLevel = 3 }: { post: PostCardData; headi
 
 export function PackageCard({ pkg, serviceName, serviceSlug }: { pkg: PublicPackage; serviceName?: string; serviceSlug?: string }) {
   const headingId = useId();
+  const copy = useSiteCopy();
   const quoteLink = `/get-a-quote?${new URLSearchParams({ ...(serviceSlug ? { service: serviceSlug } : {}), package: pkg.id }).toString()}`;
   return (
     <article className={clsx('site-package', pkg.isMostPopular && 'site-package--popular')} aria-labelledby={headingId}>
-      {pkg.isMostPopular && <p className="site-package__badge">Most popular</p>}
+      {pkg.isMostPopular && <p className="site-package__badge">{copy.text('shared.pricing.mostPopular')}</p>}
       <h3 id={headingId} className="site-package__name">
         {serviceName && <span className="site-package__service">{serviceName}</span>}
         {pkg.name}
@@ -264,7 +265,7 @@ export function PackageCard({ pkg, serviceName, serviceSlug }: { pkg: PublicPack
       {pkg.description && <p className="site-package__desc">{pkg.description}</p>}
       <p className="site-package__price">
         {pkg.isCustomQuote || pkg.price === null ? (
-          <span className="site-package__amount site-package__amount--quote">Custom quote</span>
+          <span className="site-package__amount site-package__amount--quote">{copy.text('shared.pricing.customQuote')}</span>
         ) : (
           <>
             <span className="site-package__amount tabular">{marketingPrice(pkg.price, pkg.currency)}</span>{' '}
@@ -387,10 +388,10 @@ export function CtaBand({ title, text }: { title?: string; text?: string }) {
             <p>{text ?? copy.text('shared.cta.text')}</p>
           </div>
           <div className="site-cta__actions">
-            <ButtonLink to="/free-audit" variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
+            <ButtonLink to={copy.text('shared.cta.primaryUrl')} variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
               {copy.text('shared.cta.primary')}
             </ButtonLink>
-            <ButtonLink to="/book-a-consultation" variant="secondary" size="lg">
+            <ButtonLink to={copy.text('shared.cta.secondaryUrl')} variant="secondary" size="lg">
               {copy.text('shared.cta.secondary')}
             </ButtonLink>
           </div>

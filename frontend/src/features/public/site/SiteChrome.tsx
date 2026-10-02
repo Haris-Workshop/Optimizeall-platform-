@@ -7,6 +7,7 @@ import { useSite } from './api';
 import { captureAttribution } from './attribution';
 import { PartnerLinksProvider } from '../partners/PartnerLinksContext';
 import { CookieConsent } from './CookieConsent';
+import { useBrandFavicon } from './layout';
 import { SiteFooter } from './SiteFooter';
 import { SiteHeader } from './SiteHeader';
 import { chromeVariant } from './variant';
@@ -62,6 +63,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
   const mainRef = useRef<HTMLElement>(null);
   const focusedPath = useRef(location.pathname);
   const variant = chromeVariant(location.pathname);
+  useBrandFavicon();
 
   useEffect(() => {
     captureAttribution({ pathname: location.pathname, search: location.search });

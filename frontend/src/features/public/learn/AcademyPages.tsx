@@ -30,7 +30,7 @@ import {
   Users,
   Wrench,
 } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type CSSProperties, type FormEvent, type ReactNode, type RefObject } from 'react';
+import { startTransition, useEffect, useId, useRef, useState, type CSSProperties, type FormEvent, type ReactNode, type RefObject } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
@@ -463,8 +463,12 @@ export function AcademyPage() {
       if (v) next.set(k, v);
       else next.delete(k);
     }
-    setParams(next, { replace: true });
-    setCatalogKey((k) => k + 1); // the catalog's search box is uncontrolled: remount it with the new query
+    // A non-blocking update (React can interrupt it): re-rendering the catalog is heavy, and a tap on a subject on a
+    // slow phone should paint at once (interaction latency, INP). The router's own update is a transition already.
+    startTransition(() => {
+      setParams(next, { replace: true });
+      setCatalogKey((k) => k + 1); // the catalog's search box is uncontrolled: remount it with the new query
+    });
     catalogRef.current?.scrollIntoView({ block: 'start' });
   };
 

@@ -1,5 +1,5 @@
 import { ArrowRight } from 'lucide-react';
-import { useId, useMemo, useRef, useState } from 'react';
+import { memo, useDeferredValue, useId, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ButtonLink, EmptyState } from '@/components/ui';
 import { usePage, usePricing, type Pricing } from '../site/api';
@@ -14,8 +14,11 @@ import { useReveal } from '../site/motion';
 
 type Mode = 'recurring' | 'oneTime';
 
-/** One service's packages: the service beside its tiers, with a link to what the service includes. */
-function ServicePricing({ entry, lineAnchor }: { entry: Pricing['services'][number]; lineAnchor: boolean }) {
+/**
+ * One service's packages: the service beside its tiers, with a link to what the service includes. Memoized: the
+ * toggle's immediate render (before the deferred mode catches up) skips the unchanged price list.
+ */
+const ServicePricing = memo(function ServicePricing({ entry, lineAnchor }: { entry: Pricing['services'][number]; lineAnchor: boolean }) {
   const copy = useSiteCopy();
   const headingId = useId();
   const { service, packages } = entry;
@@ -39,7 +42,7 @@ function ServicePricing({ entry, lineAnchor }: { entry: Pricing['services'][numb
       </div>
     </section>
   );
-}
+});
 
 /**
  * /pricing — every service's packages, switchable between monthly retainers and one-time projects, with a jump bar to
@@ -50,6 +53,9 @@ export function PricingPage() {
   const { data, isLoading, error } = usePricing();
   const page = usePage('pricing');
   const [mode, setMode] = useState<Mode>('recurring');
+  // The toggle answers at once; the price list (dozens of services) re-renders with the new mode in a non-blocking
+  // render React can interrupt, so a tap on a slow phone paints immediately (interaction latency, INP).
+  const shownMode = useDeferredValue(mode);
   const copy = useSiteCopy();
   const root = useRef<HTMLDivElement>(null);
   useReveal(root);
@@ -61,10 +67,10 @@ export function PricingPage() {
       (data?.services ?? [])
         .map((s) => ({
           ...s,
-          packages: s.packages.filter((p) => (mode === 'oneTime' ? p.billingPeriod === 'OneTime' : p.billingPeriod !== 'OneTime')),
+          packages: s.packages.filter((p) => (shownMode === 'oneTime' ? p.billingPeriod === 'OneTime' : p.billingPeriod !== 'OneTime')),
         }))
         .filter((s) => s.packages.length > 0),
-    [data, mode],
+    [data, shownMode],
   );
 
   // The jump bar lists the service lines; each points at its first service.

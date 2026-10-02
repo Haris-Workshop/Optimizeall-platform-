@@ -386,6 +386,11 @@
   font-weight: 700;
 }
 
+/* Drawn as generated content: the art is decorative (aria-hidden) and the journey card may overlap it. */
+.cr-art__tag::before {
+  content: '#ad';
+}
+
 .cr-art__journey {
   position: absolute;
   right: 0;

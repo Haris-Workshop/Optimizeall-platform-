@@ -39,7 +39,7 @@ export function CreatorsHeroArt({ payoutSchedule }: { payoutSchedule: string }) 
         <div className="cr-art__caption">
           <b />
           <b className="cr-art__caption-short" />
-          <span className="cr-art__tag">#ad</span>
+          <span className="cr-art__tag" />
         </div>
       </div>
       <div className="cr-art__journey">

@@ -33,6 +33,10 @@ public sealed class DefaultDenyTests(ApiFactory api) : IClassFixture<ApiFactory>
         "POST api/v1/auth/google/start",
         "POST api/v1/auth/google/callback",
         "POST api/v1/auth/google/complete",
+        // Two-step verification sign-in step: the caller proves the first factor with the signed challenge token.
+        "POST api/v1/auth/2fa/verify",
+        "POST api/v1/auth/2fa/enroll/setup",
+        "POST api/v1/auth/2fa/enroll/confirm",
         "GET api/v1/public/invitations/{code}",
         "GET api/v1/public/campaigns/{slug}",
         "POST api/v1/public/conversions",
@@ -224,6 +228,14 @@ public sealed class DefaultDenyTests(ApiFactory api) : IClassFixture<ApiFactory>
             .ShouldFailAsync(404, "auth.google_disabled");
         await (await client.PostAsJsonAsync("/api/v1/auth/google/complete", new { ticket = "t", acceptTerms = true, countryCode = "PK" }))
             .ShouldFailAsync(404, "auth.google_disabled");
+
+        // Two-step sign-in step: handlers answer (an unknown challenge) instead of a challenge for credentials.
+        await (await client.PostAsJsonAsync("/api/v1/auth/2fa/verify", new { challengeToken = "t", code = "123456" }))
+            .ShouldFailAsync(401, "auth.2fa_challenge_expired");
+        await (await client.PostAsJsonAsync("/api/v1/auth/2fa/enroll/setup", new { challengeToken = "t" }))
+            .ShouldFailAsync(401, "auth.2fa_challenge_expired");
+        await (await client.PostAsJsonAsync("/api/v1/auth/2fa/enroll/confirm", new { challengeToken = "t", code = "123456" }))
+            .ShouldFailAsync(401, "auth.2fa_challenge_expired");
 
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/v1/campaign-categories")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/v1/content/faqs")).StatusCode);

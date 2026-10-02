@@ -455,6 +455,36 @@ public sealed class GoogleSignInTests(GoogleSignInFixture fx) : IClassFixture<Go
     }
 
     [Fact]
+    public async Task Google_sign_in_asks_for_the_two_step_code_too()
+    {
+        var (client, userId) = await NewGoogleAccountAsync(NewSubject(), NewEmail("twostep"));
+        var subject = (await LoginsAsync(userId)).Single().Subject;
+        var (secret, codes) = await TwoFactorKit.EnableAsync(client, Api.Clock);
+
+        // Google proves the identity, but no session exists until the code is entered.
+        var attempt = await StartAsync(returnTo: "/app/earnings");
+        var callbackResponse = await CallbackAsync(attempt, subject, "whatever@gmail.com");
+        Assert.False(callbackResponse.Headers.TryGetValues("Set-Cookie", out var cookies) &&
+                     cookies.Any(c => c.StartsWith("oa_refresh=", StringComparison.Ordinal) && !c.StartsWith("oa_refresh=;", StringComparison.Ordinal)));
+        var callback = await callbackResponse.ReadJsonAsync();
+        Assert.Equal("twoFactorRequired", callback.GetProperty("status").GetString());
+        Assert.Equal("/app/earnings", callback.GetProperty("returnTo").GetString());
+        Assert.False(callback.TryGetProperty("auth", out var auth) && auth.ValueKind != JsonValueKind.Null);
+        var token = callback.GetProperty("twoFactor").GetProperty("challengeToken").GetString()!;
+        await (await attempt.Client.PostAsync("/api/v1/auth/refresh", null)).ShouldFailAsync(401);
+
+        await (await attempt.Client.PostAsJsonAsync("/api/v1/auth/2fa/verify", new { challengeToken = token, code = TwoFactorKit.WrongCode(secret, Api.Clock) }))
+            .ShouldFailAsync(400, "auth.2fa_invalid_code");
+        var session = await (await attempt.Client.PostAsJsonAsync("/api/v1/auth/2fa/verify", new { challengeToken = token, recoveryCode = codes[0] }))
+            .ReadJsonAsync();
+        Assert.Equal(userId, session.GetProperty("user").GetProperty("id").GetGuid());
+        (await attempt.Client.PostAsync("/api/v1/auth/refresh", null)).EnsureSuccessStatusCode();
+        Assert.Contains(await Api.WithDbAsync(db => db.Set<AuditLog>().AsNoTracking()
+            .Where(a => a.EntityId == userId.ToString() && a.Action == "auth.2fa_verified").Select(a => a.AfterJson).ToListAsync()),
+            json => json!.Contains("google"));
+    }
+
+    [Fact]
     public async Task Google_cannot_be_unlinked_when_it_is_the_only_sign_in_method()
     {
         var (client, userId) = await NewGoogleAccountAsync(NewSubject(), NewEmail("only"));

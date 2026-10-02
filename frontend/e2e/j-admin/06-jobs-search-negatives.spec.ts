@@ -15,6 +15,7 @@ import {
   watchErrors,
 } from './support/jadmin';
 import { ApiSession } from './support/jadmin';
+import type { Page } from '@playwright/test';
 
 /**
  * Jobs, notification deliveries, global search and the negative paths:
@@ -24,6 +25,16 @@ import { ApiSession } from './support/jadmin';
  *   role create makes one role; boundary values of names and reasons are refused.
  */
 test.describe.configure({ mode: 'serial' });
+
+/**
+ * Ctrl+K once the portal shell is up. The shell (PortalLayout) is a lazily loaded chunk that can arrive after the URL has
+ * changed, and a keystroke pressed before it mounts reaches no listener; the top bar's Search button (which advertises
+ * the shortcut) is rendered in the same commit that attaches it.
+ */
+async function pressSearchShortcut(page: Page) {
+  await expect(page.getByRole('banner').getByRole('button', { name: 'Search', exact: true })).toBeVisible();
+  await page.keyboard.press('Control+k');
+}
 
 test('run a job now; the notification deliveries it sends are listed', async ({ as }) => {
   const id = runId();
@@ -77,7 +88,7 @@ test('Ctrl+K search is scoped to what the searcher may see', async ({ as }) => {
   const id = runId();
   const admin = await as(accounts.admin, landing.admin);
   const errors = watchErrors(admin);
-  await admin.keyboard.press('Control+k');
+  await pressSearchShortcut(admin);
   const palette = modal(admin, 'Search');
   const box = palette.getByRole('combobox', { name: 'Search pages and records' });
   await expect(box).toBeFocused();
@@ -94,7 +105,7 @@ test('Ctrl+K search is scoped to what the searcher may see', async ({ as }) => {
   await arrangeRole(`E2E CRM search ${id}`, ['crm.view'], [crm.id]);
   const page = await as(crm, landing.agency);
   const pageErrors = watchErrors(page);
-  await page.keyboard.press('Control+k');
+  await pressSearchShortcut(page);
   const box2 = modal(page, 'Search').getByRole('combobox', { name: 'Search pages and records' });
   await box2.fill('Sara');
   await expect(
@@ -116,7 +127,7 @@ test('Ctrl+K search is scoped to what the searcher may see', async ({ as }) => {
   await arrangeRole(`E2E content only ${id}`, ['content.manage'], [editor.id]);
   const editorPage = await as(editor, landing.admin);
   const editorErrors = watchErrors(editorPage);
-  await editorPage.keyboard.press('Control+k');
+  await pressSearchShortcut(editorPage);
   const box3 = modal(editorPage, 'Search').getByRole('combobox', { name: 'Search pages and records' });
   await box3.fill('Content');
   await expect(

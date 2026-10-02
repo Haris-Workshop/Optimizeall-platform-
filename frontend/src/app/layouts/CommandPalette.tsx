@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
 import { CornerDownLeft, FileText, Search } from 'lucide-react';
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog } from '@/components/ui/Dialog';
 import { api } from '@/lib/api/client';
@@ -255,9 +255,12 @@ function PaletteBody({
   );
 }
 
-/** Opens the palette on Ctrl+K / Cmd+K. */
+/**
+ * Opens the palette on Ctrl+K / Cmd+K. A layout effect, so the listener is attached in the same commit that shows the
+ * top bar's Search button (which advertises the shortcut): once the shell is on screen, the shortcut works.
+ */
 export function useCommandPaletteShortcut(enabled: boolean, onOpen: () => void) {
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!enabled) return;
     const handler = (event: globalThis.KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'k') {

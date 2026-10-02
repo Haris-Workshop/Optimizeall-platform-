@@ -16,13 +16,30 @@ const root = document.getElementById('root');
 if (!root) throw new Error('Missing #root element');
 const serverRendered = root.hasAttribute(SSR_ROOT_ATTR);
 
-/** Resolves once the current content has been painted (right away in a background tab, which never paints). */
+/**
+ * Resolves once the browser reports the page's first contentful paint (Paint Timing: the frame is on screen, not just
+ * produced), right away in a background tab (which never paints), and after a few seconds at the latest (browsers
+ * without Paint Timing).
+ */
 function afterFirstPaint(): Promise<void> {
-  if (document.visibilityState !== 'visible') return Promise.resolve();
+  if (document.visibilityState !== 'visible' || typeof PerformanceObserver === 'undefined') return Promise.resolve();
+  if (performance.getEntriesByName('first-contentful-paint').length > 0) return Promise.resolve();
   return new Promise((resolve) => {
-    requestAnimationFrame(() => setTimeout(resolve, 0));
-    // A safety net for browsers that throttle animation frames.
-    setTimeout(resolve, 250);
+    let observer: PerformanceObserver | null = null;
+    const done = () => {
+      observer?.disconnect();
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(done, 3000);
+    try {
+      observer = new PerformanceObserver((list) => {
+        if (list.getEntriesByName('first-contentful-paint').length > 0) done();
+      });
+      observer.observe({ type: 'paint', buffered: true });
+    } catch {
+      done();
+    }
   });
 }
 

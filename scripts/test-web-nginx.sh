@@ -42,7 +42,7 @@ http {
     listen 127.0.0.1:$api_port;
     default_type text/html;
     location = /_document/ { return 200 '<!doctype html><h1>API home</h1>'; }
-    location = /_document/page { return 200 '<!doctype html><h1>API page</h1>'; }
+    location = /_document/page { add_header Strict-Transport-Security "max-age=2592000" always; return 200 '<!doctype html><h1>API page</h1>'; }
     location = /_document/missing { return 404 '<!doctype html><h1>API not found</h1>'; }
     location = /_document/gone { return 410 '<!doctype html><h1>API gone</h1>'; }
     location = /_document/moved { return 301 /page; }
@@ -118,6 +118,28 @@ expect /app 200 text/html SHELL
 # X-Forwarded-Proto/Host carry the visitor's scheme and host (with its port) to the API (docs/RENDER.md#public-url).
 expect /origin 200 text/html "origin=http://127.0.0.1:$web_port"
 expect /api/v1/origin 200 text/plain "origin=http://127.0.0.1:$web_port"
+
+# Security headers on pages and static files; HSTS only when the request arrived over HTTPS (X-Forwarded-Proto from the
+# TLS-terminating load balancer), never on plain http.
+# expect_header PATH HEADER_REGEX [FORWARDED_PROTO]   /   expect_no_header PATH HEADER_REGEX [FORWARDED_PROTO]
+headers_of() { curl -s -o /dev/null -D - ${2:+-H "X-Forwarded-Proto: $2"} "http://127.0.0.1:$web_port$1" | tr -d '\r'; }
+expect_header() {
+  if headers_of "$1" "${3:-}" | grep -qiE "$2"; then ok "$1${3:+ ($3)} has $2"; else warn "$1${3:+ ($3)}: no header matching $2"; failures=$((failures + 1)); fi
+}
+expect_no_header() {
+  if headers_of "$1" "${3:-}" | grep -qiE "$2"; then warn "$1${3:+ ($3)}: unexpected $2"; failures=$((failures + 1)); else ok "$1${3:+ ($3)} has no $2"; fi
+}
+for path in / /page /app /favicon.svg; do
+  expect_header "$path" "^content-security-policy: default-src 'self'; script-src 'self';"
+  expect_header "$path" "^x-content-type-options: nosniff"
+  expect_header "$path" "^referrer-policy: strict-origin-when-cross-origin"
+  expect_header "$path" "^x-frame-options: DENY"
+  expect_header "$path" "^strict-transport-security: max-age=31536000" https
+  expect_no_header "$path" "^strict-transport-security" ""
+done
+if [ "$(headers_of /page https | grep -ci '^strict-transport-security')" != 1 ]; then
+  warn "/page (https): expected exactly one Strict-Transport-Security header"; failures=$((failures + 1))
+fi
 
 log "API down"
 kill "$stub_pid"; wait "$stub_pid" 2>/dev/null || true; stub_pid=""

@@ -298,6 +298,10 @@ services.AddOptions<ForwardedHeadersOptions>().Configure<IConfiguration>((o, cfg
 });
 services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o => o.MultipartBodyLengthLimit = 12 * 1024 * 1024);
 
+// HSTS on HTTPS requests outside Development (app.UseHsts below): one year, like the web server's header
+// (frontend/nginx/snippets/security-headers.conf); no includeSubDomains, since other subdomains may not serve HTTPS.
+services.AddHsts(o => o.MaxAge = TimeSpan.FromDays(365));
+
 services.AddEndpointsApiExplorer();
 services.AddSwaggerGen(o =>
 {

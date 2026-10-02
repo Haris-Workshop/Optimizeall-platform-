@@ -23,6 +23,15 @@ map $http_x_forwarded_proto $oa_forwarded_proto {
     ""      $scheme;
 }
 
+# HSTS (snippets/security-headers.conf) on HTTPS only: the request reached us over TLS, or the load balancer that
+# terminated TLS says so (Render, docs/RENDER.md). Plain-http deployments and local runs get no header (an empty value is
+# not sent); a spoofed X-Forwarded-Proto on plain http is harmless, since browsers ignore HSTS received over http.
+# One year, without includeSubDomains/preload: other subdomains of a custom domain may still serve plain http.
+map $oa_forwarded_proto $oa_hsts {
+    default "";
+    https   "max-age=31536000";
+}
+
 # The host (and port) the visitor used, for X-Forwarded-Host: the Host header as received (with a non-default port, e.g.
 # localhost:4173), or the server's own name for requests without one. The API validates it (Common/Hosting/PublicOrigin.cs).
 map $http_host $oa_forwarded_host {
@@ -270,6 +279,7 @@ server {
         proxy_hide_header Referrer-Policy;
         proxy_hide_header Permissions-Policy;
         proxy_hide_header Cross-Origin-Resource-Policy;
+        proxy_hide_header Strict-Transport-Security;
         include /etc/nginx/snippets/security-headers.conf;
     }
 

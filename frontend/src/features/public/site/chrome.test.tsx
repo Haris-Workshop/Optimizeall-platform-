@@ -114,6 +114,32 @@ describe('agency chrome (default)', () => {
     expect(creators.className).not.toMatch(/ui-button/);
   });
 
+  it('mobile menu: a modal sheet that closes on Escape, the close button and a link, and is shown again on the next tap', async () => {
+    const user = userEvent.setup();
+    renderChrome('/');
+    const open = screen.getByRole('button', { name: 'Open menu' });
+    await user.click(open);
+    const sheet = await screen.findByRole('dialog', { name: 'Menu' });
+    expect(sheet).toHaveAttribute('aria-modal', 'true');
+    expect(open).toHaveAttribute('aria-expanded', 'true');
+    expect(sheet).toContainElement(document.activeElement as HTMLElement);
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Menu' })).not.toBeInTheDocument();
+    expect(open).toHaveAttribute('aria-expanded', 'false');
+    expect(open).toHaveFocus();
+    // Rendered once: closing hides the sheet instead of removing it.
+    expect(document.querySelector('.site-sheet')).toHaveAttribute('hidden');
+
+    await user.click(open);
+    await user.click(within(screen.getByRole('dialog', { name: 'Menu' })).getByRole('button', { name: 'Close menu' }));
+    expect(screen.queryByRole('dialog', { name: 'Menu' })).not.toBeInTheDocument();
+
+    await user.click(open);
+    await user.click(within(screen.getByRole('navigation', { name: 'Mobile' })).getByRole('link', { name: /Optimize All Academy/ }));
+    expect(screen.queryByRole('dialog', { name: 'Menu' })).not.toBeInTheDocument();
+  });
+
   it('footer: no Academy column; a "More from Optimize All" group and one "Sign in" group labelled by audience', () => {
     renderChrome('/');
     const f = footer();

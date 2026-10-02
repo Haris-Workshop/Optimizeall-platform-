@@ -182,6 +182,20 @@ public sealed record BaselineUpgradeSummary(
 /// (4) row counts, <c>foreign_key_check</c> and <c>integrity_check</c> are verified; (5) the temporary file is renamed over
 /// the live one (atomic on the same file system). Any failure before (5) leaves the live database untouched.</para>
 /// </summary>
+/// <summary>
+/// Releases the pooled connections to ONE database (the app's connection string) so its file can be checkpointed, moved or
+/// replaced. Never <c>SqliteConnection.ClearAllPools()</c>: that is process-wide and tears down other databases' pools
+/// while they serve requests (several API hosts share a process in the integration tests).
+/// </summary>
+internal static class SqlitePools
+{
+    public static void Clear(AppDbContext db)
+    {
+        using var connection = new SqliteConnection(db.Database.GetConnectionString());
+        SqliteConnection.ClearPool(connection);
+    }
+}
+
 internal sealed class SqliteBaselineUpgrader(IServiceProvider sp, AppDbContext db, ILogger logger)
 {
     private const string HistoryTable = "__EFMigrationsHistory";
@@ -199,7 +213,7 @@ internal sealed class SqliteBaselineUpgrader(IServiceProvider sp, AppDbContext d
             $"{name}-{foreignBaseline}-{DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss'Z'", CultureInfo.InvariantCulture)}.db");
 
         await db.Database.CloseConnectionAsync();
-        SqliteConnection.ClearAllPools();
+        SqlitePools.Clear(db);
         DeleteDatabaseFiles(tempPath); // left over from an interrupted attempt
 
         // (1) Backup: checkpoint, then SQLite's online backup (a consistent single-file copy including any WAL content).
@@ -212,7 +226,7 @@ internal sealed class SqliteBaselineUpgrader(IServiceProvider sp, AppDbContext d
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            SqliteConnection.ClearAllPools();
+            SqlitePools.Clear(db);
             DeleteDatabaseFiles(backupPath);
             throw new BaselineUpgradeException(
                 $"Baseline upgrade from '{foreignBaseline}' failed before any change: the database {livePath} could not be " +
@@ -241,7 +255,7 @@ internal sealed class SqliteBaselineUpgrader(IServiceProvider sp, AppDbContext d
         }
         catch (Exception ex)
         {
-            SqliteConnection.ClearAllPools();
+            SqlitePools.Clear(db);
             DeleteDatabaseFiles(tempPath);
             throw new BaselineUpgradeException(
                 $"Baseline upgrade from '{foreignBaseline}' failed; the database {livePath} was left unchanged (a backup is at " +
@@ -251,14 +265,14 @@ internal sealed class SqliteBaselineUpgrader(IServiceProvider sp, AppDbContext d
 
         // (5) Swap. No connection is open (no pooling on the upgrade connections, pools cleared); the live file was fully
         // checkpointed, so its -wal/-shm hold nothing and must not be paired with the new file.
-        SqliteConnection.ClearAllPools();
+        SqlitePools.Clear(db);
         await using (var live = await OpenAsync(livePath, ct))
             await CheckpointAsync(live, livePath, ct);
-        SqliteConnection.ClearAllPools();
+        SqlitePools.Clear(db);
         DeleteSidecars(tempPath);
         DeleteSidecars(livePath);
         File.Move(tempPath, livePath, overwrite: true);
-        SqliteConnection.ClearAllPools();
+        SqlitePools.Clear(db);
         return summary with { BackupPath = backupPath, Elapsed = stopwatch.Elapsed };
     }
 

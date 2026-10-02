@@ -57,7 +57,7 @@ internal static class SqliteDatabaseProbe
         }
         finally
         {
-            SqliteConnection.ClearAllPools();
+            SqlitePools.Clear(db);
         }
     }
 
@@ -84,7 +84,7 @@ internal static class SqliteFreshStart
     {
         ct.ThrowIfCancellationRequested();
         await db.Database.CloseConnectionAsync();
-        SqliteConnection.ClearAllPools();
+        SqlitePools.Clear(db);
 
         var directory = Path.GetDirectoryName(livePath)!;
         var backups = Path.Combine(directory, "backups");

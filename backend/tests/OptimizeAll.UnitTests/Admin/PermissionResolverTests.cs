@@ -36,7 +36,10 @@ public sealed class PermissionResolverTests : IDisposable
 
     public void Dispose()
     {
-        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        // Only this test's database: ClearAllPools would tear down other test classes' pools mid-test.
+        using (var connection = new Microsoft.Data.Sqlite.SqliteConnection(
+                   new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder { DataSource = _file }.ConnectionString))
+            Microsoft.Data.Sqlite.SqliteConnection.ClearPool(connection);
         foreach (var suffix in new[] { "", "-wal", "-shm" })
             try { File.Delete(_file + suffix); } catch (IOException) { }
     }

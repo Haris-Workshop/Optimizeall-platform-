@@ -58,9 +58,20 @@ public sealed class BaselineUpgradeTests : IDisposable
 
     public BaselineUpgradeTests() => Directory.CreateDirectory(_directory);
 
+    /// <summary>
+    /// Releases the pooled connections to this test's database only (the host's connection string is
+    /// <c>Data Source=&lt;DbPath&gt;</c>, see DatabaseConnection.ResolveSqlite). Not ClearAllPools: other test classes run in
+    /// parallel in the same process and that would tear down their pools mid-request.
+    /// </summary>
+    private void ReleaseDatabase()
+    {
+        using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = DbPath }.ConnectionString);
+        SqliteConnection.ClearPool(connection);
+    }
+
     public void Dispose()
     {
-        SqliteConnection.ClearAllPools();
+        ReleaseDatabase();
         try { Directory.Delete(_directory, recursive: true); } catch (IOException) { }
     }
 
@@ -138,7 +149,7 @@ public sealed class BaselineUpgradeTests : IDisposable
             using var client = host.CreateClient();
             Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/health/ready")).StatusCode);
         }
-        SqliteConnection.ClearAllPools();
+        ReleaseDatabase();
 
         Assert.Equal(CurrentSqliteHistory, Query(DbPath, "SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId"));
         var after = RowCounts(DbPath);
@@ -169,7 +180,7 @@ public sealed class BaselineUpgradeTests : IDisposable
             var login = await client.PostAsJsonAsync("/api/v1/auth/login", new { email = DemoAccounts.Admin, password = DemoAccounts.Password });
             Assert.Equal(HttpStatusCode.OK, login.StatusCode);
         }
-        SqliteConnection.ClearAllPools();
+        ReleaseDatabase();
         Assert.Single(Directory.GetFiles(BackupDirectory));
         Assert.Equal(CurrentSqliteHistory, Query(DbPath, "SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId"));
         var reseeded = RowCounts(DbPath);
@@ -195,7 +206,7 @@ public sealed class BaselineUpgradeTests : IDisposable
             var login = await client.PostAsJsonAsync("/api/v1/auth/login", new { email = DemoAccounts.Admin, password = DemoAccounts.Password });
             Assert.Equal(HttpStatusCode.OK, login.StatusCode);
         }
-        SqliteConnection.ClearAllPools();
+        ReleaseDatabase();
         Assert.Equal(CurrentSqliteHistory, Query(DbPath, "SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId"));
         Assert.StartsWith("optimizeall-20260923201802_InitialCreate-", Path.GetFileName(Assert.Single(Directory.GetFiles(BackupDirectory))));
         Assert.Equal(new[] { "ok" }, Query(DbPath, "PRAGMA integrity_check"));
@@ -217,7 +228,7 @@ public sealed class BaselineUpgradeTests : IDisposable
             using var client = host.CreateClient();
             Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/health/ready")).StatusCode);
         }
-        SqliteConnection.ClearAllPools();
+        ReleaseDatabase();
 
         // The old file is kept byte for byte under a name that says what happened; nothing else is left behind.
         var aside = Assert.Single(Directory.GetFiles(BackupDirectory));
@@ -232,7 +243,7 @@ public sealed class BaselineUpgradeTests : IDisposable
         // The next start finds the current baseline and keeps the database.
         await using (var host = Start("AutoOrFresh"))
             await host.StartAsync();
-        SqliteConnection.ClearAllPools();
+        ReleaseDatabase();
         Assert.Single(Directory.GetFiles(BackupDirectory));
     }
 
@@ -251,7 +262,7 @@ public sealed class BaselineUpgradeTests : IDisposable
             Assert.Contains("cannot be read", refusal.Message);
             Assert.Contains("AutoOrFresh", refusal.Message);
         }
-        SqliteConnection.ClearAllPools();
+        ReleaseDatabase();
         Assert.Equal(hash, Hash(DbPath));
 
         await using (var host = Start("AutoOrFresh", "Baseline"))
@@ -260,7 +271,7 @@ public sealed class BaselineUpgradeTests : IDisposable
             using var client = host.CreateClient();
             Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/health/ready")).StatusCode);
         }
-        SqliteConnection.ClearAllPools();
+        ReleaseDatabase();
         var aside = Assert.Single(Directory.GetFiles(BackupDirectory));
         Assert.Matches(@"^optimizeall-unreadable-\d{8}T\d{6}Z-unmigrated\.db$", Path.GetFileName(aside));
         Assert.Equal(hash, Hash(aside));
@@ -275,7 +286,7 @@ public sealed class BaselineUpgradeTests : IDisposable
 
         await using (var host = Start("Auto"))
             await host.StartAsync();
-        SqliteConnection.ClearAllPools();
+        ReleaseDatabase();
 
         Assert.Equal(CurrentSqliteHistory, Query(DbPath, "SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId"));
         Assert.Equal(new[] { "1" }, Query(DbPath, $"SELECT COUNT(*) FROM users WHERE Id = '{userId.ToString().ToUpperInvariant()}'"));
@@ -295,7 +306,7 @@ public sealed class BaselineUpgradeTests : IDisposable
         Assert.Contains(CurrentSqliteBaseline, refusal.Message);
         Assert.Contains("Database:BaselineUpgrade", refusal.Message);
 
-        SqliteConnection.ClearAllPools();
+        ReleaseDatabase();
         Assert.Equal(hash, Hash(DbPath));
         Assert.False(Directory.Exists(BackupDirectory));
     }
@@ -311,7 +322,7 @@ public sealed class BaselineUpgradeTests : IDisposable
 
         await using (var host = Start("Auto"))
             await host.StartAsync();
-        SqliteConnection.ClearAllPools();
+        ReleaseDatabase();
 
         Assert.Equal(new[] { $"0|[]|{nameof(ParticipantTier.Standard)}" },
             Query(DbPath, $"SELECT FailedLoginCount || '|' || Interests || '|' || Tier FROM users WHERE Id = '{userId.ToString().ToUpperInvariant()}'"));
@@ -341,7 +352,7 @@ public sealed class BaselineUpgradeTests : IDisposable
         Assert.Contains("foreign_key_check", failure.Message);
         Assert.Contains("user_roles", failure.Message);
 
-        SqliteConnection.ClearAllPools();
+        ReleaseDatabase();
         Assert.Equal(hash, Hash(DbPath));
         Assert.Equal(new[] { "20200101000000_InitialCreate" }, Query(DbPath, "SELECT MigrationId FROM __EFMigrationsHistory"));
         Assert.Single(Directory.GetFiles(BackupDirectory));
@@ -370,7 +381,7 @@ public sealed class BaselineUpgradeTests : IDisposable
             db.Set<User>().Add(user);
             await db.SaveChangesAsync();
         }
-        SqliteConnection.ClearAllPools();
+        ReleaseDatabase();
         Exec(DbPath, "PRAGMA wal_checkpoint(TRUNCATE);");
         return user.Id;
     }

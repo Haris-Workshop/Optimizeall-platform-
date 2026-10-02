@@ -230,6 +230,14 @@ descriptions unique.
   nginx, `a11y` 37/37 (failed 3/37 in CI on the same pages — /team, /careers, /blog, /get-a-quote — before the fixes
   above), `j-learning` 11/11, `j-auth` 60/60, `j-partners` 4/4, `j-content` 22/22, `crawl` 20/20.
 * `scripts/test-web-nginx.sh` (nginx error mapping + security headers).
+* Server-side rendering pass (rebased on the two-step verification work): `npm run typecheck`, `npm run lint`,
+  `npx vitest run` (122 files, 961 tests), `npm run build` (client + `dist-ssr`), `npm run budget` (initial JS 165 KiB now
+  counts the app chunk the entry starts); backend Release build, unit tests 1,753/1,753, Website/SEO integration tests on
+  SQLite 232/232; E2E on SQLite: `j-seo` 97/97 with vite preview and 97/97 with the production nginx + renderer
+  (including the new hydration checks on every public page), `smoke` 40/40, `a11y` 37/37, `crawl` 20/20, `j-content`
+  22/22, `j-learning` 11/11, `j-partners` 4/4, `agency` 13/13; `scripts/test-web-nginx.sh` with a stub renderer
+  (rendered page, renderer 503, API fallback). Docker could not be run in the sandbox (no daemon): the web image change
+  (`apk add nodejs`, renderer files, entrypoint script) is unbuilt here.
 
 ## Two-step verification (added after the audit)
 

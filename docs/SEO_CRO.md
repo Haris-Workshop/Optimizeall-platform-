@@ -265,7 +265,9 @@ browser: paints, then fetches the app (src/main.tsx → src/start.tsx) and the p
 * **Fallbacks.** If the renderer is not running (502) or too slow (504), nginx asks the API directly
   (`@document_api`): the page is then the API's plain copy, hidden for script-capable browsers, and React renders it in
   the browser — the behaviour before server rendering. A render error, a non-200 status (404/410/301), portals, tokenized
-  links and client landing pages are never rendered by the renderer. If the API is unreachable, both paths answer
+  links and client landing pages are never rendered by the renderer; neither is a page whose data request failed for a
+  passing reason (rate limit, 5xx, network) — it gets the API's complete plain copy instead of loading states. The
+  renderer's API requests carry the visitor's address, so they count towards that visitor's rate limits. If the API is unreachable, both paths answer
   `503` + the app shell.
 * **Same data, no flash.** The renderer renders until no new query appears (dependent queries take another pass;
   the queries a URL needed last time are fetched before the first pass), failed queries stay pending (the browser loads

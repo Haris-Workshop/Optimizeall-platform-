@@ -19,6 +19,7 @@ import { AppProviders } from './app/providers';
 import { routerFuture, routes } from './app/router';
 import { injectRenderedPage, pageAssets, type RenderInput, type RenderResult } from './app/ssrDocument';
 import { setTransport } from './lib/api/client';
+import { isApiError } from './lib/api/errors';
 import { setServerOrigin } from './lib/ssr';
 
 interface RequestContext {
@@ -111,14 +112,20 @@ async function render(input: RenderInput): Promise<RenderResult> {
       );
 
     const attempted = new Set<string>();
+    /** A request that failed for a passing reason (rate limit, server error, network): the page is not rendered. */
+    let unavailable: string | null = null;
     const fetchAll = (queries: Query[]) =>
       Promise.all(
         queries.map(async (query) => {
           attempted.add(query.queryHash);
           try {
             await query.fetch();
-          } catch {
-            // Not rendered with data: the query is dropped and comes back pending on the next pass; the client loads it.
+          } catch (error) {
+            // A 4xx answer is part of the page (the client gets the same): the query is dropped, comes back pending on
+            // the next pass and the client loads it. Anything else would render loading states in place of content, so
+            // the API's plain, complete copy is served instead (crawlers never get a half-rendered page).
+            if (!isApiError(error) || error.status === 0 || error.status === 429 || error.status >= 500)
+              unavailable ??= `${JSON.stringify(query.queryKey)}: ${isApiError(error) ? error.status : String(error)}`;
             queryClient.getQueryCache().remove(query);
           }
         }),
@@ -134,6 +141,7 @@ async function render(input: RenderInput): Promise<RenderResult> {
     const document = await input.document;
     if (document === null) return { rendered: false, reason: 'no document' };
     await prefetched;
+    if (unavailable) return { rendered: false, reason: `data unavailable (${unavailable})` };
 
     let html = '';
     let passes = 0;
@@ -149,6 +157,7 @@ async function render(input: RenderInput): Promise<RenderResult> {
         .filter((q) => q.state.status === 'pending' && q.state.fetchStatus === 'idle' && !attempted.has(q.queryHash) && isEnabled(q));
       if (pending.length === 0 || passes >= MAX_PASSES) break;
       await fetchAll(pending);
+      if (unavailable) return { rendered: false, reason: `data unavailable (${unavailable})` };
     }
     const queries = queryClient.getQueryCache().getAll();
     remember(

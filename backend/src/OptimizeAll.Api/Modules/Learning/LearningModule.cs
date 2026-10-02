@@ -64,7 +64,7 @@ public sealed class LearningSitemapContributor(AppDbContext db, CourseContentCac
     public async Task<IReadOnlyList<SitemapContribution>> UrlsAsync(CancellationToken ct)
     {
         var courses = await db.Set<Course>().AsNoTracking()
-            .Where(c => c.Status == CourseStatus.Published && c.PublishedVersionId != null)
+            .Where(c => c.Status == CourseStatus.Published && c.PublishedVersionId != null && !c.NoIndex)
             .OrderBy(c => c.SortOrder).ThenBy(c => c.Slug).ToListAsync(ct);
         var links = new LearningLinks((await issuers.GetAsync(ct)).BaseUrl);
         var lastUpdate = courses.Count == 0 ? (DateTime?)null : courses.Max(c => c.UpdatedAt);
@@ -79,7 +79,7 @@ public sealed class LearningSitemapContributor(AppDbContext db, CourseContentCac
         }
         foreach (var course in courses)
         {
-            result.Add(new SitemapContribution(LearningLinks.CoursePath(course.Slug), course.UpdatedAt, course.Title));
+            result.Add(new SitemapContribution(LearningLinks.CoursePath(course.Slug), course.UpdatedAt, course.Title) { Hidden = course.HideFromSitemap });
             var doc = await cache.GetAsync(db, course.PublishedVersionId!.Value, ct);
             foreach (var l in doc.Lessons)
             {
@@ -87,7 +87,7 @@ public sealed class LearningSitemapContributor(AppDbContext db, CourseContentCac
                 var video = l.Lesson.Lecture?.Src is null ? null
                     : LearningJsonLd.SeoVideo(doc.Pack, l.Lesson, PublicLearningService.Truncate(PublicLearningService.LessonSummaryText(l.Lesson.Body), 300), links, course);
                 result.Add(new SitemapContribution(LearningLinks.LessonPath(course.Slug, l.Lesson.Slug), course.UpdatedAt, l.Lesson.Title,
-                    Videos: video is null ? null : new[] { video }));
+                    Videos: video is null ? null : new[] { video }) { Hidden = course.HideFromSitemap });
             }
         }
         return result;

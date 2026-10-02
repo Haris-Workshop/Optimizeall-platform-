@@ -72,6 +72,7 @@ public sealed partial class SeoPageResolver(
     };
 
     private SiteSettings _settings = null!;
+    private SeoSettings _seo = SeoSettings.Defaults;
     private string _baseUrl = string.Empty;
     private JsonLd _ld = null!;
     private SeoJsonLd _seoLd = null!;
@@ -86,9 +87,19 @@ public sealed partial class SeoPageResolver(
 
     public SiteSettings Settings => _settings;
 
+    /// <summary>The SEO settings (crawler policy and the editor's robots.txt, sitemap and llms.txt choices) as of this request.</summary>
+    public SeoSettings Seo => _seo;
+
     public CopyReader Copy => _copy;
 
     public string Absolute(string path) => _ld.Url(path);
+
+    /// <summary>Forgets what this request has loaded (after the SEO settings were saved in the same request).</summary>
+    public void Reload()
+    {
+        _loaded = false;
+        _candidates = null;
+    }
 
     public async Task EnsureLoadedAsync(CancellationToken ct)
     {
@@ -100,6 +111,8 @@ public sealed partial class SeoPageResolver(
         var copy = await copyService.GetPublicAsync(ct);
         _copy = new CopyReader(copy.Values);
         _copyUpdatedAt = copy.UpdatedAt;
+        _seo = SeoSettingsService.Parse(await db.Set<SiteSettingsDocument>().AsNoTracking().Where(d => d.Key == SeoSettingsService.DocumentKey)
+            .Select(d => d.Json).FirstOrDefaultAsync(ct));
         _settingsUpdatedAt = await db.Set<SiteSettingsDocument>().AsNoTracking().Where(d => d.Key == SiteSettingsDocument.DefaultKey)
             .Select(d => (DateTime?)d.UpdatedAt).FirstOrDefaultAsync(ct);
         _loaded = true;

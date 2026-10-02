@@ -18,6 +18,7 @@ internal static class WebsiteMapping
         seo.Property(s => s.OgImageUrl).HasColumnName("SeoOgImageUrl").HasMaxLength(500);
         seo.Property(s => s.CanonicalUrl).HasColumnName("SeoCanonicalUrl").HasMaxLength(500);
         seo.Property(s => s.NoIndex).HasColumnName("SeoNoIndex");
+        seo.Property(s => s.HideFromSitemap).HasColumnName("SeoHideFromSitemap");
     }
 }
 

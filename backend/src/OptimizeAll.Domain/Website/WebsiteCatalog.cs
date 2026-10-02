@@ -17,6 +17,9 @@ public class SeoMeta
 
     /// <summary>Ask search engines not to index the page (also excluded from the sitemap).</summary>
     public bool NoIndex { get; set; }
+
+    /// <summary>Leave the page out of the sitemaps (and llms.txt) while it stays indexable.</summary>
+    public bool HideFromSitemap { get; set; }
 }
 
 /// <summary>A question and its answer (FAQ blocks, service FAQs → FAQPage JSON-LD).</summary>

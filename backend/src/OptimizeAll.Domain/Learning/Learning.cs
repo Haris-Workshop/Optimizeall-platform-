@@ -122,6 +122,12 @@ public class Course : AuditedEntity, IConcurrencyStamped
     public bool IsFeatured { get; set; }
     public int SortOrder { get; set; }
 
+    /// <summary>Ask search engines not to index the course and its lessons (also leaves them out of the sitemaps).</summary>
+    public bool NoIndex { get; set; }
+
+    /// <summary>Leave the course and its lessons out of the sitemaps (and llms.txt) while they stay indexable.</summary>
+    public bool HideFromSitemap { get; set; }
+
     // Listing metadata of the published (or, before publication, latest) version.
     public string Title { get; set; } = string.Empty;
     public string Subtitle { get; set; } = string.Empty;

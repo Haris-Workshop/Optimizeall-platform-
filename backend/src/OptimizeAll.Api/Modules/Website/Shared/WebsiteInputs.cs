@@ -18,11 +18,15 @@ public sealed class SeoInput
     public string? CanonicalUrl { get; set; }
 
     public bool NoIndex { get; set; }
+
+    /// <summary>Leave the page out of the sitemaps and llms.txt (it stays indexable).</summary>
+    public bool HideFromSitemap { get; set; }
 }
 
-public sealed record SeoDto(string? Title, string? Description, string? OgImageUrl, string? CanonicalUrl, bool NoIndex)
+public sealed record SeoDto(string? Title, string? Description, string? OgImageUrl, string? CanonicalUrl, bool NoIndex, bool HideFromSitemap = false)
 {
-    public static SeoDto From(SeoMeta? s) => new(s?.Title, s?.Description, s?.OgImageUrl, s?.CanonicalUrl, s?.NoIndex ?? false);
+    public static SeoDto From(SeoMeta? s) =>
+        new(s?.Title, s?.Description, s?.OgImageUrl, s?.CanonicalUrl, s?.NoIndex ?? false, s?.HideFromSitemap ?? false);
 }
 
 public sealed class FaqEntryInput

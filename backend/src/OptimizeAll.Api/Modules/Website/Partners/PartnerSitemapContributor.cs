@@ -19,12 +19,12 @@ public sealed class PartnerSitemapContributor(AppDbContext db) : ISitemapContrib
     {
         var partners = await db.Set<WebsitePartner>().AsNoTracking().Where(p => p.IsActive)
             .OrderBy(p => p.SortOrder).ThenBy(p => p.Name)
-            .Select(p => new { p.Slug, p.Name, p.LogoUrl, p.UpdatedAt, p.Seo.NoIndex, p.Seo.CanonicalUrl }).ToListAsync(ct);
+            .Select(p => new { p.Slug, p.Name, p.LogoUrl, p.UpdatedAt, p.Seo.NoIndex, p.Seo.CanonicalUrl, p.Seo.HideFromSitemap }).ToListAsync(ct);
         if (partners.Count == 0) return Array.Empty<SitemapContribution>();
         var urls = new List<SitemapContribution> { new("/partners", partners.Max(p => p.UpdatedAt), "Our partners") };
         urls.AddRange(partners
             .Where(p => !p.NoIndex && (string.IsNullOrWhiteSpace(p.CanonicalUrl) || p.CanonicalUrl.TrimEnd('/').EndsWith($"/partners/{p.Slug}", StringComparison.OrdinalIgnoreCase)))
-            .Select(p => new SitemapContribution($"/partners/{p.Slug}", p.UpdatedAt, p.Name, p.LogoUrl)));
+            .Select(p => new SitemapContribution($"/partners/{p.Slug}", p.UpdatedAt, p.Name, p.LogoUrl) { Hidden = p.HideFromSitemap }));
         return urls;
     }
 }

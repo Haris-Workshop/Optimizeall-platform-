@@ -122,25 +122,28 @@ public sealed class SeoFilesController(SeoPageResolver resolver, SeoSettingsServ
     public async Task<IActionResult> SitemapIndex(CancellationToken ct)
     {
         var urls = await resolver.SitemapUrlsAsync(ct);
-        var files = SitemapWriter.Files(urls, MaxUrls);
-        return Cached(SitemapWriter.Index(files, resolver.BaseUrl), "application/xml; charset=utf-8", 300, files.Max(f => f.LastModified));
+        var files = SitemapWriter.Files(urls, MaxUrls, resolver.Seo.SitemapOrDefault);
+        return Cached(SitemapWriter.Index(files, resolver.BaseUrl), "application/xml; charset=utf-8", 300, files.Count == 0 ? null : files.Max(f => f.LastModified));
     }
 
     [HttpGet("/sitemaps/{name}.xml")]
     public async Task<IActionResult> Sitemap(string name, CancellationToken ct)
     {
         var urls = await resolver.SitemapUrlsAsync(ct);
-        var file = SitemapWriter.Files(urls, MaxUrls).FirstOrDefault(f => f.Name == name);
+        var options = resolver.Seo.SitemapOrDefault;
+        var file = SitemapWriter.Files(urls, MaxUrls, options).FirstOrDefault(f => f.Name == name);
         if (file is null) return NotFound();
-        return Cached(SitemapWriter.UrlSet(file, resolver.BaseUrl), "application/xml; charset=utf-8", 300, file.LastModified);
+        options.GroupDefaults.TryGetValue(SitemapWriter.GroupOf(file), out var defaults);
+        return Cached(SitemapWriter.UrlSet(file, resolver.BaseUrl, defaults), "application/xml; charset=utf-8", 300, file.LastModified);
     }
 
     /// <summary>Legacy flat sitemap (every indexable URL in one urlset); kept for links submitted before the sitemap index.</summary>
     [HttpGet("/api/v1/public/sitemap.xml")]
     public async Task<IActionResult> LegacySitemap(CancellationToken ct)
     {
-        var urls = await resolver.SitemapUrlsAsync(ct);
-        var file = new SitemapFile("all", "urls", urls.Take(50_000).ToList(), urls.Max(u => u.LastModified));
+        var excludedGroups = resolver.Seo.SitemapOrDefault.ExcludedGroups;
+        var urls = (await resolver.SitemapUrlsAsync(ct)).Where(u => !excludedGroups.Contains(u.Group, StringComparer.Ordinal)).ToList();
+        var file = new SitemapFile("all", "urls", urls.Take(50_000).ToList(), urls.Count == 0 ? null : urls.Max(u => u.LastModified));
         return Cached(SitemapWriter.UrlSet(file, resolver.BaseUrl), "application/xml; charset=utf-8", 300, file.LastModified);
     }
 
@@ -162,7 +165,9 @@ public sealed class SeoFilesController(SeoPageResolver resolver, SeoSettingsServ
     [HttpGet("/llms/{name}.txt")]
     public async Task<IActionResult> LlmsSection(string name, CancellationToken ct)
     {
-        if (!(await settings.GetAsync(ct)).LlmsTxtEnabled) return NotFound();
+        var s = await settings.GetAsync(ct);
+        if (!s.LlmsTxtEnabled) return NotFound();
+        if (name == "academy" && !s.LlmsOrDefault.AcademyGuideEnabled) return NotFound();
         var body = await llms.SectionAsync(name, ct);
         return body is null ? NotFound() : Cached(body, "text/plain; charset=utf-8", 3600);
     }

@@ -20,7 +20,7 @@ public static class SitemapWriter
     private const string ImageNs = "http://www.google.com/schemas/sitemap-image/1.1";
     private const string VideoNs = "http://www.google.com/schemas/sitemap-video/1.1";
 
-    public static IReadOnlyList<SitemapFile> Files(IReadOnlyList<SitemapUrl> urls, int maxUrls)
+    public static IReadOnlyList<SitemapFile> Files(IReadOnlyList<SitemapUrl> urls, int maxUrls, SitemapOptions? options = null)
     {
         var files = new List<SitemapFile>();
         void AddChunks(string group, string kind, IReadOnlyList<SitemapUrl> items)
@@ -36,7 +36,15 @@ public static class SitemapWriter
         foreach (var group in SeoPageResolver.UrlGroups) AddChunks(group, "urls", urls.Where(u => u.Group == group).ToList());
         AddChunks("images", "images", urls.Where(u => u.Images.Count > 0).ToList());
         AddChunks("videos", "videos", urls.Where(u => u.Videos.Any(Listable)).ToList());
-        return files;
+        // Groups an editor left out (Agency → Website → SEO → Sitemaps) are not in the index, and their files answer 404.
+        return options is null ? files : files.Where(f => !options.ExcludedGroups.Contains(GroupOf(f), StringComparer.Ordinal)).ToList();
+    }
+
+    /// <summary>The group (or <c>images</c> / <c>videos</c>) a file belongs to: its name without the <c>-2</c>, <c>-3</c>… suffix.</summary>
+    public static string GroupOf(SitemapFile file)
+    {
+        var dash = file.Name.LastIndexOf('-');
+        return dash > 0 && int.TryParse(file.Name[(dash + 1)..], NumberStyles.None, CultureInfo.InvariantCulture, out _) ? file.Name[..dash] : file.Name;
     }
 
     /// <summary>Google's video sitemap needs a thumbnail and the video file or a player URL.</summary>
@@ -70,7 +78,7 @@ public static class SitemapWriter
     }
 
     /// <summary>A urlset: plain, with image entries or with video entries depending on <see cref="SitemapFile.Kind"/>.</summary>
-    public static string UrlSet(SitemapFile file, string baseUrl)
+    public static string UrlSet(SitemapFile file, string baseUrl, SitemapGroupDefaults? defaults = null)
     {
         var sb = new StringBuilder();
         using (var w = Writer(sb))
@@ -84,6 +92,9 @@ public static class SitemapWriter
                 w.WriteStartElement("url", Ns);
                 w.WriteElementString("loc", Ns, baseUrl + u.Path);
                 if (u.LastModified is { } m) w.WriteElementString("lastmod", Ns, Date(m));
+                if (file.Kind == "urls" && defaults?.ChangeFrequency is { } freq) w.WriteElementString("changefreq", Ns, freq);
+                if (file.Kind == "urls" && defaults?.Priority is { } priority)
+                    w.WriteElementString("priority", Ns, priority.ToString("0.0", CultureInfo.InvariantCulture));
                 if (file.Kind == "images")
                     foreach (var img in u.Images.Take(1000))
                     {
@@ -140,6 +151,7 @@ public static class RobotsWriter
 
     public static string Write(SeoSettings settings, string baseUrl)
     {
+        var options = settings.RobotsOrDefault;
         var sb = new StringBuilder();
         sb.Append("# robots.txt for ").Append(baseUrl).Append('\n');
         sb.Append("# Public marketing pages are open to search engines and AI assistants; signed-in areas, the API, personal links\n");
@@ -149,6 +161,8 @@ public static class RobotsWriter
         {
             foreach (var a in Allowed) sb.Append("Allow: ").Append(a).Append('\n');
             foreach (var d in Disallowed) sb.Append("Disallow: ").Append(d).Append('\n');
+            // The editor's own rules (Agency → Website → SEO → robots.txt) apply to every crawler that may crawl the site.
+            foreach (var rule in options.ExtraRules) sb.Append(rule).Append('\n');
             sb.Append("Allow: /\n\n");
         }
 
@@ -162,7 +176,10 @@ public static class RobotsWriter
         }
         sb.Append("# Everyone else\nUser-agent: *\n");
         Rules();
+        if (!string.IsNullOrWhiteSpace(options.ExtraText))
+            sb.Append("# Added in Agency → Website → SEO → robots.txt\n").Append(options.ExtraText.TrimEnd()).Append("\n\n");
         sb.Append("Sitemap: ").Append(baseUrl).Append("/sitemap.xml\n");
+        foreach (var extra in options.ExtraSitemaps) sb.Append("Sitemap: ").Append(extra).Append('\n');
         return sb.ToString();
     }
 }

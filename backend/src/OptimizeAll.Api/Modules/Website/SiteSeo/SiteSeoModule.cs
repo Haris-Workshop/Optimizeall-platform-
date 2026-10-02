@@ -14,6 +14,7 @@ public static class SiteSeoModule
         services.AddScoped<SeoPageResolver>();
         services.AddScoped<LlmsTxtService>();
         services.AddScoped<SeoOverviewService>();
+        services.AddScoped<SeoFilesService>();
         // Fallback only: the Website module registers its redirect manager's lookup (WebsiteRedirectLookup).
         services.TryAddScoped<ISeoRedirectLookup, NoSeoRedirects>();
         services.AddHttpClient(IndexNowJob.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(20));

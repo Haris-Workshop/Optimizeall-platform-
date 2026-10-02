@@ -12,7 +12,13 @@ using OptimizeAll.Domain.Website;
 namespace OptimizeAll.Api.Modules.Website.SiteSeo;
 
 /// <summary>An indexable public URL for the sitemaps, llms.txt and the SEO overview.</summary>
-public sealed record SitemapUrl(string Path, DateTime? LastModified, string Group, IReadOnlyList<SeoImage> Images, IReadOnlyList<SeoVideo> Videos, string Title);
+/// <param name="HiddenBy">
+/// Why the URL is left out of the sitemaps although it is public: <c>page</c> (the content's own "hide from sitemap"
+/// setting) or <c>address</c> (excluded in Agency → Website → SEO → Sitemaps). Null for listed URLs.
+/// </param>
+public sealed record SitemapUrl(
+    string Path, DateTime? LastModified, string Group, IReadOnlyList<SeoImage> Images, IReadOnlyList<SeoVideo> Videos, string Title,
+    string? HiddenBy = null);
 
 public sealed partial class SeoPageResolver
 {
@@ -46,39 +52,67 @@ public sealed partial class SeoPageResolver
     private IReadOnlyList<SeoVideo> CatalogVideos(string path) =>
         SiteVideoCatalog.ForPath(path).Select(v => ToVideo(v.Block, v.UploadDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))).ToList();
 
+    public const string HiddenByPage = "page";
+    public const string HiddenByAddress = "address";
+
+    private IReadOnlyList<SitemapUrl>? _candidates;
+
     /// <summary>
     /// Every published, indexable, self-canonical public URL with its real last-modified time: built-in pages, CMS pages,
-    /// services, industries, case studies, blog posts, open jobs, live client landing pages and public campaigns.
-    /// Unpublished, scheduled, noindex and cross-canonical content is left out.
+    /// services, industries, case studies, blog posts, open jobs, live client landing pages and public campaigns, plus
+    /// the addresses an editor added. Unpublished, scheduled, noindex and cross-canonical content is left out, and so is
+    /// content hidden from the sitemap (its own setting, or an address excluded in Agency → Website → SEO → Sitemaps).
+    /// Whole sitemap groups an editor left out are dropped by <see cref="SitemapWriter.Files"/> (they stay in llms.txt).
     /// </summary>
-    public async Task<IReadOnlyList<SitemapUrl>> SitemapUrlsAsync(CancellationToken ct)
+    public async Task<IReadOnlyList<SitemapUrl>> SitemapUrlsAsync(CancellationToken ct) =>
+        (await SitemapReportAsync(ct)).Where(u => u.HiddenBy is null).ToList();
+
+    /// <summary>
+    /// <see cref="SitemapUrlsAsync"/> plus the public URLs hidden from the sitemaps, each with the reason
+    /// (<see cref="SitemapUrl.HiddenBy"/>): the admin's sitemap report.
+    /// </summary>
+    public async Task<IReadOnlyList<SitemapUrl>> SitemapReportAsync(CancellationToken ct)
     {
+        if (_candidates is not null) return _candidates;
         await EnsureLoadedAsync(ct);
+        var options = _seo.SitemapOrDefault;
+        var all = (await CandidateUrlsAsync(ct)).ToList();
+        var known = all.Select(u => u.Path).ToHashSet(StringComparer.Ordinal);
+        foreach (var extra in options.ExtraPaths.Where(known.Add))
+            all.Add(new SitemapUrl(extra, null, GroupPages, NoImages, NoVideos, extra));
+        var excluded = options.ExcludedPaths.ToHashSet(StringComparer.Ordinal);
+        _candidates = all.Select(u => u.HiddenBy is null && excluded.Contains(u.Path) ? u with { HiddenBy = HiddenByAddress } : u).ToList();
+        return _candidates;
+    }
+
+    private async Task<IReadOnlyList<SitemapUrl>> CandidateUrlsAsync(CancellationToken ct)
+    {
         var now = Now;
         var urls = new List<SitemapUrl>();
         var copyOrSettings = Latest(_copyUpdatedAt, _settingsUpdatedAt);
 
         var services = await db.Set<AgencyService>().AsNoTracking()
             .Where(s => s.IsPublished && db.Set<ServiceCategory>().Any(c => c.Id == s.CategoryId && c.IsPublished))
-            .Select(s => new { s.Slug, s.Name, s.UpdatedAt, s.HeroImageUrl, s.Seo.NoIndex, s.Seo.CanonicalUrl, s.Seo.OgImageUrl }).ToListAsync(ct);
+            .Select(s => new { s.Slug, s.Name, s.UpdatedAt, s.HeroImageUrl, s.Seo.NoIndex, s.Seo.CanonicalUrl, s.Seo.OgImageUrl, s.Seo.HideFromSitemap }).ToListAsync(ct);
         var industries = await db.Set<Industry>().AsNoTracking().Where(i => i.IsPublished)
-            .Select(i => new { i.Slug, i.Name, i.UpdatedAt, i.HeroImageUrl, i.Seo.NoIndex, i.Seo.CanonicalUrl }).ToListAsync(ct);
+            .Select(i => new { i.Slug, i.Name, i.UpdatedAt, i.HeroImageUrl, i.Seo.NoIndex, i.Seo.CanonicalUrl, i.Seo.HideFromSitemap }).ToListAsync(ct);
         var cases = await db.Set<CaseStudy>().AsNoTracking().Where(c => c.IsPublished)
-            .Select(c => new { c.Slug, c.Title, c.UpdatedAt, c.CoverImageUrl, c.GalleryImageUrls, c.Seo.NoIndex, c.Seo.CanonicalUrl }).ToListAsync(ct);
+            .Select(c => new { c.Slug, c.Title, c.UpdatedAt, c.CoverImageUrl, c.GalleryImageUrls, c.Seo.NoIndex, c.Seo.CanonicalUrl, c.Seo.HideFromSitemap }).ToListAsync(ct);
         var posts = await db.Set<BlogPost>().AsNoTracking().Where(p => p.Status == BlogPostStatus.Published && p.PublishedAt <= now)
-            .Select(p => new { p.Slug, p.Title, p.UpdatedAt, p.CoverImageUrl, p.CoverImageAlt, p.Seo.NoIndex, p.Seo.CanonicalUrl }).ToListAsync(ct);
+            .Select(p => new { p.Slug, p.Title, p.UpdatedAt, p.CoverImageUrl, p.CoverImageAlt, p.Seo.NoIndex, p.Seo.CanonicalUrl, p.Seo.HideFromSitemap }).ToListAsync(ct);
         var pages = await db.Set<SitePage>().AsNoTracking().Where(p => p.IsPublished && (p.PublishAt == null || p.PublishAt <= now))
-            .Select(p => new { p.Slug, p.Title, p.UpdatedAt, p.BlocksJson, p.Seo.NoIndex, p.Seo.CanonicalUrl }).ToListAsync(ct);
+            .Select(p => new { p.Slug, p.Title, p.UpdatedAt, p.BlocksJson, p.Seo.NoIndex, p.Seo.CanonicalUrl, p.Seo.HideFromSitemap }).ToListAsync(ct);
         var jobs = await db.Set<JobOpening>().AsNoTracking().Where(j => j.Status == JobOpeningStatus.Open && (j.ClosesAt == null || j.ClosesAt > now))
             .Select(j => new { j.Slug, j.Title, j.UpdatedAt }).ToListAsync(ct);
         var team = await db.Set<TeamMember>().AsNoTracking().Where(m => m.IsPublished).Select(m => new { m.Name, m.PhotoUrl, m.UpdatedAt }).ToListAsync(ct);
         var cmsBySlug = pages.ToDictionary(p => p.Slug);
 
         DateTime? Max(IEnumerable<DateTime> values) => values.Any() ? values.Max() : null;
-        void Add(string path, DateTime? modified, string group, string title, IReadOnlyList<SeoImage>? images = null, IReadOnlyList<SeoVideo>? videos = null)
+        void Add(string path, DateTime? modified, string group, string title, IReadOnlyList<SeoImage>? images = null, IReadOnlyList<SeoVideo>? videos = null,
+            bool hidden = false)
         {
             var vids = (videos ?? NoVideos).Concat(CatalogVideos(path)).ToList();
-            urls.Add(new SitemapUrl(path, modified, group, images ?? NoImages, vids, title));
+            urls.Add(new SitemapUrl(path, modified, group, images ?? NoImages, vids, title, hidden ? HiddenByPage : null));
         }
 
         // Built-in pages. /pricing and /contact also show the CMS page of the same slug.
@@ -110,18 +144,19 @@ public sealed partial class SeoPageResolver
             var heroImages = PageBlockValidator.Parse(p.BlocksJson).Where(b => b.Type == PageBlockTypes.Hero)
                 .Select(b => b.Data.Deserialize<HeroBlock>(Website.Settings.SiteSettingsService.Json)?.ImageUrl).OfType<string>()
                 .Select(u => (Url: (string?)u, Title: (string?)p.Title)).ToArray();
-            Add($"/{p.Slug}", p.UpdatedAt, GroupPages, p.Title, Img(heroImages), videos);
+            Add($"/{p.Slug}", p.UpdatedAt, GroupPages, p.Title, Img(heroImages), videos, p.HideFromSitemap);
         }
         foreach (var i in industries.Where(i => !i.NoIndex && SelfCanonical(i.CanonicalUrl, $"/industries/{i.Slug}")))
-            Add($"/industries/{i.Slug}", i.UpdatedAt, GroupPages, i.Name, Img((i.HeroImageUrl, i.Name)));
+            Add($"/industries/{i.Slug}", i.UpdatedAt, GroupPages, i.Name, Img((i.HeroImageUrl, i.Name)), hidden: i.HideFromSitemap);
 
         foreach (var s in services.Where(s => !s.NoIndex && SelfCanonical(s.CanonicalUrl, $"/services/{s.Slug}")))
-            Add($"/services/{s.Slug}", s.UpdatedAt, GroupServices, s.Name, Img((s.HeroImageUrl, s.Name), (s.OgImageUrl, s.Name)));
+            Add($"/services/{s.Slug}", s.UpdatedAt, GroupServices, s.Name, Img((s.HeroImageUrl, s.Name), (s.OgImageUrl, s.Name)), hidden: s.HideFromSitemap);
         foreach (var c in cases.Where(c => !c.NoIndex && SelfCanonical(c.CanonicalUrl, $"/case-studies/{c.Slug}")))
             Add($"/case-studies/{c.Slug}", c.UpdatedAt, GroupCaseStudies, c.Title,
-                Img(new[] { (c.CoverImageUrl, (string?)c.Title) }.Concat(c.GalleryImageUrls.Select(g => ((string?)g, (string?)c.Title))).ToArray()));
+                Img(new[] { (c.CoverImageUrl, (string?)c.Title) }.Concat(c.GalleryImageUrls.Select(g => ((string?)g, (string?)c.Title))).ToArray()),
+                hidden: c.HideFromSitemap);
         foreach (var p in posts.Where(p => !p.NoIndex && SelfCanonical(p.CanonicalUrl, $"/blog/{p.Slug}")).OrderByDescending(p => p.UpdatedAt))
-            Add($"/blog/{p.Slug}", p.UpdatedAt, GroupBlog, p.Title, Img((p.CoverImageUrl, p.CoverImageAlt ?? p.Title)));
+            Add($"/blog/{p.Slug}", p.UpdatedAt, GroupBlog, p.Title, Img((p.CoverImageUrl, p.CoverImageAlt ?? p.Title)), hidden: p.HideFromSitemap);
         foreach (var j in jobs)
             Add($"/careers/{j.Slug}", j.UpdatedAt, GroupCareers, j.Title);
 
@@ -145,7 +180,7 @@ public sealed partial class SeoPageResolver
                 var videos = (u.Videos ?? Array.Empty<SeoVideo>())
                     .Select(v => v with { Mp4Url = Abs(v.Mp4Url), WebmUrl = Abs(v.WebmUrl), PosterUrl = Abs(v.PosterUrl), CaptionsUrl = Abs(v.CaptionsUrl), EmbedUrl = Abs(v.EmbedUrl) })
                     .ToList();
-                Add(u.Path, u.Modified, contributor.Group, u.Title, Img(images), videos);
+                Add(u.Path, u.Modified, contributor.Group, u.Title, Img(images), videos, u.Hidden);
             }
         return urls.Select(u => u with { Images = u.Images.DistinctBy(i => i.Url).ToList() }).ToList();
     }
@@ -154,11 +189,12 @@ public sealed partial class SeoPageResolver
     {
         var live = await db.Set<LandingPage>().AsNoTracking()
             .Where(p => p.Status == LandingPageStatus.Published && p.PublishedVersionId != null)
-            .Select(p => new { p.Id, p.ClientAccountId, VersionId = p.PublishedVersionId!.Value }).ToListAsync(ct);
+            .Select(p => new { p.Id, p.ClientAccountId, VersionId = p.PublishedVersionId!.Value, p.HideFromSitemap }).ToListAsync(ct);
         if (live.Count > 0)
         {
             var versionIds = live.Select(l => l.VersionId).ToList();
             var versions = await db.Set<LandingPageVersion>().AsNoTracking().Where(v => versionIds.Contains(v.Id)).ToListAsync(ct);
+            var hiddenVersions = live.Where(l => l.HideFromSitemap).Select(l => l.VersionId).ToHashSet();
             var clientIds = live.Select(l => l.ClientAccountId).Distinct().ToList();
             var clients = await db.Set<ClientAccount>().AsNoTracking().Where(c => clientIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Slug, ct);
             foreach (var version in versions)
@@ -171,7 +207,8 @@ public sealed partial class SeoPageResolver
                 var variant = LandingPageService.Variants(snap.Variants).FirstOrDefault();
                 if (variant.Key is not null) LandingNodes(holder, variant.Blocks, snap.Name, version.PublishedAt);
                 var images = Img((snap.OgImageUrl, snap.MetaTitle ?? snap.Name)).Concat(holder.Images).ToList();
-                urls.Add(new SitemapUrl(path, version.PublishedAt, GroupLanding, images, holder.Videos, snap.MetaTitle ?? snap.Name));
+                urls.Add(new SitemapUrl(path, version.PublishedAt, GroupLanding, images, holder.Videos, snap.MetaTitle ?? snap.Name,
+                    hiddenVersions.Contains(version.Id) ? HiddenByPage : null));
             }
         }
 

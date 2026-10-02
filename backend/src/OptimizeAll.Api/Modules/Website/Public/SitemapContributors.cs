@@ -10,6 +10,9 @@ public sealed record SitemapContribution(string Path, DateTime? Modified, string
     IReadOnlyList<SiteSeo.SeoVideo>? Videos = null)
 {
     public IReadOnlyList<string>? Images { get; init; }
+
+    /// <summary>The content's own "hide from sitemap" setting is on: listed in the admin's sitemap report, not in the sitemaps.</summary>
+    public bool Hidden { get; init; }
 }
 
 /// <summary>

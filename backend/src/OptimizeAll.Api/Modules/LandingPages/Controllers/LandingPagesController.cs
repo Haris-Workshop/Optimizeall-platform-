@@ -56,6 +56,9 @@ public sealed class UpdatePageRequest
     public string? OgImageUrl { get; set; }
 
     public bool NoIndex { get; set; }
+
+    /// <summary>Leave the published page out of the sitemaps (it stays indexable); applies at once.</summary>
+    public bool HideFromSitemap { get; set; }
     public bool ExperimentEnabled { get; set; }
 
     /// <summary>Variants array: [{ key: "A", name, weight, blocks: [{ id, type, props }] }].</summary>
@@ -72,7 +75,7 @@ public sealed record PageDetailDto(
     Guid Id, Guid ClientAccountId, string ClientName, string ClientSlug, string Name, string Slug, LandingPageStatus Status, string? MetaTitle,
     string? MetaDescription, string? OgImageUrl, bool NoIndex, string? TemplateKey, JsonElement Variants, bool ExperimentEnabled,
     Guid ExperimentId, DateTime? ExperimentStartedAt, Guid? PublishedVersionId, int? PublishedVersion, DateTime? PublishedAt,
-    bool HasUnpublishedChanges, string PublicPath, Guid ConcurrencyStamp, DateTime CreatedAt, DateTime UpdatedAt);
+    bool HasUnpublishedChanges, string PublicPath, Guid ConcurrencyStamp, DateTime CreatedAt, DateTime UpdatedAt, bool HideFromSitemap = false);
 
 public sealed record VersionDto(Guid Id, int Version, DateTime PublishedAt, Guid? PublishedByUserId, string ContentHash, bool IsCurrent);
 
@@ -228,18 +231,19 @@ public sealed class LandingPagesController(
         if (request.ExperimentEnabled && variants.Count < 2)
             throw new DomainException("landing.experiment_needs_variants", "Add a second variant (B) before turning the A/B test on.");
 
-        var before = new { page.Name, page.Slug, page.ExperimentEnabled, page.NoIndex };
+        var before = new { page.Name, page.Slug, page.ExperimentEnabled, page.NoIndex, page.HideFromSitemap };
         page.Name = request.Name.Trim();
         page.Slug = slug;
         page.MetaTitle = request.MetaTitle?.Trim();
         page.MetaDescription = request.MetaDescription?.Trim();
         page.OgImageUrl = string.IsNullOrWhiteSpace(request.OgImageUrl) ? null : request.OgImageUrl.Trim();
         page.NoIndex = request.NoIndex;
+        page.HideFromSitemap = request.HideFromSitemap;
         if (request.ExperimentEnabled && !page.ExperimentEnabled) page.ExperimentStartedAt = Now;
         page.ExperimentEnabled = request.ExperimentEnabled;
         page.VariantsJson = LandingBlocks.Serialize(variants);
         page.HasUnpublishedChanges = true;
-        audit.Record("landing.page_updated", nameof(LandingPage), page.Id, before, new { page.Name, page.Slug, page.ExperimentEnabled, page.NoIndex, Variants = variants.Count });
+        audit.Record("landing.page_updated", nameof(LandingPage), page.Id, before, new { page.Name, page.Slug, page.ExperimentEnabled, page.NoIndex, page.HideFromSitemap, Variants = variants.Count });
         await db.SaveChangesAsync(ct);
         return await ToDetailAsync(page, ct);
     }
@@ -466,7 +470,7 @@ public sealed class LandingPagesController(
         using var doc = JsonDocument.Parse(p.VariantsJson);
         return new PageDetailDto(p.Id, p.ClientAccountId, client.Name ?? string.Empty, client.Slug ?? string.Empty, p.Name, p.Slug, p.Status, p.MetaTitle,
             p.MetaDescription, p.OgImageUrl, p.NoIndex, p.TemplateKey, doc.RootElement.Clone(), p.ExperimentEnabled, p.ExperimentId, p.ExperimentStartedAt,
-            p.PublishedVersionId, version, p.PublishedAt, p.HasUnpublishedChanges, PublicPath(client.Slug, liveSlug), p.ConcurrencyStamp, p.CreatedAt, p.UpdatedAt);
+            p.PublishedVersionId, version, p.PublishedAt, p.HasUnpublishedChanges, PublicPath(client.Slug, liveSlug), p.ConcurrencyStamp, p.CreatedAt, p.UpdatedAt, p.HideFromSitemap);
     }
 
     public static string PublicPath(string? clientSlug, string slug) => $"/lp/{clientSlug}/{slug}";

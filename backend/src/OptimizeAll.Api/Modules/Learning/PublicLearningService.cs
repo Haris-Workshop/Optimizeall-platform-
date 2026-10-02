@@ -148,7 +148,7 @@ public sealed partial class PublicLearningService(AppDbContext db, CourseContent
                 l.Video?.Src is not null || l.Lecture?.Src is not null, l.Lecture is not null, l.Lecture?.TargetMinutes ?? 0)).ToList())).ToList();
         var seo = new LearningSeoDto(SeoTitle($"{pack.Title} — free course with certificate", $"{pack.Title} — free course", pack.Title),
             Truncate(pack.Subtitle, SeoDescriptionMax),
-            LearningLinks.CoursePath(pack.Slug), links.BadgeImage(pack.Slug), false);
+            LearningLinks.CoursePath(pack.Slug), links.BadgeImage(pack.Slug), course.NoIndex);
         var jsonLd = new List<JsonElement>
         {
             LearningJsonLd.Course(pack, links, issuer, course),
@@ -203,7 +203,7 @@ public sealed partial class PublicLearningService(AppDbContext db, CourseContent
             r.Index + 1, doc.Lessons.Count,
             new LearningSeoDto(SeoTitle($"{lesson.Title} — {doc.Pack.Title}", lesson.Title), excerpt, path,
                 lesson.Lecture?.Poster is { } poster ? links.Absolute(poster)
-                : lesson.Lecture?.YouTubeId is { } yt ? YouTube.Thumbnail(yt) : links.BadgeImage(doc.Pack.Slug), false),
+                : lesson.Lecture?.YouTubeId is { } yt ? YouTube.Thumbnail(yt) : links.BadgeImage(doc.Pack.Slug), course.NoIndex),
             jsonLd, Lecture(lesson, processing), doc.Pack.LastReviewed);
     }
 

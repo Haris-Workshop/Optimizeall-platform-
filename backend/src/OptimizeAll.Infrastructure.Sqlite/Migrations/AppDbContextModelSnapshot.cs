@@ -7847,6 +7847,9 @@ namespace OptimizeAll.Infrastructure.Sqlite.Migrations
                     b.Property<bool>("HasUnpublishedChanges")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("HideFromSitemap")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("MetaDescription")
                         .HasMaxLength(320)
                         .HasColumnType("TEXT");
@@ -8231,6 +8234,9 @@ namespace OptimizeAll.Infrastructure.Sqlite.Migrations
                     b.Property<int>("EstimatedMinutes")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("HideFromSitemap")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsFeatured")
                         .HasColumnType("INTEGER");
 
@@ -8246,6 +8252,9 @@ namespace OptimizeAll.Infrastructure.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int>("ModuleCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("NoIndex")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Origin")
@@ -19076,6 +19085,10 @@ namespace OptimizeAll.Infrastructure.Sqlite.Migrations
                                 .HasColumnType("TEXT")
                                 .HasColumnName("SeoDescription");
 
+                            b1.Property<bool>("HideFromSitemap")
+                                .HasColumnType("INTEGER")
+                                .HasColumnName("SeoHideFromSitemap");
+
                             b1.Property<bool>("NoIndex")
                                 .HasColumnType("INTEGER")
                                 .HasColumnName("SeoNoIndex");
@@ -19124,6 +19137,10 @@ namespace OptimizeAll.Infrastructure.Sqlite.Migrations
                                 .HasColumnType("TEXT")
                                 .HasColumnName("SeoDescription");
 
+                            b1.Property<bool>("HideFromSitemap")
+                                .HasColumnType("INTEGER")
+                                .HasColumnName("SeoHideFromSitemap");
+
                             b1.Property<bool>("NoIndex")
                                 .HasColumnType("INTEGER")
                                 .HasColumnName("SeoNoIndex");
@@ -19171,6 +19188,10 @@ namespace OptimizeAll.Infrastructure.Sqlite.Migrations
                                 .HasMaxLength(200)
                                 .HasColumnType("TEXT")
                                 .HasColumnName("SeoDescription");
+
+                            b1.Property<bool>("HideFromSitemap")
+                                .HasColumnType("INTEGER")
+                                .HasColumnName("SeoHideFromSitemap");
 
                             b1.Property<bool>("NoIndex")
                                 .HasColumnType("INTEGER")
@@ -19222,6 +19243,10 @@ namespace OptimizeAll.Infrastructure.Sqlite.Migrations
                                 .HasMaxLength(200)
                                 .HasColumnType("TEXT")
                                 .HasColumnName("SeoDescription");
+
+                            b1.Property<bool>("HideFromSitemap")
+                                .HasColumnType("INTEGER")
+                                .HasColumnName("SeoHideFromSitemap");
 
                             b1.Property<bool>("NoIndex")
                                 .HasColumnType("INTEGER")
@@ -19304,6 +19329,10 @@ namespace OptimizeAll.Infrastructure.Sqlite.Migrations
                                 .HasColumnType("TEXT")
                                 .HasColumnName("SeoDescription");
 
+                            b1.Property<bool>("HideFromSitemap")
+                                .HasColumnType("INTEGER")
+                                .HasColumnName("SeoHideFromSitemap");
+
                             b1.Property<bool>("NoIndex")
                                 .HasColumnType("INTEGER")
                                 .HasColumnName("SeoNoIndex");
@@ -19371,6 +19400,10 @@ namespace OptimizeAll.Infrastructure.Sqlite.Migrations
                                 .HasMaxLength(200)
                                 .HasColumnType("TEXT")
                                 .HasColumnName("SeoDescription");
+
+                            b1.Property<bool>("HideFromSitemap")
+                                .HasColumnType("INTEGER")
+                                .HasColumnName("SeoHideFromSitemap");
 
                             b1.Property<bool>("NoIndex")
                                 .HasColumnType("INTEGER")

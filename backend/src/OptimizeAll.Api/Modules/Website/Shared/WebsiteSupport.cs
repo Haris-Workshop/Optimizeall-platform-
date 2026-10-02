@@ -17,6 +17,11 @@ public sealed class FieldErrors
 
     public bool Any => _errors.Count > 0;
 
+    public bool Has(string field) => _errors.ContainsKey(field);
+
+    /// <summary>The errors collected so far (field → messages), e.g. for a preview that reports instead of throwing.</summary>
+    public IReadOnlyDictionary<string, string[]> ToDictionary() => _errors.ToDictionary(kv => kv.Key, kv => kv.Value.ToArray());
+
     public void Add(string field, string message)
     {
         if (!_errors.TryGetValue(field, out var list)) _errors[field] = list = new List<string>();
@@ -127,6 +132,7 @@ public sealed class WebsiteRules(ImageUrlPolicy images)
             OgImageUrl = Image(input.OgImageUrl, "seo.ogImageUrl", errors),
             CanonicalUrl = Link(input.CanonicalUrl, "seo.canonicalUrl", errors),
             NoIndex = input.NoIndex,
+            HideFromSitemap = input.HideFromSitemap,
         };
         if (seo.Title?.Length > 70) errors.Add("seo.title", "Keep the SEO title under 70 characters.");
         if (seo.Description?.Length > 200) errors.Add("seo.description", "Keep the meta description under 200 characters.");

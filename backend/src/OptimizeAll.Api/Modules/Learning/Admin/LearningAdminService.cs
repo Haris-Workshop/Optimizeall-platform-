@@ -81,7 +81,7 @@ public sealed class LearningAdminService(
             return new AdminCourseRowDto(c.Id, c.Slug, c.Title, c.Category, c.Level, c.Status, c.Origin, c.IsFeatured, c.SortOrder, c.LessonCount,
                 published?.Number, latest?.Number, packUpdate, s.Enrolments, s.Completions,
                 s.Enrolments == 0 ? 0 : s.Completions * 100 / s.Enrolments, s.Attempts, s.Attempts == 0 ? 0 : s.Passed * 100 / s.Attempts,
-                s.Average is { } avg ? (int)Math.Round(avg) : null, s.Certificates, c.UpdatedAt, c.ConcurrencyStamp);
+                s.Average is { } avg ? (int)Math.Round(avg) : null, s.Certificates, c.UpdatedAt, c.ConcurrencyStamp, c.NoIndex, c.HideFromSitemap);
         }).ToList();
     }
 
@@ -247,10 +247,13 @@ public sealed class LearningAdminService(
     {
         var course = await LoadAsync(courseId, ct);
         ConcurrencyGuard.Apply(db, course, request.ConcurrencyStamp!.Value);
-        var before = new { course.IsFeatured, course.SortOrder };
+        var before = new { course.IsFeatured, course.SortOrder, course.NoIndex, course.HideFromSitemap };
         course.IsFeatured = request.IsFeatured;
         course.SortOrder = request.SortOrder;
-        audit.Record("learning.course_settings_changed", nameof(Course), course.Id, before, new { course.IsFeatured, course.SortOrder });
+        course.NoIndex = request.NoIndex;
+        course.HideFromSitemap = request.HideFromSitemap;
+        audit.Record("learning.course_settings_changed", nameof(Course), course.Id, before,
+            new { course.IsFeatured, course.SortOrder, course.NoIndex, course.HideFromSitemap });
         await db.SaveChangesAsync(ct);
         return await CourseAsync(courseId, ct);
     }

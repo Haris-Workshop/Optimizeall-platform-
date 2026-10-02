@@ -26,6 +26,9 @@ public class LandingPage : AuditedEntity, IConcurrencyStamped
     public string? MetaDescription { get; set; }
     public string? OgImageUrl { get; set; }
     public bool NoIndex { get; set; }
+
+    /// <summary>Leave the published page out of the sitemaps while it stays indexable (applies at once, not versioned).</summary>
+    public bool HideFromSitemap { get; set; }
     public string? TemplateKey { get; set; }
 
     /// <summary>Draft variants: JSON array of {key, name, weight, blocks}. Variant "A" is the control.</summary>

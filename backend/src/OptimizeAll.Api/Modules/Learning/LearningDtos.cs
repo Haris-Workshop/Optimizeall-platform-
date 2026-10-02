@@ -187,7 +187,7 @@ public sealed record AdminCourseRowDto(
     Guid Id, string Slug, string Title, CourseCategory Category, CourseLevel Level, CourseStatus Status, CourseSource Origin,
     bool IsFeatured, int SortOrder, int LessonCount, int? PublishedVersionNumber, int? LatestVersionNumber, bool PackUpdateAvailable,
     int Enrolments, int Completions, int CompletionRate, int Attempts, int PassRate, int? AverageScore, int Certificates,
-    DateTime UpdatedAt, Guid ConcurrencyStamp);
+    DateTime UpdatedAt, Guid ConcurrencyStamp, bool NoIndex = false, bool HideFromSitemap = false);
 
 public sealed record CourseVersionDto(
     Guid Id, int Number, CourseSource Source, int? PackVersion, Guid? BasedOnVersionId, string? Note, DateTime CreatedAt,
@@ -254,6 +254,12 @@ public sealed class CourseSettingsRequest
 
     [Range(0, 10_000)]
     public int SortOrder { get; set; }
+
+    /// <summary>Ask search engines not to index the course and its lessons (also leaves them out of the sitemaps).</summary>
+    public bool NoIndex { get; set; }
+
+    /// <summary>Leave the course and its lessons out of the sitemaps and llms.txt (they stay indexable).</summary>
+    public bool HideFromSitemap { get; set; }
 
     [Required]
     public Guid? ConcurrencyStamp { get; set; }

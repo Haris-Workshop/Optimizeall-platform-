@@ -27,6 +27,33 @@ export function isValidDate(value: DateInput | null | undefined): boolean {
   return !Number.isNaN(toDate(value).getTime());
 }
 
+/**
+ * Formatters are cached by locale and options: creating an Intl.DateTimeFormat costs far more than formatting with one
+ * (a page listing dozens of dates would otherwise spend tens of milliseconds of main-thread time building them).
+ */
+const dateFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function dateFormatter(locale: string, options: Intl.DateTimeFormatOptions = {}): Intl.DateTimeFormat {
+  const key = `${locale}|${JSON.stringify(options)}`;
+  let formatter = dateFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, options);
+    dateFormatters.set(key, formatter);
+  }
+  return formatter;
+}
+
+const relativeFormatters = new Map<string, Intl.RelativeTimeFormat>();
+
+function relativeFormatter(locale: string): Intl.RelativeTimeFormat {
+  let formatter = relativeFormatters.get(locale);
+  if (!formatter) {
+    formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+    relativeFormatters.set(locale, formatter);
+  }
+  return formatter;
+}
+
 export function browserTimeZone(): string {
   try {
     return new Intl.DateTimeFormat(browserLocale()).resolvedOptions().timeZone || 'UTC';
@@ -36,13 +63,20 @@ export function browserTimeZone(): string {
 }
 
 /** True when the IANA zone is known to this runtime. */
+const knownZones = new Map<string, boolean>();
+
 export function isValidTimeZone(timeZone: string): boolean {
-  try {
-    new Intl.DateTimeFormat('en', { timeZone });
-    return true;
-  } catch {
-    return false;
+  let valid = knownZones.get(timeZone);
+  if (valid === undefined) {
+    try {
+      dateFormatter('en', { timeZone });
+      valid = true;
+    } catch {
+      valid = false;
+    }
+    knownZones.set(timeZone, valid);
   }
+  return valid;
 }
 
 export interface FormatDateOptions {
@@ -72,7 +106,7 @@ export function formatDateTime(
         timeZoneName: 'short',
       }
     : { dateStyle: 'medium', timeStyle: 'short' };
-  return new Intl.DateTimeFormat(options.locale ?? browserLocale(), {
+  return dateFormatter(options.locale ?? browserLocale(), {
     ...style,
     timeZone: safeZone(options.timeZone),
   }).format(toDate(value));
@@ -81,7 +115,7 @@ export function formatDateTime(
 /** "Sep 23, 2026" in the given zone. A date-only value ("2026-09-23") is that calendar day in every zone. */
 export function formatDate(value: DateInput, options: FormatDateOptions = {}): string {
   if (!isValidDate(value)) return '—';
-  return new Intl.DateTimeFormat(options.locale ?? browserLocale(), {
+  return dateFormatter(options.locale ?? browserLocale(), {
     dateStyle: 'medium',
     timeZone: isDateOnly(value) ? 'UTC' : safeZone(options.timeZone),
   }).format(toDate(value));
@@ -90,7 +124,7 @@ export function formatDate(value: DateInput, options: FormatDateOptions = {}): s
 /** "2:05 PM" in the given zone. */
 export function formatTime(value: DateInput, options: FormatDateOptions = {}): string {
   if (!isValidDate(value)) return '—';
-  return new Intl.DateTimeFormat(options.locale ?? browserLocale(), {
+  return dateFormatter(options.locale ?? browserLocale(), {
     timeStyle: 'short',
     timeZone: safeZone(options.timeZone),
   }).format(toDate(value));
@@ -111,7 +145,7 @@ export function formatRelative(value: DateInput, options: { now?: DateInput; loc
   if (!isValidDate(value)) return '—';
   const now = options.now !== undefined ? toDate(options.now) : new Date();
   const diffSeconds = (toDate(value).getTime() - now.getTime()) / 1000;
-  const rtf = new Intl.RelativeTimeFormat(options.locale ?? browserLocale(), { numeric: 'auto' });
+  const rtf = relativeFormatter(options.locale ?? browserLocale());
   if (Math.abs(diffSeconds) < 45) return rtf.format(0, 'second');
   for (const [unit, seconds] of RELATIVE_UNITS) {
     if (Math.abs(diffSeconds) >= seconds) return rtf.format(Math.round(diffSeconds / seconds), unit);
@@ -122,7 +156,7 @@ export function formatRelative(value: DateInput, options: { now?: DateInput; loc
 /** Calendar date (YYYY-MM-DD) of an instant in a zone — for grouping and date inputs. */
 export function toZonedDateKey(value: DateInput, timeZone?: string): string {
   if (isDateOnly(value)) return value;
-  const parts = new Intl.DateTimeFormat('en-CA', {
+  const parts = dateFormatter('en-CA', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -135,7 +169,7 @@ export function toZonedDateKey(value: DateInput, timeZone?: string): string {
 /** Greeting for the user's local hour in their zone. */
 export function greetingFor(date: DateInput = new Date(), timeZone?: string): string {
   const hour = Number(
-    new Intl.DateTimeFormat('en-US', {
+    dateFormatter('en-US', {
       hour: 'numeric',
       hourCycle: 'h23',
       timeZone: safeZone(timeZone),

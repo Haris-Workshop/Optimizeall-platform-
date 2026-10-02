@@ -36,7 +36,7 @@ public sealed partial class SeoPageResolver
     /// </summary>
     private async Task<SeoPage> AcademyAsync(IReadOnlyDictionary<string, string> query, CancellationToken ct)
     {
-        var page = NewPage("/learn", AcademyTitle, AcademyDescription);
+        var page = NewPage("/learn", _copy.Text("academy.seo.title"), _copy.Text("academy.seo.description"));
         page.Source = "Academy";
         page.EditPath = LearningAdminPath;
         if (CatalogFilters.Any(query.ContainsKey))

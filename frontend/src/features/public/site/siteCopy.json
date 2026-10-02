@@ -518,6 +518,8 @@
       "label": "Academy (/learn)",
       "scope": "Website",
       "entries": [
+        { "key": "academy.seo.title", "label": "Search title of /learn (the section name is added after it)", "type": "text", "default": "Free courses with certificates" },
+        { "key": "academy.seo.description", "label": "Search description of /learn", "type": "textarea", "default": "Optimize All Academy: free, practical courses in sales, marketing, SEO and AI. Learn at your own pace and add a verified certificate to LinkedIn." },
         { "key": "academy.hero.eyebrow", "label": "Hero eyebrow", "type": "text", "default": "Optimize All Academy" },
         { "key": "academy.hero.title", "label": "Hero headline", "type": "text", "default": "Free courses. Real skills." },
         { "key": "academy.hero.titleAccent", "label": "Hero headline (highlighted part)", "type": "text", "default": "Verified certificates." },

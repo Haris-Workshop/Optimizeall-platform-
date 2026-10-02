@@ -415,10 +415,12 @@ function useCounted(value: number): string {
 }
 
 export function AcademyPage() {
+  const copy = useSiteCopy();
   useDocumentHead({
-    // Same title and description as the server-rendered page (SeoPageResolver.Learning.cs), within 60 / 155 characters.
-    title: ACADEMY_TITLE,
-    description: ACADEMY_DESCRIPTION,
+    // Same title and description as the server-rendered page (SeoPageResolver.Learning.cs): editable page texts whose
+    // defaults are ACADEMY_TITLE / ACADEMY_DESCRIPTION.
+    title: copy.text('academy.seo.title'),
+    description: copy.text('academy.seo.description'),
     canonical: academyPaths.home,
     jsonLd: [
       {
@@ -431,7 +433,6 @@ export function AcademyPage() {
       },
     ],
   });
-  const copy = useSiteCopy();
   const root = useRevealRoot();
   const [params, setParams] = useSearchParams();
   const categories = useCategories();

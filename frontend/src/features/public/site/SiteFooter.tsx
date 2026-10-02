@@ -198,6 +198,9 @@ export function SiteFooter({ onCookieSettings, variant = 'agency' }: { onCookieS
     (column) => column.title.toLowerCase() !== 'academy',
   );
   const contact = site?.contact;
+  // An emptied group is left out (Settings → Footer).
+  const productLinks = site?.footer.productLinks ?? DEFAULT_PRODUCT_LINKS;
+  const signInLinks = site?.footer.signInLinks ?? DEFAULT_SIGN_IN_LINKS;
 
   return (
     <footer className="public-footer site-footer site-footer--agency">
@@ -257,8 +260,8 @@ export function SiteFooter({ onCookieSettings, variant = 'agency' }: { onCookieS
             {columns.map((column) => (
               <LinkGroup key={column.title} title={column.title} links={column.links} />
             ))}
-            <LinkGroup title={copy.text('shared.footer.productLinksTitle')} links={site?.footer.productLinks ?? DEFAULT_PRODUCT_LINKS} />
-            <LinkGroup title={copy.text('shared.footer.signInTitle')} links={site?.footer.signInLinks ?? DEFAULT_SIGN_IN_LINKS} />
+            {productLinks.length > 0 && <LinkGroup title={copy.text('shared.footer.productLinksTitle')} links={productLinks} />}
+            {signInLinks.length > 0 && <LinkGroup title={copy.text('shared.footer.signInTitle')} links={signInLinks} />}
           </nav>
         </div>
         <LegalRow onCookieSettings={onCookieSettings} social />

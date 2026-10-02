@@ -9,6 +9,8 @@ test('anonymous visitors browse the academy, read a lesson and try its knowledge
   const errors = watchErrors(page);
   await page.goto('/learn');
   await expect(page.getByRole('heading', { level: 1, name: /Free courses/ })).toBeVisible();
+  // The page is server-rendered: the filters respond once the app has hydrated it.
+  await expect(page.locator('html[data-app-ready]')).toHaveCount(1);
   await page.getByRole('group', { name: 'Filter by category' }).getByRole('button', { name: /Optimize All platform/ }).click();
   await expect(page).toHaveURL(/category=Platform/);
   // The course may also appear in the hub's "Just published" rail: follow the catalog's card.

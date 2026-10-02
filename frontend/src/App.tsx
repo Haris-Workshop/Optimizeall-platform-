@@ -1,5 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { markClientNavigation } from '@/lib/ssr';
 import { AppProviders } from './app/providers';
@@ -19,6 +19,8 @@ function createRouter() {
 /** The app. `queryClient` comes from src/main.tsx when the page was rendered on the server (seeded with its data). */
 export function App({ queryClient }: { queryClient?: QueryClient }) {
   const [router] = useState(createRouter);
+  // The app is live (a server-rendered page is hydrated): `html[data-app-ready]`, for tests that interact right away.
+  useEffect(() => document.documentElement.setAttribute('data-app-ready', ''), []);
   return (
     <AppProviders queryClient={queryClient}>
       <RouterProvider router={router} future={{ v7_startTransition: true }} />

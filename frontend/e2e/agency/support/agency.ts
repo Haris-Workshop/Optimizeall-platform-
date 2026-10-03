@@ -114,6 +114,12 @@ export function watchErrors(page: Page) {
     // Playwright's trace recorder injects its snapshot script into every frame; Chromium refuses it in the app's
     // sandboxed srcdoc previews (email/social previews use sandbox="") and logs this. It never happens without tracing.
     if (/^Blocked script execution in 'about:srcdoc'/.test(msg.text())) return;
+    // Playwright's trace recorder reads a page's blob: images (an upload's preview) with fetch(), which the strict
+    // connect-src 'self' refuses; the app itself only shows them in <img>, which img-src allows.
+    if (/^Refused to connect to 'blob:/.test(msg.text())) return;
+    // The demo media library links photos on picsum.photos; the strict img-src (own images, i.ytimg.com, IMG_SRC_EXTRA)
+    // refuses other hosts by design, so those thumbnails stay empty.
+    if (/^Refused to load the image 'https:\/\/picsum\.photos\//.test(msg.text())) return;
     problems.push(`console: ${msg.text()}`);
   });
   page.on('pageerror', (err) => problems.push(`pageerror: ${err.message}`));

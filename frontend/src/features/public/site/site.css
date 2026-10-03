@@ -3655,6 +3655,8 @@ button.site-chip {
 
 .oa-co-posts > li {
   contain-intrinsic-size: auto 400px;
+}
+
 /* Uploaded brand logo (Site settings → Brand): sized by its height attribute; an optional dark-background version
    replaces it in dark themes (system preference unless the theme is forced). */
 .site-brand-logo {

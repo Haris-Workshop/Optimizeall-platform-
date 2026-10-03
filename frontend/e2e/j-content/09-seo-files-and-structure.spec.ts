@@ -154,7 +154,7 @@ test.describe.serial('SEO files and site structure', () => {
       errors.expectClean('the site settings');
 
       // The server-rendered home page follows the new order; the app keeps it after hydration.
-      const html = (await anonGet('/')).text;
+      const html = (await anonGet('/_document/')).text;
       expect(html.indexOf('Get marketing insights in your inbox')).toBeLessThan(
         html.indexOf('Every channel, one accountable team'),
       );

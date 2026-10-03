@@ -1,5 +1,5 @@
 import { ArrowUpRight } from 'lucide-react';
-import { type CSSProperties, type RefObject, type ReactNode, useEffect, useState } from 'react';
+import { type RefObject, type ReactNode, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { buttonClasses, type ButtonSize, type ButtonVariant } from '@/components/ui/buttonStyles';
 import { siteDate } from '../site/format';
@@ -45,10 +45,6 @@ export function SponsoredLink({
   );
 }
 
-export function accent(partner: PartnerCard): CSSProperties | undefined {
-  return partner.brandColor ? ({ '--partner-accent': partner.brandColor } as CSSProperties) : undefined;
-}
-
 /** The partners whose brand colours are defined in partnerCards.css (class names, so no inline styles are needed). */
 const THEMED = new Set(['pci-ai', 'certuvo']);
 
@@ -59,7 +55,7 @@ export function themeClass(slug: string): string {
 
 export function PartnerLogo({ partner, size = 56 }: { partner: Pick<PartnerCard, 'logoUrl' | 'name'>; size?: number }) {
   return (
-    <span className="partner-logo" style={{ width: size, height: size }}>
+    <span className={`partner-logo partner-logo--${[48, 56, 72, 96, 152].includes(size) ? size : 56}`}>
       <img
         src={partner.logoUrl}
         {...partnerLogoSources(partner.logoUrl, size)}

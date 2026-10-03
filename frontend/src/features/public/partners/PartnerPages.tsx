@@ -1,5 +1,6 @@
 import { Check, Info } from 'lucide-react';
-import { useId, useRef, type CSSProperties } from 'react';
+import { useId, useRef } from 'react';
+import clsx from 'clsx';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { ButtonLink, Skeleton } from '@/components/ui';
 import { isInternalHref } from '@/lib/safeHref';
@@ -11,6 +12,7 @@ import { CoCta, CoHero, CoSection } from '../pages/companyKit';
 import { type PartnerCard, type PartnerOffering, type PartnerProfile, usePartner, usePartners } from './api';
 import { PartnerLogo, PartnerOfferNote, SponsoredLink } from './PartnerSlot';
 import { PartnerShare } from './PartnerShare';
+import { themeClass } from './PartnerParts';
 import { useImpression } from './tracking';
 import './partners.css';
 import { partnerLogoSources } from './logoSources';
@@ -27,7 +29,6 @@ function joinNames(names: string[]): string {
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
-const accent = (color: string | null): CSSProperties | undefined => (color ? ({ '--partner-accent': color } as CSSProperties) : undefined);
 
 /** The disclosure shown on every partner page (visible text, not hidden in markup). */
 function Disclosure({ name }: { name?: string }) {
@@ -48,7 +49,7 @@ function DirectoryCard({ partner }: { partner: PartnerCard }) {
   const { pathname } = useLocation();
   useImpression(ref, { partner: partner.slug, slot: 'partners.directory', path: pathname });
   return (
-    <article ref={ref} className="partner-card" style={accent(partner.brandColor)}>
+    <article ref={ref} className={clsx('partner-card', themeClass(partner.slug))}>
       <div className="partner-card__head">
         <PartnerLogo partner={partner} size={72} />
       </div>
@@ -76,7 +77,7 @@ function LogoConstellation({ partners }: { partners: PartnerCard[] }) {
   return (
     <div className="oa-co-glass partner-hero-logos" aria-hidden="true">
       {partners.slice(0, 4).map((p) => (
-        <span key={p.slug} className="partner-hero-logos__item" style={accent(p.brandColor)}>
+        <span key={p.slug} className={clsx('partner-hero-logos__item', themeClass(p.slug))}>
           <img src={p.logoUrl} {...partnerLogoSources(p.logoUrl, 96)} alt="" width={96} height={96} loading="lazy" decoding="async" />
         </span>
       ))}
@@ -228,7 +229,7 @@ export function PartnerProfilePage() {
               </>
             }
             aside={
-              <div className="partner-hero-card" style={accent(p.brandColor)}>
+              <div className={clsx('partner-hero-card', themeClass(p.slug))}>
                 <PartnerLogo partner={p} size={152} />
                 <p>{p.relationshipLabel}.</p>
               </div>
@@ -285,7 +286,7 @@ export function PartnerProfilePage() {
               <ul className="partner-grid">
                 {p.related.map((r) => (
                   <li key={r.slug}>
-                    <article className="partner-card partner-card--compact" style={accent(r.brandColor)}>
+                    <article className={clsx('partner-card partner-card--compact', themeClass(r.slug))}>
                       <div className="partner-card__head">
                         <PartnerLogo partner={r} size={56} />
                         <h3 className="partner-card__title">

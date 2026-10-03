@@ -3655,4 +3655,31 @@ button.site-chip {
 
 .oa-co-posts > li {
   contain-intrinsic-size: auto 400px;
+/* Uploaded brand logo (Site settings → Brand): sized by its height attribute; an optional dark-background version
+   replaces it in dark themes (system preference unless the theme is forced). */
+.site-brand-logo {
+  display: inline-flex;
+  align-items: center;
+}
+.site-brand-logo__img {
+  display: block;
+  width: auto;
+  max-width: 14rem;
+}
+.site-brand-logo__img--dark {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .site-brand-logo__img--has-dark {
+    display: none;
+  }
+  :root:not([data-theme='light']) .site-brand-logo__img--dark {
+    display: block;
+  }
+}
+:root[data-theme='dark'] .site-brand-logo__img--has-dark {
+  display: none;
+}
+:root[data-theme='dark'] .site-brand-logo__img--dark {
+  display: block;
 }

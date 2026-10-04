@@ -159,6 +159,9 @@ test.describe.serial('SEO files and site structure', () => {
         html.indexOf('Every channel, one accountable team'),
       );
       const visitorPage = await openPublic(browser, '/');
+      // Sections arrive after the app is ready when the page is not server-rendered: wait for both before comparing.
+      await expect(visitorPage.getByRole('heading', { level: 2, name: 'Every channel, one accountable team' })).toBeVisible({ timeout: 30_000 });
+      await expect(visitorPage.getByRole('heading', { level: 2, name: 'Get marketing insights in your inbox' })).toBeAttached({ timeout: 30_000 });
       const h2 = await visitorPage.getByRole('heading', { level: 2 }).allTextContents();
       expect(h2.indexOf('Get marketing insights in your inbox')).toBeLessThan(
         h2.indexOf('Every channel, one accountable team'),

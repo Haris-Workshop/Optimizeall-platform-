@@ -270,6 +270,8 @@ describe('BookConsultationPage', () => {
     await user.click(screen.getByRole('button', { name: /^Book .+ at / }));
 
     expect(await screen.findByText('See you soon')).toBeInTheDocument();
+    // The confirmation is brought into view (the long form it replaces would leave the visitor at the footer).
+    expect(window.scrollTo).toHaveBeenCalled();
     const body = calls.find((c) => c.method === 'POST' && c.path === '/public/consultations')!.body as Record<string, unknown>;
     expect(body).toMatchObject({ slotStart: '2026-09-29T14:00:00Z', email: 'ada@example.com', consent: true });
     expect(typeof body.visitorTimeZone).toBe('string');

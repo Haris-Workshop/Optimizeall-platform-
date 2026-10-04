@@ -175,15 +175,26 @@ export function SubmitRow({ children }: { children: ReactNode }) {
   );
 }
 
+/** Space kept above the confirmation so the sticky site header does not cover it. */
+const SUCCESS_SCROLL_OFFSET = 96;
+
 /**
  * The confirmation that replaces a submitted form: a tick, the heading (focused, so it is announced and keyboard users
  * start from it), the message, the reference and two ways onward.
  */
 export function FormSuccess({ title, reference, children }: { title: string; reference?: string; children?: ReactNode }) {
   const heading = useRef<HTMLHeadingElement>(null);
-  useEffect(() => heading.current?.focus({ preventScroll: true }), []);
+  const card = useRef<HTMLDivElement>(null);
+  // The form that was just submitted was far taller than this card: without scrolling, the browser keeps the old offset
+  // and the visitor lands on the footer with the confirmation above the fold. Bring the confirmation (just under the
+  // sticky header) into view, then give it focus.
+  useEffect(() => {
+    const top = (card.current?.getBoundingClientRect().top ?? 0) + window.scrollY - SUCCESS_SCROLL_OFFSET;
+    window.scrollTo({ top: Math.max(0, top) });
+    heading.current?.focus({ preventScroll: true });
+  }, []);
   return (
-    <div className="oa-co-card oa-co-success" role="status" aria-live="polite">
+    <div ref={card} className="oa-co-card oa-co-success" role="status" aria-live="polite">
       <span className="oa-co-success__mark" aria-hidden="true">
         <Check />
       </span>

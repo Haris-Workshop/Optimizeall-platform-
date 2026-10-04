@@ -20,8 +20,7 @@
   gap: var(--space-2);
 }
 
-.ui-field__optional,
-.ui-field__required {
+.ui-field__optional {
   color: var(--color-text-subtle);
   font-weight: var(--weight-regular);
   font-size: var(--text-xs);

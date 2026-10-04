@@ -1952,11 +1952,6 @@ img.oa-co-member__portrait {
   letter-spacing: -0.02em;
 }
 
-.oa-co-summary__sub {
-  color: var(--color-text-muted);
-  font-size: var(--text-small);
-}
-
 .oa-co-dl {
   display: grid;
   gap: 0;

@@ -314,38 +314,9 @@
   font-size: var(--text-xs);
 }
 
-.pb-choice {
-  display: grid;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.pb-choice label {
-  display: flex;
-  gap: var(--space-3);
-  align-items: flex-start;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-control);
-  cursor: pointer;
-  transition:
-    border-color var(--duration-fast) var(--ease-standard),
-    background-color var(--duration-fast) var(--ease-standard);
-}
-
-.pb-choice label:hover {
-  border-color: var(--color-border-strong);
-}
-
 .pb-choice label:has(input:checked) {
   border-color: var(--color-primary);
   background: var(--color-primary-soft);
-}
-
-.pb-choice input:checked + span {
-  font-weight: var(--weight-semibold);
 }
 
 .pb-code {

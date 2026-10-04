@@ -45,11 +45,6 @@
   margin: 0;
 }
 
-.ad-num {
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
 .ad-list {
   margin: 0;
   padding-left: var(--space-5);

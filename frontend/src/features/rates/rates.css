@@ -237,21 +237,6 @@
 }
 
 /* Participant "your rate" */
-.rt-your-rate {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--brand-border, var(--color-border));
-  background: var(--brand-bg, var(--color-surface-2));
-  color: var(--brand-fg, var(--color-text));
-}
-
-.rt-your-rate__amount {
-  font-size: var(--text-h3);
-  font-weight: 700;
-}
 
 /* Version terms under the rates table: one quiet surface instead of rows floating on the page. */
 .rt-terms {

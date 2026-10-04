@@ -134,11 +134,6 @@
   padding-block: var(--space-8) 0;
 }
 
-.site-home-hero + .partner-strip {
-  margin-top: calc(-1 * var(--space-8));
-  padding-top: 0;
-}
-
 .partner-strip__inner {
   display: grid;
   gap: var(--space-5);
@@ -242,9 +237,6 @@
 }
 
 @media (min-width: 900px) {
-  .site-home-hero + .partner-strip {
-    margin-top: calc(-1 * var(--space-12));
-  }
 
   .partner-strip__inner {
     grid-template-columns: minmax(0, 12rem) auto minmax(0, 1fr);

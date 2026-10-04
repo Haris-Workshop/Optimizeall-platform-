@@ -2441,16 +2441,6 @@
   color: #12152e;
 }
 
-.ax-sheet__seal {
-  position: relative;
-  display: grid;
-  place-items: center;
-}
-
-.ax-sheet__seal img {
-  filter: drop-shadow(0 14px 24px rgb(31 38 89 / 0.3));
-}
-
 .ax-record {
   display: grid;
   gap: var(--space-5);

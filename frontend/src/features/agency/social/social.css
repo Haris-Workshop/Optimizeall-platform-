@@ -241,12 +241,6 @@
   outline: 2px solid var(--color-focus);
 }
 
-.sm-week {
-  display: grid;
-  gap: var(--space-2);
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
-}
-
 @media (max-width: 767px) {
   .sm-calendar {
     grid-template-columns: minmax(0, 1fr);
@@ -424,32 +418,13 @@
   font-size: var(--text-small);
 }
 
-.sm-media-thumb {
-  width: 3.5rem;
-  height: 3.5rem;
-  object-fit: cover;
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-3);
-}
-
 .sm-comment {
   border-left: 3px solid var(--color-border);
   padding-left: var(--space-3);
-}
-
-.sm-comment--client {
-  border-left-color: var(--color-accent);
 }
 
 .sm-pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   margin: 0;
-}
-
-.sm-heat {
-  display: grid;
-  gap: 2px;
-  grid-template-columns: 4rem repeat(auto-fit, minmax(1.5rem, 1fr));
-  font-size: var(--text-xs);
 }

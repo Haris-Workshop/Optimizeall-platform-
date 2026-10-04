@@ -101,12 +101,6 @@
   align-items: center;
 }
 
-@media (max-width: 767px) {
-  .pp-actions--stack-mobile > * {
-    flex: 1 1 100%;
-  }
-}
-
 /* Touch targets: every interactive element in the portal is at least 44px tall on phones. */
 @media (max-width: 767px) {
   .pp-page .ui-button,

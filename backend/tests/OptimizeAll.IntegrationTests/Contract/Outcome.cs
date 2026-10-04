@@ -54,12 +54,15 @@ public sealed class Outcome
     /// dev/preview server pass its response to browsers and crawlers as is, and a missing page must be a real
     /// <c>404</c>/<c>410</c> HTML page (noindex, helpful links, the app shell) — a JSON problem there would be what
     /// visitors and search engines see. Everything else still applies to them: no 5xx, no internals, and the 4xx must
-    /// be a complete HTML document (or the API's usual problem when the request never reached the renderer).
+    /// be a complete HTML document (or the API's usual problem when the request never reached the renderer). The partner
+    /// short link <c>/go/{alias}</c> is the same kind of endpoint: people follow it from newsletters and bios, so a retired
+    /// alias answers 404 with a small page that leads on (PartnerShortLinksController.UnknownShortLink).
     /// </summary>
     public static readonly IReadOnlySet<string> HtmlDocumentEndpoints = new HashSet<string>(StringComparer.Ordinal)
     {
         "GET _document/{**path}",
         "HEAD _document/{**path}",
+        "GET go/{alias}",
     };
 
     /// <summary>

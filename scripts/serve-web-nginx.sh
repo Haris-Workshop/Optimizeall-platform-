@@ -45,7 +45,11 @@ cp "$FRONTEND_DIR"/nginx/snippets/*.conf "$WORK_DIR/snippets/"
 
 MIME_TYPES="/etc/nginx/mime.types"
 [ -f "$MIME_TYPES" ] || die "$MIME_TYPES not found"
+# As root nginx would drop its workers to "nobody", which cannot read the root-owned temp directory in $WORK_DIR.
+NGINX_USER=""
+[ "$(id -u)" = "0" ] && NGINX_USER="user root;"
 cat > "$WORK_DIR/nginx.conf" <<EOF
+$NGINX_USER
 worker_processes 1;
 daemon off;
 pid $WORK_DIR/nginx.pid;

@@ -154,7 +154,9 @@
                 "term": "SDK",
                 "say": "S D K"
               }
-            ]
+            ],
+            "src": "https://www.youtube.com/watch?v=zS-quGOMLCM",
+            "publishedAt": "2026-10-04"
           },
           "keyTakeaways": [
             "A system prompt is a job brief: role, objective, rules with reasons, knowledge/tools and an output contract.",

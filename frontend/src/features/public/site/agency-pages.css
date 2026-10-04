@@ -2276,8 +2276,7 @@ div.oa-a-rows {
   -webkit-box-orient: vertical;
 }
 
-.oa-art-cap__hub,
-.oa-art-sector__core {
+.oa-art-cap__hub {
   --logo-primary: #c9cff5;
   --logo-accent: #fcb31e;
 }
@@ -2305,8 +2304,7 @@ div.oa-a-rows {
 }
 
 @media (max-width: 1023px) {
-  .oa-art-cap,
-  .oa-art-sector {
+  .oa-art-cap {
     width: min(100%, 420px);
   }
 }
@@ -2320,239 +2318,6 @@ div.oa-a-rows {
     align-items: center;
     justify-content: center;
   }
-}
-
-/* Sector rings (/industries, industry page) */
-.oa-art-sector {
-  position: relative;
-  container-type: inline-size;
-  width: min(100%, 500px);
-  aspect-ratio: 1;
-}
-
-.oa-art-sector__rings {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-.oa-art-sector__ring {
-  fill: none;
-  stroke: rgb(255 255 255 / 0.14);
-}
-
-.oa-art-sector__ring--dash {
-  stroke: rgb(255 255 255 / 0.12);
-  stroke-dasharray: 2 6;
-}
-
-.oa-art-sector__ring--amber {
-  stroke: rgb(252 179 30 / 0.3);
-}
-
-.oa-art-sector__sweep {
-  fill: none;
-  stroke: #fcb31e;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-dasharray: 0.08 0.92;
-  opacity: 0.8;
-  transform-origin: 200px 200px;
-}
-
-.oa-art-sector__nodes {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.oa-art-sector__nodes li {
-  position: absolute;
-  top: var(--y);
-  left: var(--x);
-  display: grid;
-  place-items: center;
-  width: 13cqi;
-  height: 13cqi;
-  border-radius: 50%;
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.04));
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.14);
-  color: rgb(255 255 255 / 0.82);
-  transform: translate(-50%, -50%);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-}
-
-.oa-art-sector__nodes svg {
-  width: 5.4cqi;
-  height: 5.4cqi;
-  stroke-width: 1.7;
-}
-
-.oa-art-sector__core {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  display: grid;
-  place-items: center;
-  width: 28cqi;
-  height: 28cqi;
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 30%, #2a3475, #10143a);
-  box-shadow:
-    0 0 0 1px rgb(252 179 30 / 0.4),
-    0 0 0 4cqi rgb(252 179 30 / 0.06),
-    0 30px 60px -20px rgb(0 0 0 / 0.7);
-  color: #fdcc52;
-  transform: translate(-50%, -50%);
-}
-
-.oa-art-sector__core svg {
-  width: 12cqi;
-  height: 12cqi;
-  stroke-width: 1.5;
-}
-
-.oa-art-sector--focus .oa-art-sector__nodes li {
-  opacity: 0.55;
-}
-
-/* Tiers (/pricing) */
-.oa-art-tiers {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4%;
-  align-items: end;
-  width: min(100%, 500px);
-  padding-block: 6%;
-}
-
-.oa-art-tiers__card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-  padding: 10% 10% 12%;
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.03));
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.1);
-}
-
-.oa-art-tiers__card:nth-child(1) {
-  min-height: 62%;
-}
-
-.oa-art-tiers__card.is-lit {
-  background:
-    radial-gradient(80% 50% at 100% 0%, rgb(252 179 30 / 0.3), transparent 70%),
-    linear-gradient(180deg, #1c2358, #11163d);
-  box-shadow:
-    inset 0 0 0 1px rgb(252 179 30 / 0.45),
-    0 30px 60px -24px rgb(0 0 0 / 0.7);
-  transform: translateY(-8%);
-}
-
-.oa-art-tiers__line {
-  display: block;
-  height: 6px;
-  border-radius: 3px;
-  background: rgb(255 255 255 / 0.16);
-}
-
-.oa-art-tiers__line--title {
-  width: 55%;
-  height: 8px;
-  background: rgb(255 255 255 / 0.32);
-}
-
-.oa-art-tiers__price {
-  display: block;
-  width: 70%;
-  height: 22px;
-  margin: 6px 0 8px;
-  border-radius: 6px;
-  background: rgb(255 255 255 / 0.22);
-}
-
-.is-lit .oa-art-tiers__price {
-  background: linear-gradient(90deg, #fee08c, #fcb31e);
-}
-
-.oa-art-tiers__check {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.oa-art-tiers__check i {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: rgb(252 179 30 / 0.55);
-}
-
-.oa-art-tiers__check .oa-art-tiers__line {
-  flex: 1;
-  max-width: 100%;
-}
-
-.oa-art-tiers__button {
-  display: block;
-  height: 26px;
-  margin-top: auto;
-  padding-top: 0;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.12);
-}
-
-.is-lit .oa-art-tiers__button {
-  background: #fcb31e;
-}
-
-/* Monogram (case study without a cover image) */
-.oa-art-mono {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: min(100%, 460px);
-  aspect-ratio: 4 / 3;
-  overflow: hidden;
-  border-radius: var(--radius-panel);
-  background:
-    radial-gradient(60% 70% at 70% 20%, rgb(252 179 30 / 0.2), transparent 70%),
-    linear-gradient(160deg, #1a2154, #0c1031);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.1), 0 40px 80px -40px rgb(0 0 0 / 0.6);
-}
-
-.oa-art-mono svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.oa-art-mono__curve {
-  fill: none;
-  stroke: rgb(252 179 30 / 0.55);
-  stroke-width: 2;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 0;
-}
-
-.oa-art-mono span {
-  position: relative;
-  color: #fff;
-  font-family: var(--font-display);
-  font-size: clamp(6rem, 4rem + 8vw, 10rem);
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: -0.05em;
-  opacity: 0.92;
 }
 
 /* Art motion: only on screen, never for reduced motion. */
@@ -2570,22 +2335,13 @@ div.oa-a-rows {
     animation-delay: calc(var(--i) * 1s);
   }
 
-  .oa-art-sector.is-inview .oa-art-sector__sweep {
-    animation: oa-art-orbit 14s linear infinite;
-  }
+  
 
-  .oa-art-sector.is-inview .oa-art-sector__nodes li {
-    animation: oa-art-float 6s ease-in-out infinite;
-    animation-delay: calc(var(--i) * -0.7s);
-  }
+  
 
-  .oa-art-tiers.is-inview .is-lit {
-    animation: oa-art-lift 6s ease-in-out infinite;
-  }
+  
 
-  .oa-art-mono__curve {
-    animation: oa-art-draw 2.4s var(--ease-standard) 300ms both;
-  }
+  
 }
 
 @keyframes oa-art-signal {
@@ -2620,36 +2376,3 @@ div.oa-a-rows {
   }
 }
 
-@keyframes oa-art-orbit {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes oa-art-float {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-
-  50% {
-    translate: 0 -4px;
-  }
-}
-
-@keyframes oa-art-lift {
-  0%,
-  100% {
-    transform: translateY(-8%);
-  }
-
-  50% {
-    transform: translateY(-11%);
-  }
-}
-
-@keyframes oa-art-draw {
-  from {
-    stroke-dashoffset: 1;
-  }
-}

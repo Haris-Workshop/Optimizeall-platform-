@@ -32,33 +32,6 @@ function Portrait({ member, className }: { member: TeamMember; className: string
   );
 }
 
-/** The hero's mosaic of the first few people (decorative: the names are in the list below). */
-function TeamMosaic({ members }: { members: TeamMember[] }) {
-  const shown = members.slice(0, 6);
-  if (shown.length < 2) return null;
-  return (
-    <div className={`oa-co-mosaic oa-co-mosaic--${Math.min(shown.length, 6)}`} aria-hidden="true">
-      {shown.map((m) => (
-        <Portrait key={m.slug} member={m} className="oa-co-mosaic__face" />
-      ))}
-    </div>
-  );
-}
-
-/**
- * The hero art's room while the data loads (blank faces / a blank panel of the usual size): rendering nothing and then
- * the art pushed the whole page down on phones when the data arrived (CLS ~0.2 on a slow device).
- */
-function TeamMosaicPlaceholder() {
-  return (
-    <div className="oa-co-mosaic oa-co-mosaic--6 oa-co-mosaic--pending" aria-hidden="true">
-      {Array.from({ length: 6 }, (_, i) => (
-        <span key={i} className="oa-co-mosaic__face" />
-      ))}
-    </div>
-  );
-}
-
 function MemberCard({ member }: { member: TeamMember }) {
   const links = member.socialLinks.filter((l) => isExternalHref(l.url));
   return (
@@ -110,7 +83,6 @@ export function TeamPage() {
         title={copy.text('team.hero.title')}
         lead={copy.text('team.hero.lead')}
         breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Team' }]}
-        aside={isLoading ? <TeamMosaicPlaceholder /> : members.length > 1 ? <TeamMosaic members={members} /> : undefined}
       />
       <PublicQueryState error={error} isLoading={false} notFoundTitle="Team unavailable">
         <CoSection eyebrow={copy.text('team.people.eyebrow')} title={copy.text('team.people.title')}>
@@ -208,7 +180,7 @@ function RolesAtAGlance({ jobs }: { jobs: JobCard[] }) {
   );
 }
 
-/** RolesAtAGlance's room while the roles load (see TeamMosaicPlaceholder). */
+/** RolesAtAGlance's room while the roles load (a blank panel of the usual size, so the page does not jump). */
 function RolesAtAGlancePlaceholder() {
   return (
     <div className="oa-co-glass oa-co-glance" aria-hidden="true">

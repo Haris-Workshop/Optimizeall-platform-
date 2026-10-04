@@ -2,8 +2,7 @@ import { ArrowRight, ArrowUpRight, Quote } from 'lucide-react';
 import { useId, useRef } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ButtonLink, EmptyState, FormField, Select, Skeleton } from '@/components/ui';
-import { useCaseStudies, useCaseStudy, useIndustries, useIndustry, useServices, type CaseStudyCard, type PublicCaseStudy } from '../site/api';
-import { MonogramArt, SectorArt } from '../site/AgencyArt';
+import { useCaseStudies, useCaseStudy, useIndustries, useIndustry, useServices, type CaseStudyCard } from '../site/api';
 import { AgencyHero, AgencySection, CaseGrid, ClosingCta, Figure, NumberedGrid, ServiceRows, type TocItem } from '../site/AgencyKit';
 import { formatPublished, PublicQueryState } from '../site/components';
 import { headFromSeo, useDocumentHead } from '../site/head';
@@ -45,10 +44,6 @@ export function IndustriesPage() {
               {copy.text('industries.hero.secondaryCta')}
             </ButtonLink>
           </>
-        }
-        // The art keeps its room while the sectors load (its fixed aspect ratio), so the page does not jump when they arrive.
-        aside={
-          isLoading || items.length > 0 ? <SectorArt sectors={items.map((i) => ({ name: i.name, icon: i.icon }))} /> : undefined
         }
       />
       <PublicQueryState error={error} isLoading={isLoading} notFoundTitle="Industries unavailable">
@@ -115,7 +110,6 @@ export function IndustriesPage() {
 export function IndustryDetailPage() {
   const { slug = '' } = useParams();
   const { data: i, isLoading, error } = useIndustry(slug);
-  const all = useIndustries();
   const copy = useSiteCopy();
   const root = useRef<HTMLDivElement>(null);
   useReveal(root);
@@ -145,9 +139,7 @@ export function IndustryDetailPage() {
               aside={
                 i.heroImageUrl ? (
                   <img className="oa-a-hero__image" src={i.heroImageUrl} alt="" width={640} height={480} decoding="async" />
-                ) : (
-                  <SectorArt sectors={(all.data ?? []).map((x) => ({ name: x.name, icon: x.icon }))} focus={{ name: i.name, icon: i.icon }} />
-                )
+                ) : undefined
               }
             />
             {i.bodyMarkdown && (
@@ -331,12 +323,6 @@ export function CaseStudiesPage() {
   );
 }
 
-/** The case study hero's side: the cover image, or the headline result, or the client's monogram. */
-function CaseHeroAside({ c }: { c: PublicCaseStudy }) {
-  if (c.coverImageUrl) return <img className="oa-a-hero__image" src={c.coverImageUrl} alt="" width={640} height={480} decoding="async" />;
-  return <MonogramArt name={c.clientName} />;
-}
-
 /**
  * /case-studies/:slug — hero → results band (each figure measured or estimated) → the story (challenge, strategy,
  * execution) beside a sticky contents rail → the client's words → gallery → services used → more case studies → call
@@ -403,7 +389,7 @@ export function CaseStudyDetailPage() {
                   )}
                 </dl>
               }
-              aside={<CaseHeroAside c={c} />}
+              aside={c.coverImageUrl ? <img className="oa-a-hero__image" src={c.coverImageUrl} alt="" width={640} height={480} decoding="async" /> : undefined}
             />
 
             {c.metrics.length > 0 && (

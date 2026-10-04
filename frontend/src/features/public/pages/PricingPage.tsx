@@ -3,7 +3,6 @@ import { memo, useDeferredValue, useId, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom';
 import { ButtonLink, EmptyState } from '@/components/ui';
 import { usePage, usePricing, type Pricing } from '../site/api';
-import { TierArt } from '../site/AgencyArt';
 import { AgencyHero, AgencySection, ClosingCta, OnThisPage, PointGrid, TierGrid, type TocItem } from '../site/AgencyKit';
 import { Blocks } from '../site/Blocks';
 import { useSiteCopy } from '../site/copy';
@@ -95,7 +94,6 @@ export function PricingPage() {
             </ButtonLink>
           </>
         }
-        aside={<TierArt />}
       />
       {page.data && <Blocks blocks={page.data.blocks.filter((b) => b.type !== 'faq')} />}
 

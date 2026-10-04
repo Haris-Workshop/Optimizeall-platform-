@@ -2937,42 +2937,6 @@ img.oa-co-member__portrait {
   margin-top: 0;
 }
 
-/* Team mosaic (hero). */
-.oa-co-mosaic {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
-  width: min(100%, 460px);
-  margin-inline: auto;
-}
-
-.oa-co-mosaic--2,
-.oa-co-mosaic--4 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  width: min(100%, 360px);
-}
-
-.oa-co-mosaic__face {
-  display: grid;
-  width: 100%;
-  aspect-ratio: 4 / 5;
-  object-fit: cover;
-  border-radius: 18px;
-  box-shadow:
-    inset 0 0 0 1px rgb(255 255 255 / 0.1),
-    0 20px 40px -24px rgb(0 0 0 / 0.7);
-  font-size: clamp(1.5rem, 1rem + 2vw, 2.25rem);
-}
-
-/* Blank faces while the team loads (TeamMosaicPlaceholder). */
-.oa-co-mosaic--pending .oa-co-mosaic__face {
-  background: rgb(255 255 255 / 0.06);
-}
-
-.oa-co-mosaic > :nth-child(3n + 2) {
-  transform: translateY(18px);
-}
-
 /* Careers hero: roles per team. */
 .oa-co-glance {
   width: min(100%, 420px);
@@ -3231,7 +3195,5 @@ img.oa-co-member__portrait {
     border-radius: var(--radius-panel);
   }
 
-  .oa-co-mosaic {
-    gap: var(--space-2);
-  }
+  
 }

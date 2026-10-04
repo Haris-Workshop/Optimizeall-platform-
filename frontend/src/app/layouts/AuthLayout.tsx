@@ -1,4 +1,4 @@
-import { BadgeCheck, CalendarClock, ShieldCheck } from 'lucide-react';
+import { BadgeCheck, GraduationCap, ShieldCheck } from 'lucide-react';
 import { Link, Outlet } from 'react-router-dom';
 import { BRAND_TAGLINE, Logo } from '@/components/brand/Logo';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -7,19 +7,19 @@ import './AuthLayout.css';
 
 const POINTS = [
   {
+    icon: GraduationCap,
+    title: 'Free Academy',
+    text: 'Courses and exams with certificates anyone can verify.',
+  },
+  {
     icon: BadgeCheck,
-    title: 'Brands you choose',
-    text: 'Share company-approved content that fits your audience.',
+    title: 'Creator campaigns',
+    text: 'Share company-approved posts; every post is reviewed by a person.',
   },
   {
     icon: ShieldCheck,
-    title: 'Human review',
-    text: 'Every post is checked by a person — clear feedback, fair decisions.',
-  },
-  {
-    icon: CalendarClock,
-    title: 'Biweekly payouts',
-    text: 'Approved earnings are paid on a transparent schedule.',
+    title: 'Client workspace',
+    text: 'Approvals, reports and invoices in one place.',
   },
 ];
 
@@ -37,7 +37,7 @@ export function AuthLayout() {
         </Link>
         <div className="auth-brand__copy">
           <p className="auth-brand__eyebrow">{BRAND_TAGLINE}</p>
-          <p className="auth-brand__headline">Get paid to share brands you believe in.</p>
+          <p className="auth-brand__headline">One account for learning, creating and client work.</p>
           <ul className="auth-brand__points">
             {POINTS.map(({ icon: Icon, title, text }) => (
               <li key={title}>

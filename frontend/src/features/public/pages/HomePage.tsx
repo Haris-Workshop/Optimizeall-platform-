@@ -10,7 +10,7 @@ import { useSiteCopy } from '../site/copy';
 import { LogoCloud } from '../site/Blocks';
 import { PriceText, TestimonialCarousel } from '../site/components';
 import { headFromSeo, useDocumentHead } from '../site/head';
-import { AcademyArt, CreatorsArt, GrowthOrbit } from '../site/HomeArt';
+import { GrowthOrbit } from '../site/HomeArt';
 import { SiteIcon } from '../site/icons';
 import { trackGlow, useReveal } from '../site/motion';
 import { type HomeSectionKey, useSections } from '../site/layout';
@@ -435,7 +435,6 @@ export function HomePage() {
           <ul className="oa-h-products" data-reveal="stagger">
             <li>
               <article className="oa-h-product oa-h-product--academy">
-                <AcademyArt />
                 <div className="oa-h-product__body">
                   <p className="oa-h-product__kicker">{copy.text('home.more.academy.kicker')}</p>
                   <h3 className="oa-h-product__title">
@@ -452,7 +451,6 @@ export function HomePage() {
             </li>
             <li>
               <article className="oa-h-product oa-h-product--creators">
-                <CreatorsArt />
                 <div className="oa-h-product__body">
                   <p className="oa-h-product__kicker">{copy.text('home.more.creators.kicker')}</p>
                   <h3 className="oa-h-product__title">

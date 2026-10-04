@@ -68,69 +68,6 @@ export function GrowthOrbit({ channels }: { channels: OrbitChannel[] }) {
           </li>
         ))}
       </ul>
-      <div className="oa-orbit__card">
-        <div className="oa-orbit__card-head">
-          <i />
-          <b />
-        </div>
-        <svg viewBox="0 0 160 56" preserveAspectRatio="none" focusable="false">
-          <defs>
-            <linearGradient id="oa-orbit-area" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#fcb31e" stopOpacity="0.35" />
-              <stop offset="1" stopColor="#fcb31e" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <path d="M0 48 C18 46 28 40 44 38 S72 30 88 26 S120 18 136 12 S152 6 160 4 V56 H0Z" fill="url(#oa-orbit-area)" />
-          <path className="oa-orbit__trend" pathLength={1} d="M0 48 C18 46 28 40 44 38 S72 30 88 26 S120 18 136 12 S152 6 160 4" />
-        </svg>
-        <div className="oa-orbit__card-bars">
-          {[42, 58, 50, 72, 64, 86].map((h, i) => (
-            <span key={i} style={{ '--h': `${h}%`, '--i': i } as CSSProperties} />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Academy card art: a certificate with the brand hexagon and a lesson-progress meter. */
-export function AcademyArt() {
-  return (
-    <div className="oa-prod-art oa-prod-art--academy" aria-hidden="true">
-      <div className="oa-prod-art__sheet">
-        <svg className="oa-prod-art__hex" viewBox="0 0 64 72" focusable="false">
-          <path d="M32 2 60 18v36L32 70 4 54V18Z" fill="#1f2659" stroke="#fcb31e" strokeWidth="3" />
-          <path d="m22 36 7 7 14-15" fill="none" stroke="#fcb31e" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        <i className="oa-prod-art__line oa-prod-art__line--title" />
-        <i className="oa-prod-art__line" />
-        <i className="oa-prod-art__line oa-prod-art__line--short" />
-        <span className="oa-prod-art__meter">
-          <span />
-        </span>
-      </div>
-    </div>
-  );
-}
-
-/** Creators card art: an approved post and a payout row. */
-export function CreatorsArt() {
-  return (
-    <div className="oa-prod-art oa-prod-art--creators" aria-hidden="true">
-      <div className="oa-prod-art__post">
-        <span className="oa-prod-art__avatar" />
-        <i className="oa-prod-art__line oa-prod-art__line--title" />
-        <span className="oa-prod-art__media" />
-        <span className="oa-prod-art__badge">
-          <svg viewBox="0 0 16 16" focusable="false">
-            <path d="m4 8.5 2.5 2.5L12 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </span>
-      </div>
-      <div className="oa-prod-art__payout">
-        <span className="oa-prod-art__coin" />
-        <i className="oa-prod-art__line" />
-      </div>
     </div>
   );
 }

@@ -499,10 +499,27 @@ export function usePublicLesson(slug: string, lesson: string) {
   });
 }
 
+/**
+ * A credential ID as printed on the certificate and on LinkedIn ("OA-XXXX-XXXX", the "OA-" prefix optional). The
+ * verification pages are addressed by the certificate's own id (a GUID), so a visitor who types the credential ID is sent
+ * through the code lookup first.
+ */
+export function isCredentialCode(value: string): boolean {
+  return /^(OA-)?[A-Z0-9]{4}-[A-Z0-9]{4}$/i.test(value.trim());
+}
+
+/** Looks a certificate up by its credential ID (404 `Certificate was not found` when there is none). */
+export function lookupCertificateByCode(code: string) {
+  return api.get<CertificateVerification>('/public/learning/certificates/verify', { query: { code: code.trim() } });
+}
+
 export function useCertificateVerification(id: string) {
   return useQuery({
     queryKey: learningKeys.verify(id),
-    queryFn: () => api.get<CertificateVerification>(`/public/learning/certificates/${encodeURIComponent(id)}`),
+    queryFn: () =>
+      isCredentialCode(id)
+        ? lookupCertificateByCode(id)
+        : api.get<CertificateVerification>(`/public/learning/certificates/${encodeURIComponent(id)}`),
     retry: false,
   });
 }

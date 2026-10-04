@@ -332,4 +332,32 @@ describe('Verify a certificate (/verify)', () => {
     await user.click(screen.getByRole('button', { name: 'Verify certificate' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/verify/certificates/cert-9'));
   });
+
+  it('looks a credential ID (OA-XXXX-XXXX) up and opens the certificate it belongs to', async () => {
+    const user = userEvent.setup();
+    const { calls } = mockFetch({
+      'POST /auth/refresh': () => problem(401, 'auth.session_expired', 'Expired'),
+      'GET /public/learning/certificates/verify': () => json(200, { id: '7d6f4a52-0c1e-4b7a-9a43-5d2f1c8e9b10' }),
+    });
+    const { router } = renderWithApp(<VerifyIndexPage />, { route: '/verify', path: '/verify', withAuth: false });
+    await user.type(screen.getByLabelText('Credential ID or verification link'), 'oa-abcd-2345');
+    await user.click(screen.getByRole('button', { name: 'Verify certificate' }));
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/verify/certificates/7d6f4a52-0c1e-4b7a-9a43-5d2f1c8e9b10'),
+    );
+    expect(calls.some((c) => c.path === '/public/learning/certificates/verify')).toBe(true);
+  });
+
+  it('says so next to the field when no certificate has that credential ID', async () => {
+    const user = userEvent.setup();
+    mockFetch({
+      'POST /auth/refresh': () => problem(401, 'auth.session_expired', 'Expired'),
+      'GET /public/learning/certificates/verify': () => problem(404, 'not_found', 'Certificate was not found.'),
+    });
+    const { router } = renderWithApp(<VerifyIndexPage />, { route: '/verify', path: '/verify', withAuth: false });
+    await user.type(screen.getByLabelText('Credential ID or verification link'), 'OA-AAAA-BBBB');
+    await user.click(screen.getByRole('button', { name: 'Verify certificate' }));
+    expect(await screen.findByText(/couldn’t find a certificate with that ID/)).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/verify');
+  });
 });

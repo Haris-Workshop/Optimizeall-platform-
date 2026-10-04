@@ -2,6 +2,8 @@ import { BadgeCheck, ShieldCheck } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, FormField, Input } from '@/components/ui';
+import { isCredentialCode, lookupCertificateByCode } from '@/features/learning/api';
+import { isApiError } from '@/lib/api/errors';
 import { PageHero } from '../site/components';
 import { useDocumentHead } from '../site/head';
 
@@ -26,15 +28,36 @@ export function VerifyIndexPage() {
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const submit = (e: FormEvent) => {
+  const [checking, setChecking] = useState(false);
+
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (checking) return;
     const id = certificateIdFrom(value);
     if (!id) {
       setError('Enter the certificate’s ID or paste its verification link.');
       return;
     }
     setError(null);
-    navigate(`/verify/certificates/${encodeURIComponent(id)}`);
+    if (!isCredentialCode(id)) {
+      navigate(`/verify/certificates/${encodeURIComponent(id)}`);
+      return;
+    }
+    // A credential ID ("OA-XXXX-XXXX") is looked up here, so a typo shows a message next to the field instead of a
+    // "not found" page, and a hit opens the certificate's own verification page.
+    setChecking(true);
+    try {
+      const found = await lookupCertificateByCode(id);
+      navigate(`/verify/certificates/${encodeURIComponent(found.id)}`);
+    } catch (failure) {
+      setError(
+        isApiError(failure) && failure.status === 404
+          ? 'We couldn’t find a certificate with that ID. Check it against the certificate and try again.'
+          : 'We couldn’t check that right now. Please try again in a moment.',
+      );
+    } finally {
+      setChecking(false);
+    }
   };
 
   return (
@@ -57,11 +80,11 @@ export function VerifyIndexPage() {
         <span className="site-panel__icon" aria-hidden="true">
           <ShieldCheck />
         </span>
-        <form onSubmit={submit} noValidate className="site-verify__form">
+        <form onSubmit={(e) => void submit(e)} noValidate className="site-verify__form">
           <FormField label="Credential ID or verification link" error={error}>
             <Input value={value} onChange={(e) => setValue(e.target.value)} autoComplete="off" spellCheck={false} />
           </FormField>
-          <Button type="submit" size="lg" fullWidth>
+          <Button type="submit" size="lg" fullWidth loading={checking}>
             Verify certificate
           </Button>
         </form>

@@ -113,7 +113,7 @@ describe('HomePage', () => {
       'Playbooks and insights',
       'More from Optimize All',
       'Ready for marketing that answers to results?',
-      'Get marketing insights in your inbox',
+      // No standalone newsletter section: the footer's sign-up (on every page) is right below.
     ];
     expect(titles).toEqual(order);
 

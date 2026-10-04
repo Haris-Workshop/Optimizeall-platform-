@@ -193,15 +193,19 @@ export function SiteFooter({ onCookieSettings, variant = 'agency' }: { onCookieS
     );
   }
 
-  const columns = (site?.footer.columns.length ? site.footer.columns : FALLBACK_COLUMNS).filter(
-    // Stored footers from before the academy became its own product may still lead with an Academy column.
-    (column) => column.title.toLowerCase() !== 'academy',
-  );
   const contact = site?.contact;
   // An emptied group is left out (Settings → Footer).
   const productLinks = site?.footer.productLinks ?? DEFAULT_PRODUCT_LINKS;
   const signInLinks = site?.footer.signInLinks ?? DEFAULT_SIGN_IN_LINKS;
-
+  const productTitle = copy.text('shared.footer.productLinksTitle').toLowerCase();
+  const signInTitle = copy.text('shared.footer.signInTitle').toLowerCase();
+  const columns = (site?.footer.columns.length ? site.footer.columns : FALLBACK_COLUMNS).filter((column) => {
+    const title = column.title.toLowerCase();
+    // Stored footers from before the academy became its own product may still lead with an Academy column; the
+    // "More from" and "Sign in" groups are rendered from their own settings below, so a column of the same name (the
+    // shipped defaults list both) would show every heading twice.
+    return title !== 'academy' && title !== productTitle && title !== signInTitle;
+  });
   return (
     <footer className="public-footer site-footer site-footer--agency">
       <div className="site-footer__stage">

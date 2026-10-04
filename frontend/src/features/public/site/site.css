@@ -2895,3 +2895,39 @@ svg.site-mega__icon {
 :root[data-theme='dark'] .site-brand-logo__img--dark {
   display: block;
 }
+
+/* ---------- Touch targets ----------
+ * On phones and any touch screen the small standalone links (footer lists, breadcrumbs, legal and contact links,
+ * share buttons, tag chips, the article's "On this page" toggle) get a 44px tall hit area (WCAG 2.5.5, and well past
+ * the 24px minimum of 2.5.8). Links inside running text keep the line's own height. */
+@media (pointer: coarse), (max-width: 767px) {
+  .public-header__brand,
+  .site-footer__nav a,
+  .site-footer__legal a,
+  .site-footer__legal .site-linkbutton,
+  .site-footer__contact a,
+  .site-footer__mini-nav a,
+  .site-breadcrumbs a,
+  .oa-trust__links a,
+  a.oa-co-chip,
+  .oa-co-arrowlink,
+  .oa-h-arrowlink,
+  .oa-co-toc__toggle {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .site-footer__nav ul {
+    gap: 0;
+  }
+
+  .site-footer__nav ul,
+  .site-footer__legal ul {
+    row-gap: 0;
+  }
+
+  .oa-co-toc__toggle {
+    display: flex;
+  }
+}

@@ -299,7 +299,8 @@ export function Markdown({ source, className, minLevel = 2, interlude }: Markdow
         );
       case 'code':
         return (
-          <pre key={key}>
+          // Keyboard users can scroll a long line: a scrollable region has to be focusable (WCAG 2.1.1).
+          <pre key={key} tabIndex={0} role="group" aria-label="Code">
             <code>{block.text}</code>
           </pre>
         );

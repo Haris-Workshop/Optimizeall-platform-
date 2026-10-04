@@ -1560,20 +1560,3 @@ div.oa-h-services {
   color: var(--color-heading);
 }
 
-/* ---------- Newsletter ---------- */
-.oa-h-newsletter .oa-h-title {
-  max-width: 20ch;
-  font-size: clamp(1.625rem, 1.3rem + 1.2vw, 2.25rem);
-}
-
-.oa-h-newsletter__form {
-  max-width: 560px;
-}
-
-@media (min-width: 1024px) {
-  .oa-h-newsletter__form {
-    justify-self: end;
-    width: 100%;
-    padding-top: var(--space-2);
-  }
-}

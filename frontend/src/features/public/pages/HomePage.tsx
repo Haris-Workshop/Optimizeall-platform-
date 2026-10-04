@@ -14,7 +14,6 @@ import { GrowthOrbit } from '../site/HomeArt';
 import { SiteIcon } from '../site/icons';
 import { trackGlow, useReveal } from '../site/motion';
 import { type HomeSectionKey, useSections } from '../site/layout';
-import { NewsletterSignup } from '../site/NewsletterSignup';
 import { PartnerSlot } from '../partners/PartnerSlot';
 
 /**
@@ -501,13 +500,9 @@ export function HomePage() {
         </div>
       </section>
     ),
-    newsletter: (
-      <HomeSection className="oa-h-newsletter" title={copy.text('home.newsletter.title')} intro={copy.text('home.newsletter.intro')} layout="split">
-        <div className="oa-h-newsletter__form">
-          <NewsletterSignup source="home" />
-        </div>
-      </HomeSection>
-    ),
+    // The site footer (every page, this one included) already carries the newsletter sign-up right below: a second
+    // copy a screen above it only repeated the offer.
+    newsletter: null,
   };
 
   return (

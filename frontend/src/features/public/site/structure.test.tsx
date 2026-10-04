@@ -46,9 +46,9 @@ describe('page layout', () => {
 
   it('home: hides and reorders sections and follows the edited button links', async () => {
     const home = [
-      { key: 'newsletter', visible: true },
+      { key: 'cta', visible: true },
       { key: 'process', visible: false },
-      ...HOME_SECTIONS.filter((k) => k !== 'newsletter' && k !== 'process').map((key) => ({ key, visible: true })),
+      ...HOME_SECTIONS.filter((k) => k !== 'cta' && k !== 'process').map((key) => ({ key, visible: true })),
     ];
     render(<HomePage />, {
       site: { ...fx.site, layouts: { home, creators: CREATORS_SECTIONS.map((key) => ({ key, visible: true })) } },
@@ -59,11 +59,11 @@ describe('page layout', () => {
     await waitFor(() => expect(h2s()).not.toContain('A process built for accountability'));
     const titles = h2s();
     expect(titles).not.toContain('Our process');
-    // The newsletter now comes before the services section.
-    const newsletter = titles.indexOf('Get marketing insights in your inbox');
+    // The closing call to action now comes before the services section.
+    const cta = titles.indexOf('Ready for marketing that answers to results?');
     const services = titles.indexOf('Every channel, one accountable team');
-    expect(newsletter).toBeGreaterThanOrEqual(0);
-    expect(services).toBeGreaterThan(newsletter);
+    expect(cta).toBeGreaterThanOrEqual(0);
+    expect(services).toBeGreaterThan(cta);
   });
 
   it('creators: hidden sections leave the page', async () => {

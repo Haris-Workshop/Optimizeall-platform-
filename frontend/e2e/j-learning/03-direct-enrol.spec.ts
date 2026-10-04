@@ -36,6 +36,8 @@ test.describe.serial('direct enrol from the public course page', () => {
 
   test('enrol → register with a return path to the course', async () => {
     const errors = watchErrors(page);
+    // The course page is server-rendered: a click before the app has hydrated does nothing.
+    await expect(page.locator('html[data-app-ready]')).toHaveCount(1, { timeout: 30_000 });
     await page.getByRole('button', { name: 'Enrol for free — start learning' }).first().click();
     await expect(page).toHaveURL(/\/register\?next=/);
     expect(new URL(page.url()).searchParams.get('next')).toBe(`/learn/${COURSE}?enrol=1`);

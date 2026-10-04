@@ -144,6 +144,8 @@ jobs:
           path: |
             frontend/dist
             frontend/dist-ssr
+          # dist/.vite/manifest.json (the server renderer reads it) is a hidden file.
+          include-hidden-files: true
           retention-days: 3
 
   # ----------------------------------------------------------------------------------------------------

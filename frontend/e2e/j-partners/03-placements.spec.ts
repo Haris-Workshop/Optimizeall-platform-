@@ -129,7 +129,11 @@ test('/go/pciai and /go/certuvo count a click and redirect with UTM tags; anythi
   const certuvo = await page.request.get('/go/certuvo', { maxRedirects: 0 });
   expect(certuvo.status()).toBe(302);
   expect(certuvo.headers()['location']).toMatch(/^https:\/\/certuvo\.com\/\?utm_source=optimizeall&utm_medium=partner&utm_campaign=go\.link$/);
-  expect((await page.request.get('/go/nobody', { maxRedirects: 0 })).status()).toBe(404);
+  const unknown = await page.request.get('/go/nobody', { maxRedirects: 0 });
+  expect(unknown.status()).toBe(404);
+  // A person who follows a retired short link sees a page that leads on to the partners list, not a JSON error.
+  expect(unknown.headers()['content-type']).toContain('text/html');
+  expect(await unknown.text()).toContain('href="/partners"');
   // robots.txt keeps crawlers out of the redirects.
   expect(await (await page.request.get('/robots.txt')).text()).toContain('Disallow: /go/');
 });

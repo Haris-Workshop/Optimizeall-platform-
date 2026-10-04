@@ -133,8 +133,24 @@ public sealed class PartnerShortLinksController(PartnerTrackingService tracking,
         var key = alias.Trim().ToLowerInvariant();
         var slug = Resolve(await copy.ValueAsync("partners.go.aliases", ct), key) ?? key;
         var target = await tracking.VisitAsync(slug, PartnerSlots.Go, "/go/" + key, Request.Headers.UserAgent.ToString(), ct);
-        return target is null ? NotFound() : Redirect(target);
+        return target is null ? UnknownShortLink() : Redirect(target);
     }
+
+    /// <summary>
+    /// 404 for a short link that is not (or no longer) in use. The status stays 404 for monitors and crawlers, but the body is
+    /// a small page that sends the person on to the partners list: these links are pasted into newsletters and social bios, so
+    /// a human who follows a retired one must not be left with a problem-details JSON blob.
+    /// </summary>
+    private static ContentResult UnknownShortLink() => new()
+    {
+        StatusCode = StatusCodes.Status404NotFound,
+        ContentType = "text/html; charset=utf-8",
+        Content = "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+                  + "<meta name=\"robots\" content=\"noindex\"><title>Link not found</title></head><body>"
+                  + "<h1>This link is not in use any more</h1>"
+                  + "<p>The short link you followed has been retired or was mistyped.</p>"
+                  + "<p><a href=\"/partners\">See our partners</a> or <a href=\"/\">go to the home page</a>.</p></body></html>",
+    };
 
     /// <summary>The partner slug an alias stands for in the list "alias | slug" (null when it is not listed).</summary>
     public static string? Resolve(string? list, string alias)

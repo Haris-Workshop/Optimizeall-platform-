@@ -575,7 +575,11 @@ public sealed class WebsitePartnersTests(ApiFactory api) : IClassFixture<ApiFact
     [Fact]
     public async Task An_unknown_short_link_is_404_and_the_aliases_are_editable_page_copy()
     {
-        Assert.Equal(HttpStatusCode.NotFound, (await Visitor().GetAsync("/go/nobody")).StatusCode);
+        var unknown = await Visitor().GetAsync("/go/nobody");
+        Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
+        // A person who follows a retired short link gets a page that leads on, not a problem-details JSON blob.
+        Assert.StartsWith("text/html", unknown.Content.Headers.ContentType!.ToString());
+        Assert.Contains("href=\"/partners\"", await unknown.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.NotFound, (await Visitor().GetAsync("/go/https:%2F%2Fevil.example")).StatusCode);
         var admin = await api.AdminAsync();
         await SetCopyAsync(admin, "partners.go.aliases", "pciai | pci-ai\nexams | certuvo");

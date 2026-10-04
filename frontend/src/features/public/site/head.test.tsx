@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { json, mockFetch } from '@/test/fetchMock';
 import { renderWithApp } from '@/test/render';
 import { site } from '../testFixtures';
-import { applyTitleTemplate, INDEXABLE_ROBOTS, useDocumentHead, type DocumentHead } from './head';
+import { applyTitleTemplate, INDEXABLE_ROBOTS, NotFoundHead, useDocumentHead, type DocumentHead } from './head';
 
 function Head(props: DocumentHead) {
   useDocumentHead(props);
@@ -56,6 +56,14 @@ describe('head manager', () => {
     expect(content('meta[name="robots"]')).toBe(INDEXABLE_ROBOTS);
     expect(document.head.querySelector('link[rel="canonical"]')!.getAttribute('href')).toBe('https://www.optimizeall.com/pricing');
     expect(all('meta[name="description"]')).toHaveLength(1);
+  });
+
+  it('gives a not-found page its own title and keeps it out of the index', async () => {
+    mockFetch({ 'GET /public/site': () => json(200, site) });
+    renderWithApp(<NotFoundHead title="We couldn't find that page" description="It may have moved." />, { route: '/nope', withAuth: false });
+    await waitFor(() => expect(document.title).toBe("We couldn't find that page | Optimize All"));
+    expect(content('meta[name="robots"]')).toBe('noindex, follow');
+    expect(content('meta[name="description"]')).toBe('It may have moved.');
   });
 
   it.each([

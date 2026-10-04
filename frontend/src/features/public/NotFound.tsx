@@ -3,6 +3,7 @@ import { useId } from 'react';
 import { Link } from 'react-router-dom';
 import { ButtonLink } from '@/components/ui/ButtonLink';
 import { useSiteCopy } from './site/copy';
+import { NotFoundHead } from './site/head';
 import { MovedOrNotFound } from './site/redirects';
 import { StatusPage } from './StatusPage';
 
@@ -23,21 +24,24 @@ const HELPFUL_LINKS = [
 
 /**
  * The 404 page. A public address that has moved (Website → Redirects) navigates to its new address instead.
- * `siteLinks` adds the website's most useful destinations (public website only, not the portals).
+ * `siteLinks` adds the website's most useful destinations (public website only, not the portals); `head` (default: with
+ * `siteLinks`) gives the page its own title and a noindex robots tag (the Academy's missing pages ask for it too).
  */
-export function NotFound({ siteLinks = false }: { siteLinks?: boolean }) {
+export function NotFound({ siteLinks = false, head = siteLinks }: { siteLinks?: boolean; head?: boolean }) {
   return (
     <MovedOrNotFound>
-      <NotFoundPage siteLinks={siteLinks} />
+      <NotFoundPage siteLinks={siteLinks} head={head} />
     </MovedOrNotFound>
   );
 }
 
-function NotFoundPage({ siteLinks }: { siteLinks: boolean }) {
+function NotFoundPage({ siteLinks, head }: { siteLinks: boolean; head: boolean }) {
   const copy = useSiteCopy();
   const linksId = useId();
   return (
-    <StatusPage
+    <>
+      {head && <NotFoundHead title={copy.text('shared.page404.title')} description={copy.text('shared.page404.description')} />}
+      <StatusPage
       code="404"
       icon={<Compass />}
       title={copy.text('shared.page404.title')}
@@ -81,5 +85,6 @@ function NotFoundPage({ siteLinks }: { siteLinks: boolean }) {
         )
       }
     />
+    </>
   );
 }

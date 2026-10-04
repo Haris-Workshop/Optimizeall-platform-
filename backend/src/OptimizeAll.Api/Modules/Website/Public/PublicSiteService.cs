@@ -77,14 +77,17 @@ public sealed class PublicSiteService(
             .Where(g => g.Services.Count > 0)
             .ToList();
 
-    private async Task<PublicSeoDto> SeoAsync(SeoMeta? seo, string fallbackTitle, string? fallbackDescription, string? fallbackImage, string path, CancellationToken ct)
+    private async Task<PublicSeoDto> SeoAsync(SeoMeta? seo, string fallbackTitle, string? fallbackDescription, string? fallbackImage, string path, CancellationToken ct, string? thinDescriptionContext = null)
     {
         var ld = await LdAsync(ct);
         var s = await SettingsAsync(ct);
         return new PublicSeoDto(
             seo?.Title ?? fallbackTitle,
             // Search engines show about 155 characters; longer fallbacks (summaries, hero copy) are cut at a word boundary.
-            SiteSeo.SeoText.Clamp(seo?.Description ?? fallbackDescription ?? s.Seo.DefaultDescription),
+            SiteSeo.SeoText.Clamp(thinDescriptionContext is null
+                ? seo?.Description ?? fallbackDescription ?? s.Seo.DefaultDescription
+                // A one-line card summary is too thin for a search result: one more sentence on the page type follows it.
+                : SiteSeo.SeoText.Pad(seo?.Description ?? fallbackDescription, thinDescriptionContext) ?? s.Seo.DefaultDescription),
             seo?.OgImageUrl ?? fallbackImage ?? s.Seo.DefaultOgImageUrl,
             ld.Url(seo?.CanonicalUrl ?? path),
             seo?.NoIndex ?? false);
@@ -182,7 +185,7 @@ public sealed class PublicSiteService(
         var caseStudies = (await CaseStudyCardsAsync(q => q, 50, ct)).Where(c => c.IndustrySlug == i.Slug).Take(6).ToList();
         var ld = await LdAsync(ct);
         return new PublicIndustryDto(i.Slug, i.Name, i.Summary, i.BodyMarkdown, i.Challenges, i.Icon, i.HeroImageUrl, services, caseStudies,
-            await SeoAsync(i.Seo, $"Marketing for {i.Name}", SiteSeo.SeoText.Pad(i.Summary, $"Strategy, execution and reporting for {i.Name} brands from Optimize All."), i.HeroImageUrl, $"/industries/{i.Slug}", ct),
+            await SeoAsync(i.Seo, $"Marketing for {i.Name}", i.Summary, i.HeroImageUrl, $"/industries/{i.Slug}", ct, $"Strategy, execution and reporting for {i.Name} brands from Optimize All."),
             new[] { ld.Breadcrumbs(("Home", "/"), ("Industries", "/industries"), (i.Name, $"/industries/{i.Slug}")) });
     }
 

@@ -19,8 +19,10 @@ async function focusIndicator(page: Page) {
     const child = Array.from(el.querySelectorAll('*')).some(
       (c) => getComputedStyle(c).outlineStyle !== 'none',
     );
-    const card = el.closest('.ui-card--interactive, .site-card');
-    const ancestor = !!card && getComputedStyle(card).outlineStyle !== 'none';
+    // Whole-card links (title link inside a stretched card) draw the ring on the card: look a few levels up.
+    let ancestor = false;
+    for (let up: HTMLElement | null = el.parentElement, n = 0; up && n < 4 && !ancestor; up = up.parentElement, n++)
+      ancestor = getComputedStyle(up).outlineStyle !== 'none' && parseFloat(getComputedStyle(up).outlineWidth) > 0;
     const name = `${el.tagName.toLowerCase()} "${(el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 40)}"`;
     return { name, visible: ring || child || ancestor };
   });
@@ -58,6 +60,25 @@ test.describe('skip links', () => {
     await page.keyboard.press('Enter');
     await expect(page.locator('main#main')).toBeFocused();
   });
+});
+
+test.describe('public site focus', () => {
+  for (const path of ['/', '/pricing', '/blog', '/learn', '/creators']) {
+    test(`${path}: every tab stop (header, content, footer) shows a visible focus indicator`, async ({ page }) => {
+      await page.goto(path);
+      await settle(page);
+      const seen = new Set<string>();
+      for (let i = 0; i < 120; i++) {
+        await page.keyboard.press('Tab');
+        const { name, visible } = await focusIndicator(page);
+        // The stops of the whole page (header, sections, footer) are visited; the order wraps to the browser's own UI.
+        if (name === 'body' || seen.has(name)) break;
+        seen.add(name);
+        expect.soft(visible, `visible focus indicator on ${name}`).toBe(true);
+      }
+      expect(seen.size, 'tab stops on the page').toBeGreaterThan(10);
+    });
+  }
 });
 
 test.describe('portal chrome', () => {

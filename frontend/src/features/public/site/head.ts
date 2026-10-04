@@ -183,3 +183,12 @@ export function headFromSeo(seo: PublicSeo | undefined, jsonLd?: JsonLd[], type?
     type,
   };
 }
+
+/**
+ * The head of a "not found" page: its own title, never indexed. Without it the missing address kept the previous or
+ * default page's title, description and "index" robots tag once the app took over from the server-rendered 404.
+ */
+export function NotFoundHead({ title, description }: { title: string; description?: string }) {
+  useDocumentHead({ title, description, noIndex: true, follow: true });
+  return null;
+}

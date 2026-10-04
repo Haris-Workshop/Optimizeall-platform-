@@ -1006,7 +1006,7 @@ export function AcademyCoursePage() {
   useDocumentHead(headFrom(q.data?.seo, q.data?.jsonLd));
   if (q.isPending) return <PageLoading />;
   if (q.isError) {
-    if ((q.error as { status?: number }).status === 404) return <NotFound />;
+    if ((q.error as { status?: number }).status === 404) return <NotFound head />;
     return <PageError error={q.error} title="This course isn’t available right now" retry={() => void q.refetch()} />;
   }
   return <CourseBody course={q.data} flow={flow} />;
@@ -1105,7 +1105,7 @@ export function AcademyLessonPage() {
   useDocumentHead(headFrom(q.data?.seo, q.data?.jsonLd, 'article'));
   if (q.isPending || course.isPending) return <PageLoading height={520} />;
   if (q.isError) {
-    if ((q.error as { status?: number }).status === 404) return <NotFound />;
+    if ((q.error as { status?: number }).status === 404) return <NotFound head />;
     return <PageError error={q.error} title="This lesson isn’t available right now" retry={() => void q.refetch()} />;
   }
   return <LessonBody slug={slug} lessonSlug={lessonSlug} lesson={q.data} />;
@@ -1361,7 +1361,7 @@ export function AcademyPathPage() {
   useDocumentHead(headFrom(q.data?.seo, q.data?.jsonLd));
   if (q.isPending) return <PageLoading />;
   if (q.isError) {
-    if ((q.error as { status?: number }).status === 404) return <NotFound />;
+    if ((q.error as { status?: number }).status === 404) return <NotFound head />;
     return <PageError error={q.error} title="This learning path isn’t available right now" retry={() => void q.refetch()} />;
   }
   const path = q.data;

@@ -16,6 +16,7 @@ import type {
 } from './api';
 import { useSiteCopy } from './copy';
 import { SiteIcon } from './icons';
+import { NotFoundHead } from './head';
 import { MovedOrNotFound } from './redirects';
 import { chromeVariant, SECTION_ROOT, type ChromeVariant } from './variant';
 
@@ -363,6 +364,7 @@ export function PublicQueryState({
     if (isApiError(error) && error.status === 404)
       return (
         <MovedOrNotFound>
+          <NotFoundHead title={notFoundTitle} description={copy.text('shared.notFound.description')} />
           <div className="container site-loading">
             <EmptyState
               title={notFoundTitle}

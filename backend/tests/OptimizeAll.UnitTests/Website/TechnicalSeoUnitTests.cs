@@ -48,6 +48,17 @@ public sealed class TechnicalSeoUnitTests
     }
 
     [Fact]
+    public void Thin_descriptions_get_a_page_type_sentence_and_longer_ones_are_left_alone()
+    {
+        Assert.Null(SeoText.Pad("  ", "Context."));
+        var padded = SeoText.Pad("Measurement, tracking and reporting.", "Practical analytics guides from the Optimize All team.")!;
+        Assert.StartsWith("Measurement, tracking and reporting. Practical", padded);
+        Assert.InRange(padded.Length, SeoText.DescriptionMin, SeoText.DescriptionMax);
+        var long80 = new string('a', SeoText.DescriptionMin) + ".";
+        Assert.Equal(long80, SeoText.Pad(long80, "Context."));
+    }
+
+    [Fact]
     public void Descriptions_are_cut_at_a_word_boundary()
     {
         Assert.Null(SeoText.Clamp("  "));

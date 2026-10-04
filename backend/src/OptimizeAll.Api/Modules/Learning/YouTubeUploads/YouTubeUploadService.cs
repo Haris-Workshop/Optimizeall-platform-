@@ -1060,7 +1060,7 @@ public sealed class YouTubeUploadService(
         {
             if (file is null) continue;
             try { storage.Delete(file.StorageKey); }
-            catch (Exception ex) { logger.LogWarning("Could not delete staged file {FileId} ({ErrorType})", file.Id, ex.GetType().Name); }
+            catch (Exception ex) { logger.LogWarning("Could not delete staged file {StorageKey} ({ErrorType})", file.StorageKey, ex.GetType().Name); }
         }
     }
 

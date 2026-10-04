@@ -9,7 +9,5 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-declare module 'virtual:site-copy-defaults' {
-  const defaults: Record<string, string>;
-  export default defaults;
-}
+/** Page copy defaults of one key prefix, registered when imported (frontend/siteCopy.ts). */
+declare module 'virtual:site-copy/*' {}

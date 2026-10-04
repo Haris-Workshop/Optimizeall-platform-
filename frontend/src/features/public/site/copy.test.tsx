@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { json, mockFetch, problem } from '@/test/fetchMock';
 import { renderWithApp } from '@/test/render';
 import { LandingPage } from '../LandingPage';
-import { COPY_DEFAULTS, type CopyCatalogGroup, makeSiteCopy, splitPairs } from './copy';
+import { type CopyCatalogGroup, makeSiteCopy, splitPairs } from './copy';
 import catalog from './siteCopy.json';
 
 const COPY_GROUPS = catalog.groups as CopyCatalogGroup[];
@@ -21,7 +21,8 @@ describe('site copy', () => {
     for (const source of Object.values(sources))
       for (const match of source.matchAll(/copy\.(?:text|list|pairs)\('([^']+)'/g)) used.add(match[1]);
     expect(used.size).toBeGreaterThan(150);
-    const unknown = [...used].filter((key) => !(key in COPY_DEFAULTS));
+    const catalogKeys = new Set(COPY_GROUPS.flatMap((g) => g.entries.map((e) => e.key)));
+    const unknown = [...used].filter((key) => !catalogKeys.has(key));
     expect(unknown).toEqual([]);
   });
 

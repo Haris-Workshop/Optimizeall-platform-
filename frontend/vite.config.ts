@@ -1,36 +1,10 @@
 /// <reference types="vitest/config" />
-import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
-import { defineConfig, loadEnv, type Plugin } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import { seoShell, ssrTrackImports } from './seoShell';
 import { devProxy } from './src/app/devProxy';
-
-/**
- * virtual:site-copy-defaults: the shipped page copy as `{ key: default text }`, read from the same catalog file
- * (src/features/public/site/siteCopy.json, shared with the backend) but without the editor-only labels, types and
- * placeholders. Every public page reads these synchronously, so they sit in the entry; the full catalog (about 40% larger
- * on the wire) is only imported by tests.
- */
-function siteCopyDefaults(): Plugin {
-  const id = 'virtual:site-copy-defaults';
-  const file = fileURLToPath(new URL('./src/features/public/site/siteCopy.json', import.meta.url));
-  return {
-    name: 'site-copy-defaults',
-    resolveId: (source) => (source === id ? `\0${id}` : undefined),
-    load(loaded) {
-      if (loaded !== `\0${id}`) return undefined;
-      this.addWatchFile(file);
-      const catalog = JSON.parse(readFileSync(file, 'utf8')) as {
-        groups: { entries: { key: string; default: string }[] }[];
-      };
-      const defaults = Object.fromEntries(
-        catalog.groups.flatMap((g) => g.entries.map((e) => [e.key, e.default])),
-      );
-      return `export default ${JSON.stringify(defaults)};`;
-    },
-  };
-}
+import { siteCopy } from './siteCopy';
 
 export default defineConfig(({ mode, isSsrBuild }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -42,7 +16,7 @@ export default defineConfig(({ mode, isSsrBuild }) => {
     // /_document endpoint and served with the app shell, exactly like nginx's @document location: real 200/301/404/410,
     // including the 301s of moved public addresses (Website → Redirects). docs/SEO_CRO.md § Rendering.
     // ssrTrackImports (server build only): the renderer learns which route modules a page used, to link their CSS.
-    plugins: [react(), siteCopyDefaults(), seoShell(apiTarget), ...(isSsrBuild ? [ssrTrackImports()] : [])],
+    plugins: [react(), siteCopy(), seoShell(apiTarget), ...(isSsrBuild ? [ssrTrackImports()] : [])],
     resolve: {
       alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
     },
@@ -80,7 +54,7 @@ export default defineConfig(({ mode, isSsrBuild }) => {
       globals: true,
       environment: 'jsdom',
       setupFiles: ['./src/test/setup.ts'],
-      include: ['src/**/*.test.{ts,tsx}', 'seoShell.test.ts'],
+      include: ['src/**/*.test.{ts,tsx}', 'seoShell.test.ts', 'siteCopy.test.ts'],
       css: false,
       // axe over full pages (e.g. the ~650 country/time-zone options on Register) needs more than the 5s default.
       testTimeout: 30_000,

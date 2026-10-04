@@ -15,5 +15,13 @@
     "noUnusedParameters": true,
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "seoShell.ts", "seoShell.test.ts", "playwright.config.ts", "e2e"]
+  "include": [
+    "vite.config.ts",
+    "seoShell.ts",
+    "seoShell.test.ts",
+    "siteCopy.ts",
+    "siteCopy.test.ts",
+    "playwright.config.ts",
+    "e2e"
+  ]
 }

@@ -227,6 +227,25 @@ describe('QuotePage', () => {
     });
   });
 
+  it('goes back one step with the browser Back button and keeps the answers', async () => {
+    const user = userEvent.setup();
+    const { router } = renderPublic(<QuotePage />, { route: '/get-a-quote', path: '/get-a-quote' });
+    await user.click(await screen.findByRole('checkbox', { name: 'Search engine optimization' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(await screen.findByRole('heading', { name: 'Step 2 of 3: Project' })).toBeInTheDocument();
+    await user.type(screen.getByRole('textbox', { name: /Project details/ }), 'We need a steady flow of local leads.');
+
+    await act(async () => {
+      await router.navigate(-1);
+    });
+    expect(await screen.findByRole('heading', { name: 'Step 1 of 3: Services' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/get-a-quote');
+    expect(screen.getByRole('checkbox', { name: 'Search engine optimization' })).toBeChecked();
+
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(await screen.findByRole('textbox', { name: /Project details/ })).toHaveValue('We need a steady flow of local leads.');
+  });
+
   it('has no axe violations', async () => {
     const { container } = renderPublic(<QuotePage />, { route: '/get-a-quote', path: '/get-a-quote' });
     await screen.findByRole('checkbox', { name: 'Local SEO' });

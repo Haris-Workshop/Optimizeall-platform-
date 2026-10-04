@@ -1,6 +1,6 @@
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Checkbox, FormField, RadioGroup, Select, Textarea } from '@/components/ui';
 import { siteMoney } from '@/features/public/site/format';
 import { usePricing, useServices } from '../site/api';
@@ -22,7 +22,17 @@ export function QuotePage() {
   const services = useServices();
   const pricing = usePricing();
   const form = useLeadForm<object>('/public/inquiries/quote');
-  const [step, setStep] = useState(0);
+  // The step lives in the history entry (location.state), not in component state: the browser's Back button and a phone's
+  // back gesture then go one step back inside the form instead of leaving it and losing the answers.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const stored: unknown = (location.state as { quoteStep?: unknown } | null)?.quoteStep;
+  const step = typeof stored === 'number' && Number.isInteger(stored) && stored >= 0 && stored < STEPS.length ? stored : 0;
+  const setStep = (to: number | ((current: number) => number)) =>
+    navigate(`${location.pathname}${location.search}`, {
+      state: { quoteStep: typeof to === 'function' ? to(step) : to },
+      preventScrollReset: true,
+    });
   const [slugs, setSlugs] = useState<string[]>(() => (params.get('service') ? [params.get('service')!] : []));
   const [packageIds, setPackageIds] = useState<string[]>(() => (params.get('package') ? [params.get('package')!] : []));
   const [budget, setBudget] = useState('');

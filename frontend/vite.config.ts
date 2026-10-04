@@ -21,8 +21,12 @@ function siteCopyDefaults(): Plugin {
     load(loaded) {
       if (loaded !== `\0${id}`) return undefined;
       this.addWatchFile(file);
-      const catalog = JSON.parse(readFileSync(file, 'utf8')) as { groups: { entries: { key: string; default: string }[] }[] };
-      const defaults = Object.fromEntries(catalog.groups.flatMap((g) => g.entries.map((e) => [e.key, e.default])));
+      const catalog = JSON.parse(readFileSync(file, 'utf8')) as {
+        groups: { entries: { key: string; default: string }[] }[];
+      };
+      const defaults = Object.fromEntries(
+        catalog.groups.flatMap((g) => g.entries.map((e) => [e.key, e.default])),
+      );
       return `export default ${JSON.stringify(defaults)};`;
     },
   };
@@ -48,7 +52,14 @@ export default defineConfig(({ mode, isSsrBuild }) => {
     // bundle: the web image runs it with plain Node, without node_modules.
     ssr: { noExternal: true, target: 'node' },
     build: isSsrBuild
-      ? { target: 'node20', outDir: 'dist-ssr', sourcemap: false, ssrEmitAssets: false, minify: false, copyPublicDir: false }
+      ? {
+          target: 'node20',
+          outDir: 'dist-ssr',
+          sourcemap: false,
+          ssrEmitAssets: false,
+          minify: false,
+          copyPublicDir: false,
+        }
       : {
           target: 'es2022',
           // dist/.vite/manifest.json: which stylesheets and chunks each route module needs (read by the server renderer).

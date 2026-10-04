@@ -26,8 +26,11 @@ async function expectDisclosedAndSponsored(unit: Locator, partnerNames: string) 
  */
 async function reveal(page: Page, slot: string): Promise<Locator> {
   const unit = page.locator(`[data-partner-slot="${slot}"]`).first();
-  await page.locator(`[data-partner-reserve="${slot}"], [data-partner-slot="${slot}"]`).first().scrollIntoViewIfNeeded();
-  await expect(unit).toBeVisible();
+  // The room is replaced by the card as soon as the answer arrives: scroll again if it went away mid-scroll.
+  await expect(async () => {
+    await page.locator(`[data-partner-reserve="${slot}"], [data-partner-slot="${slot}"]`).first().scrollIntoViewIfNeeded({ timeout: 3000 });
+    await expect(unit).toBeVisible({ timeout: 3000 });
+  }).toPass({ timeout: 30_000 });
   return unit;
 }
 

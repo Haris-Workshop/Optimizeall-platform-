@@ -96,8 +96,10 @@ test('a blog post shows one sponsored unit at its end and the sitemap lists the 
   await page.goto(`/blog/${slug}`);
   // The unit asks the API only when its reserved room is about to be scrolled into view.
   const unit = page.locator('[data-partner-slot="blog.end"]');
-  await page.locator('[data-partner-reserve="blog.end"], [data-partner-slot="blog.end"]').first().scrollIntoViewIfNeeded();
-  await expect(unit).toBeVisible();
+  await expect(async () => {
+    await page.locator('[data-partner-reserve="blog.end"], [data-partner-slot="blog.end"]').first().scrollIntoViewIfNeeded({ timeout: 3000 });
+    await expect(unit).toBeVisible({ timeout: 3000 });
+  }).toPass({ timeout: 30_000 });
   await expect(unit.getByText('Sponsored', { exact: true })).toBeVisible();
   await expect(unit).toContainText('Optimize All is the official marketing partner of');
   await expectSponsoredOutbound(page);

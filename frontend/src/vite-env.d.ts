@@ -8,3 +8,8 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare module 'virtual:site-copy-defaults' {
+  const defaults: Record<string, string>;
+  export default defaults;
+}

@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { json, mockFetch, problem } from '@/test/fetchMock';
 import { renderWithApp } from '@/test/render';
 import { LandingPage } from '../LandingPage';
-import { COPY_DEFAULTS, COPY_GROUPS, makeSiteCopy, splitPairs } from './copy';
+import { COPY_DEFAULTS, type CopyCatalogGroup, makeSiteCopy, splitPairs } from './copy';
+import catalog from './siteCopy.json';
+
+const COPY_GROUPS = catalog.groups as CopyCatalogGroup[];
 
 /** Every `copy.text/list/pairs('key')` call in the app, found in the source files. */
 const sources = import.meta.glob(['/src/features/**/*.tsx', '!/src/features/**/*.test.tsx'], {

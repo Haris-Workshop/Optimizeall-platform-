@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { api } from '@/lib/api/client';
-import catalog from './siteCopy.json';
+import defaults from 'virtual:site-copy-defaults';
 
 /**
  * Editable page copy (CMS). Every marketing text on the public site and the portal home reads its words through
- * {@link useSiteCopy}: the shipped defaults live in `siteCopy.json` (identical to the backend catalog), and the API
+ * {@link useSiteCopy}: the shipped defaults live in `siteCopy.json` (identical to the backend catalog; the app bundles only the key → text map, see vite.config.ts), and the API
  * returns only the keys an editor has overridden in the admin panel (Website → Page copy, Admin → Content → Portal copy).
  * Pages render the defaults immediately and swap in overrides once they load, so nothing flashes or breaks offline.
  */
@@ -27,11 +27,7 @@ export interface CopyCatalogGroup {
   entries: CopyCatalogEntry[];
 }
 
-export const COPY_GROUPS = catalog.groups as CopyCatalogGroup[];
-
-export const COPY_DEFAULTS: Readonly<Record<string, string>> = Object.fromEntries(
-  COPY_GROUPS.flatMap((g) => g.entries.map((e) => [e.key, e.default])),
-);
+export const COPY_DEFAULTS: Readonly<Record<string, string>> = defaults;
 
 export interface PublicCopy {
   values: Record<string, string>;

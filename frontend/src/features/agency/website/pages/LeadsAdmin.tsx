@@ -342,6 +342,10 @@ export function InquiryDetailPage() {
                 },
                 { label: 'Received', value: formatDateTime(i.createdAt) },
                 { label: 'Consent', value: `${i.consentVersion} at ${formatDateTime(i.consentAt)}` },
+                // Every inquiry also becomes a CRM lead (matched by email): this is the way on to its deals and follow-ups.
+                ...(hasPermission(Permissions.CrmView)
+                  ? [{ label: 'Sales CRM', value: <Link to={`/agency/crm/contacts?search=${encodeURIComponent(i.email)}`}>Find this lead in the CRM</Link> }]
+                  : []),
               ]}
             />
           </CardBody>

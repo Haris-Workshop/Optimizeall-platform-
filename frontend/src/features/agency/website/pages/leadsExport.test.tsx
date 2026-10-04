@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { json, makeUser, mockFetch, problem, session } from '@/test/fetchMock';
 import { renderWithApp } from '@/test/render';
-import { InquiriesPage, SubscribersPage } from './LeadsAdmin';
+import { InquiriesPage, InquiryDetailPage, SubscribersPage } from './LeadsAdmin';
 
 const staff = makeUser({
   id: 'staff-1',
@@ -82,5 +82,35 @@ describe('Website lead exports', () => {
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));
     await vi.waitFor(() => exportUrl('/subscribers/export.csv'));
     expect(exportUrl('/subscribers/export.csv').searchParams.get('search')).toBe('ann');
+  });
+});
+
+describe('Inquiry detail', () => {
+  const inquiry = {
+    id: 'inq-1', reference: 'OA-9599EE6D', type: 'Contact', status: 'New', name: 'Lead Walker', email: 'lead+1@example.com', company: null,
+    serviceSlugs: [], budgetRange: null, utmSource: null, utmCampaign: null, assignedToUserId: null, createdAt: '2026-10-04T15:18:00Z',
+    phone: null, website: null, message: 'Hello', packageIds: [], timeline: null, details: {}, utmMedium: null, utmTerm: null, utmContent: null,
+    referrer: null, landingPath: '/contact', consentVersion: 'forms-2026-09', consentAt: '2026-10-04T15:18:00Z', staffNotes: null,
+    bookingId: null, updatedAt: '2026-10-04T15:18:00Z', concurrencyStamp: 'stamp',
+  };
+  const open = (permissions: string[]) => {
+    mockFetch({
+      'POST /auth/refresh': () => json(200, session(makeUser({ id: 'staff-1', roles: ['Admin'], permissions }))),
+      'GET /agency/website/inquiries/inq-1': () => json(200, inquiry),
+      'GET /agency/staff': () => json(200, []),
+    });
+    renderWithApp(<InquiryDetailPage />, { route: '/agency/website/inquiries/inq-1', path: '/agency/website/inquiries/:inquiryId' });
+  };
+
+  it('leads on to the CRM lead it created, found by its email', async () => {
+    open(['site.manage', 'crm.view']);
+    const link = await screen.findByRole('link', { name: 'Find this lead in the CRM' });
+    expect(link).toHaveAttribute('href', '/agency/crm/contacts?search=lead%2B1%40example.com');
+  });
+
+  it('does not offer the CRM link to staff without CRM access', async () => {
+    open(['site.manage']);
+    await screen.findByText('Lead Walker');
+    expect(screen.queryByRole('link', { name: 'Find this lead in the CRM' })).not.toBeInTheDocument();
   });
 });

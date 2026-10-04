@@ -90,6 +90,19 @@ describe('Contacts list: archive filter and bulk actions', () => {
   });
 });
 
+describe('Contacts list: deep link from a website inquiry', () => {
+  it('opens already filtered by the email in ?search=', async () => {
+    mockFetch({
+      ...signedInSales,
+      'GET /agency/crm/contacts': () => json(200, page([contactRow()])),
+      'GET /agency/crm/views': () => json(200, []),
+      'GET /agency/crm/assignees': () => json(200, []),
+    });
+    renderWithApp(<ContactsPage />, { route: '/agency/crm/contacts?search=rachel%40brightline.example' });
+    expect(await screen.findByLabelText('Search')).toHaveValue('rachel@brightline.example');
+  });
+});
+
 describe('Archived contact detail', () => {
   it('explains why it is read-only and restores with the concurrency stamp', async () => {
     const user = userEvent.setup();

@@ -1,6 +1,6 @@
 import { Download, Pencil, Plus, Upload } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
   Alert,
   Button,
@@ -111,7 +111,9 @@ export function ContactsPage() {
   const { hasPermission } = useAuth();
   const canManage = hasPermission(Permissions.CrmManage);
   const toast = useToast();
-  const [search, setSearch] = useState('');
+  // `?search=` opens the list already filtered (the website inquiry page links here with the lead's email).
+  const [params] = useSearchParams();
+  const [search, setSearch] = useState(() => params.get('search')?.slice(0, 200) ?? '');
   const [lifecycleStage, setStage] = useState<string>('');
   const [consentStatus, setConsent] = useState<string>('');
   const [tag, setTag] = useState('');

@@ -247,7 +247,7 @@ export function ServiceDetailPage() {
 
   return (
     <div ref={root} className="oa-ap">
-      <PublicQueryState error={error} isLoading={isLoading} notFoundTitle="We couldn't find that service">
+      <PublicQueryState error={error} isLoading={isLoading} notFoundTitle="We couldn't find that service" backTo={{ to: '/services', label: 'Browse all services' }}>
         {s && (
           <>
             <AgencyHero

@@ -334,7 +334,23 @@ export function TestimonialCarousel({ items, label = 'Client testimonials' }: { 
 }
 
 /** Loading / error / not-found handling for public detail pages. */
-export function PublicQueryState({ error, isLoading, notFoundTitle, children }: { error: unknown; isLoading: boolean; notFoundTitle: string; children: ReactNode }) {
+export function PublicQueryState({
+  error,
+  isLoading,
+  notFoundTitle,
+  backTo,
+  children,
+}: {
+  error: unknown;
+  isLoading: boolean;
+  notFoundTitle: string;
+  /**
+   * Detail pages pass the list they belong to: a missing page then leads back to it ("Browse all services") instead of
+   * only to the home page, and the message is the page's heading (the missing page rendered no other).
+   */
+  backTo?: { to: string; label: string };
+  children: ReactNode;
+}) {
   const copy = useSiteCopy();
   if (isLoading)
     return (
@@ -350,12 +366,23 @@ export function PublicQueryState({ error, isLoading, notFoundTitle, children }: 
           <div className="container site-loading">
             <EmptyState
               title={notFoundTitle}
-              headingLevel={2}
+              headingLevel={backTo ? 1 : 2}
               description={copy.text('shared.notFound.description')}
               action={
-                <ButtonLink to="/" variant="secondary">
-                  Go to the homepage
-                </ButtonLink>
+                backTo ? (
+                  <>
+                    <ButtonLink to={backTo.to} variant="primary">
+                      {backTo.label}
+                    </ButtonLink>
+                    <ButtonLink to="/" variant="secondary">
+                      Go to the homepage
+                    </ButtonLink>
+                  </>
+                ) : (
+                  <ButtonLink to="/" variant="secondary">
+                    Go to the homepage
+                  </ButtonLink>
+                )
               }
             />
           </div>

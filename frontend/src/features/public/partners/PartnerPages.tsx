@@ -209,7 +209,7 @@ export function PartnerProfilePage() {
   useReveal(ref);
 
   return (
-    <PublicQueryState error={error} isLoading={isLoading} notFoundTitle="We couldn't find that partner">
+    <PublicQueryState error={error} isLoading={isLoading} notFoundTitle="We couldn't find that partner" backTo={{ to: '/partners', label: 'See all partners' }}>
       {p && (
         <div ref={ref} className="oa-co-page">
           <CoHero

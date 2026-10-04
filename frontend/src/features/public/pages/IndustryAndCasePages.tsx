@@ -116,7 +116,7 @@ export function IndustryDetailPage() {
   useDocumentHead(i ? headFromSeo(i.seo, i.jsonLd) : { title: 'Industry' });
   return (
     <div ref={root} className="oa-ap">
-      <PublicQueryState error={error} isLoading={isLoading} notFoundTitle="We couldn't find that industry">
+      <PublicQueryState error={error} isLoading={isLoading} notFoundTitle="We couldn't find that industry" backTo={{ to: '/industries', label: 'Browse all industries' }}>
         {i && (
           <>
             <AgencyHero
@@ -353,7 +353,7 @@ export function CaseStudyDetailPage() {
 
   return (
     <div ref={root} className="oa-ap">
-      <PublicQueryState error={error} isLoading={isLoading} notFoundTitle="We couldn't find that case study">
+      <PublicQueryState error={error} isLoading={isLoading} notFoundTitle="We couldn't find that case study" backTo={{ to: '/case-studies', label: 'Browse all case studies' }}>
         {c && (
           <>
             <AgencyHero

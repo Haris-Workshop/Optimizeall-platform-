@@ -304,7 +304,7 @@ export function JobDetailPage() {
   useDocumentHead(job ? headFromSeo(job.seo, job.jsonLd) : { title: 'Careers' });
   const salary = job ? salaryText(job) : null;
   return (
-    <PublicQueryState error={error} isLoading={isLoading} notFoundTitle="This role is no longer open">
+    <PublicQueryState error={error} isLoading={isLoading} notFoundTitle="This role is no longer open" backTo={{ to: '/careers', label: 'See open roles' }}>
       {job && (
         <div className="oa-co-page">
           <CoHero

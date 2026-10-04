@@ -376,7 +376,7 @@ export function BlogPostPage() {
   const authorLinks = post?.author?.socialLinks.filter((l) => isExternalHref(l.url)) ?? [];
 
   return (
-    <PublicQueryState error={error} isLoading={isLoading} notFoundTitle="We couldn't find that article">
+    <PublicQueryState error={error} isLoading={isLoading} notFoundTitle="We couldn't find that article" backTo={{ to: '/blog', label: 'Read the latest articles' }}>
       {post && (
         <div ref={root} className="oa-co-page">
           <ReadingProgress target={articleRef} />

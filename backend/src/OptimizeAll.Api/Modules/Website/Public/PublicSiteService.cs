@@ -182,7 +182,7 @@ public sealed class PublicSiteService(
         var caseStudies = (await CaseStudyCardsAsync(q => q, 50, ct)).Where(c => c.IndustrySlug == i.Slug).Take(6).ToList();
         var ld = await LdAsync(ct);
         return new PublicIndustryDto(i.Slug, i.Name, i.Summary, i.BodyMarkdown, i.Challenges, i.Icon, i.HeroImageUrl, services, caseStudies,
-            await SeoAsync(i.Seo, $"Marketing for {i.Name}", i.Summary, i.HeroImageUrl, $"/industries/{i.Slug}", ct),
+            await SeoAsync(i.Seo, $"Marketing for {i.Name}", SiteSeo.SeoText.Pad(i.Summary, $"Strategy, execution and reporting for {i.Name} brands from Optimize All."), i.HeroImageUrl, $"/industries/{i.Slug}", ct),
             new[] { ld.Breadcrumbs(("Home", "/"), ("Industries", "/industries"), (i.Name, $"/industries/{i.Slug}")) });
     }
 

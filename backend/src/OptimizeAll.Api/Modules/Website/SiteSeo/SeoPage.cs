@@ -99,6 +99,17 @@ public static partial class SeoText
     }
 
     /// <summary>
+    /// A short default description (a card's one-line summary) is too thin for a search result: when it is shorter than
+    /// <see cref="DescriptionMin"/>, the page-type sentence <paramref name="context"/> follows it. Longer text is left alone.
+    /// </summary>
+    public static string? Pad(string? text, string context)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        var t = text.Trim();
+        return t.Length >= DescriptionMin ? t : Clamp($"{t} {context}");
+    }
+
+    /// <summary>
     /// Applies the title template ("%s | Optimize All"), unless the title already names the site, or the suffix would
     /// push a title that fits on its own past <see cref="TitleMax"/> (search results would cut the page's own words).
     /// </summary>

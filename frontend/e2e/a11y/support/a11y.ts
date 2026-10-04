@@ -119,6 +119,7 @@ export const portalSets: PortalSet[] = [
       { path: '/app/notifications' },
       { path: '/app/support' },
       { path: '/app/profile' },
+      { path: '/app/profile/security' },
     ],
   },
   {
@@ -127,6 +128,7 @@ export const portalSets: PortalSet[] = [
     landing: /\/review(\/|$)/,
     pages: [
       { path: '/review' },
+      { path: '/review/account/security' },
       { path: '/review/queue' },
       { path: '/review/live-checks' },
       { path: '/review/appeals' },
@@ -139,6 +141,7 @@ export const portalSets: PortalSet[] = [
     landing: /\/manage(\/|$)/,
     pages: [
       { path: '/manage' },
+      { path: '/manage/account/security' },
       { path: '/manage/campaigns' },
       detail('/manage/campaigns', '/manage/campaigns/:id', 'a campaign'),
       { path: '/manage/templates' },
@@ -156,6 +159,7 @@ export const portalSets: PortalSet[] = [
     landing: /\/(finance|agency)(\/|$)/,
     pages: [
       { path: '/finance' },
+      { path: '/finance/account/security' },
       { path: '/finance/payments' },
       { path: '/finance/batches' },
       detail('/finance/batches', '/finance/batches/:id', 'a payout batch'),
@@ -172,6 +176,7 @@ export const portalSets: PortalSet[] = [
     landing: /\/admin(\/|$)/,
     pages: [
       { path: '/admin' },
+      { path: '/admin/account/security' },
       { path: '/admin/users' },
       detail('/admin/users', '/admin/users/:id', 'a user'),
       { path: '/admin/roles' },
@@ -189,6 +194,7 @@ export const portalSets: PortalSet[] = [
     landing: /\/admin(\/|$)/,
     pages: [
       { path: '/agency' },
+      { path: '/agency/account/security' },
       { path: '/agency/clients' },
       detail('/agency/clients', '/agency/clients/:id', 'a client'),
       { path: '/agency/projects' },
@@ -247,6 +253,7 @@ export const portalSets: PortalSet[] = [
     landing: /\/client(\/|$)/,
     pages: [
       { path: '/client' },
+      { path: '/client/account/security' },
       { path: '/client/approvals' },
       { path: '/client/projects' },
       { path: '/client/reports' },
@@ -290,6 +297,18 @@ async function setTheme(page: Page, theme: 'light' | 'dark') {
   await page.evaluate((t) => {
     document.documentElement.dataset.theme = t;
   }, theme);
+  // Colours cross-fade between themes (CSS transitions): measuring contrast mid-fade reports text that is fine once the
+  // theme has settled. Wait for the finite transitions and animations the switch started (infinite loops never end).
+  await page
+    .waitForFunction(
+      () =>
+        document
+          .getAnimations()
+          .every((a) => a.playState !== 'running' || (a.effect?.getTiming().iterations ?? 1) === Infinity),
+      undefined,
+      { timeout: 3_000 },
+    )
+    .catch(() => undefined);
 }
 
 /** axe (WCAG 2.0–2.2 A/AA) on the current page, in the light theme. */

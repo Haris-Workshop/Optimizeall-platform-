@@ -202,7 +202,7 @@ public sealed partial class SeoPageResolver
             var cat = index.Categories.FirstOrDefault(c => c.Slug == category);
             if (cat is null) return NotFound("/blog");
             var topic = $"/blog?category={Uri.EscapeDataString(category)}";
-            Paginate(n => n <= 1 ? topic : $"{topic}&page={n}", $"{cat.Name} articles", cat.Description ?? page.Description);
+            Paginate(n => n <= 1 ? topic : $"{topic}&page={n}", $"{cat.Name} articles", SeoText.Pad(cat.Description, $"Practical {cat.Name.ToLowerInvariant()} guides and playbooks from the Optimize All team.") ?? page.Description);
             page.Content[0] = new HeadingNode(1, $"{cat.Name} articles");
             // The topic sits under the blog in the breadcrumb trail.
             page.Breadcrumbs.Clear();

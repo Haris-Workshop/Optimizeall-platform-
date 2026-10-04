@@ -60,11 +60,18 @@ class Http:
         return Resp(r.status_code, {k.lower(): v for k, v in r.headers.items()}, r.content)
 
 
+_SECRETS: set[str] = set()  # credentials passed to YouTube(...) or issued by OAuth: never printed, even if echoed back
+
+
+def _register_secret(value) -> None:
+    if value and len(value) >= 8:  # shorter values would mangle ordinary text
+        _SECRETS.add(value)
+
+
 def _redact(text: str) -> str:
-    for var in ("YOUTUBE_CLIENT_SECRET", "YOUTUBE_REFRESH_TOKEN", "YOUTUBE_CLIENT_ID"):
-        v = os.environ.get(var)
-        if v:
-            text = text.replace(v, "***")
+    values = [os.environ.get(v) for v in ("YOUTUBE_CLIENT_SECRET", "YOUTUBE_REFRESH_TOKEN", "YOUTUBE_CLIENT_ID")]
+    for v in sorted({*values, *_SECRETS} - {None, ""}, key=len, reverse=True):
+        text = text.replace(v, "***")
     return text
 
 
@@ -100,6 +107,8 @@ class YouTube:
         self.client_id = client_id or os.environ.get("YOUTUBE_CLIENT_ID")
         self.client_secret = client_secret or os.environ.get("YOUTUBE_CLIENT_SECRET")
         self.refresh_token = refresh_token or os.environ.get("YOUTUBE_REFRESH_TOKEN")
+        for secret in (self.client_secret, self.refresh_token):
+            _register_secret(secret)
         self.sleep = sleep
         self.max_retries = max_retries
         self._token = None
@@ -123,6 +132,7 @@ class YouTube:
             raise _error(resp, "OAuth token refresh")
         body = resp.json()
         self._token = body["access_token"]
+        _register_secret(self._token)
         self._token_exp = time.time() + float(body.get("expires_in", 3600))
         return self._token
 

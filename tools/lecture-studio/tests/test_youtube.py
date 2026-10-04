@@ -130,6 +130,12 @@ class RequestBuildingTests(unittest.TestCase):
             e = youtube._error(Resp(400, {}, json.dumps({"error": {"message": "bad client s3cr3t"}}).encode()), "x")
         self.assertNotIn("s3cr3t", str(e))
 
+    def test_constructor_credentials_are_redacted_too(self):
+        youtube.YouTube(youtube.Http(), client_id="client-id-123", client_secret="constructor-secret-xyz", refresh_token="refresh-token-abcdef")
+        e = youtube._error(Resp(400, {}, json.dumps({"error": {"message": "bad constructor-secret-xyz / refresh-token-abcdef"}}).encode()), "x")
+        self.assertNotIn("constructor-secret-xyz", str(e))
+        self.assertNotIn("refresh-token-abcdef", str(e))
+
 
 class ChannelGuardTests(unittest.TestCase):
     def test_a_matching_channel_passes_and_is_checked_once(self):

@@ -116,6 +116,23 @@ given as an https URL on an allowed image host.
 | llms.txt summary, introduction, sections, custom sections, academy guide, on/off | SEO → **llms.txt** (on/off and IndexNow in Crawlers & AI) |
 | Security contact (`/.well-known/security.txt`) | SEO → Crawlers & AI |
 
+## MUST-CHANGE before go-live
+
+A fresh production install ships with **no** demo content: the `Demo` seed profile (sample team, testimonials, case
+studies, posts, jobs, leads, subscribers, home stats such as "$48M client revenue influenced", and the sample contact
+details `+1 415 555 0100` / `100 Market Street, San Francisco, CA`) runs only where `Database:Seed` lists `Demo`
+(development and staging, see DEMO.md). Never list it in a production `Database:Seed`. If a database was ever seeded
+with it, replace or delete every item below before launch:
+
+| Item | Where |
+|---|---|
+| Contact email, phone, WhatsApp, address, hours (footer, contact page, organization structured data) | Settings → Contact & social |
+| Home statistics (each figure is labelled Measured or Estimated; the demo ones say "Sample figure") | Settings → Home stats & logos |
+| Team members, testimonials, case studies, blog posts, job posts | Website → Team / Testimonials / Case studies / Blog / Jobs (unpublish or delete the `*-demo` items) |
+| Newsletter subscribers and leads named `*@example.com` | Marketing / CRM (delete) |
+| Legal name, founding year, address, areas served | Settings → SEO & organization |
+| Security contact | SEO → Crawlers & AI |
+
 ## Inventory: what was hard-coded (October 2026) and what became editable
 
 The public components were searched for literal user-facing strings, images, numbers, links, section order, menus,

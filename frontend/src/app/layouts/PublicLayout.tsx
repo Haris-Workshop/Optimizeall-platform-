@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { SiteChrome } from '@/features/public/site/SiteChrome';
-import { PageVideos } from '@/features/public/site/SiteVideo';
+import { PageVideos } from '@/features/public/site/PageVideos';
 import { ImpersonationBanner } from './ImpersonationBanner';
 import './PublicLayout.css';
 

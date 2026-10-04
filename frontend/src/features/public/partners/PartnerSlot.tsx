@@ -2,6 +2,7 @@ import { type ReactNode, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { type PartnerCard, usePartnerPlacement, usePartners } from './api';
 import { PartnerAd, PartnerBand } from './PartnerCards';
+import { PartnerFooterLine } from './PartnerFooter';
 import { PartnerLogo, useNearViewport } from './PartnerParts';
 import { slotKind, slotVariant, type PartnerListSlot, type PartnerUnitSlot } from './slots';
 import { useImpression } from './tracking';
@@ -61,30 +62,6 @@ export function PartnerStrip({ partners, slot = 'home.partners' }: { partners: P
         </div>
       </div>
     </section>
-  );
-}
-
-function FooterPartner({ partner, children }: { partner: PartnerCard; children: ReactNode }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const { pathname } = useLocation();
-  useImpression(ref, { partner: partner.slug, slot: 'footer.partners', path: pathname });
-  return <span ref={ref}>{children}</span>;
-}
-
-/** Footer: "Optimize All is the official marketing partner of PCI AI and Certuvo." (internal profile links). */
-export function PartnerFooterLine({ partners }: { partners: PartnerCard[] }) {
-  if (partners.length === 0) return null;
-  return (
-    <p className="site-footer__partners" data-partner-slot="footer.partners">
-      Optimize All is the official marketing partner of{' '}
-      {partners.map((p, i) => (
-        <FooterPartner key={p.slug} partner={p}>
-          {i === 0 ? null : i === partners.length - 1 ? ' and ' : ', '}
-          <Link to={p.profilePath}>{p.name}</Link>
-        </FooterPartner>
-      ))}
-      .
-    </p>
   );
 }
 

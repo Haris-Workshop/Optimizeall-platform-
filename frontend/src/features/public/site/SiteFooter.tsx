@@ -5,7 +5,7 @@ import { isExternalHref, isInternalHref } from '@/lib/safeHref';
 import { type SiteLink, useSite } from './api';
 import { useSiteCopy } from './copy';
 import { DEFAULT_PRODUCT_LINKS, DEFAULT_SIGN_IN_LINKS, productChrome, SiteLogo } from './layout';
-import { PartnerSlot } from '../partners/PartnerSlot';
+import { PartnerFooter } from '../partners/PartnerFooter';
 import { NewsletterSignup } from './NewsletterSignup';
 import type { ChromeVariant } from './variant';
 
@@ -224,7 +224,7 @@ export function SiteFooter({ onCookieSettings, variant = 'agency' }: { onCookieS
               {site?.footer.blurb ??
                 'A full-service digital marketing agency: strategy, search, paid media, content, creative and web, run as one accountable team.'}
             </p>
-            <PartnerSlot slot="footer.partners" />
+            <PartnerFooter />
             {contact && (
               <ul className="site-footer__contact">
                 {contact.email && (

@@ -1,5 +1,4 @@
 import { useId } from 'react';
-import { useLocation } from 'react-router-dom';
 import catalog from './siteVideos.json';
 import { Markdown } from './Markdown';
 
@@ -83,9 +82,8 @@ interface CatalogVideo extends SiteVideoData {
 /** Videos placed on built-in pages in code (siteVideos.json, identical to the backend's site-videos.json). */
 export const SITE_VIDEOS = (catalog as { videos: CatalogVideo[] }).videos;
 
-/** Renders the catalog videos for the current path (none by default). Placed at the end of each public page. */
-export function PageVideos() {
-  const { pathname } = useLocation();
+/** The catalog videos of one path (rendered by PageVideos, which lazy-loads this module only when there are some). */
+export function PageVideoList({ pathname }: { pathname: string }) {
   const videos = SITE_VIDEOS.filter((v) => v.path === pathname);
   if (videos.length === 0) return null;
   return (

@@ -10,7 +10,7 @@ import { siteMoney } from '@/features/public/site/format';
 import { isExternalHref } from '@/lib/safeHref';
 import { type EmploymentType, type JobCard, type PublicJob, type TeamMember, useJob, useJobs, useSite, useTeam, type WorkplaceType } from '../site/api';
 import { useSiteCopy } from '../site/copy';
-import { CtaBand, formatPublished, PublicQueryState } from '../site/components';
+import { formatPublished, PublicQueryState } from '../site/components';
 import { ConsentCheckbox, fieldErrorsOf, Honeypot, useFormToken, useRenewFormToken } from '../site/forms';
 import { headFromSeo, useDocumentHead } from '../site/head';
 import { Markdown } from '../site/Markdown';
@@ -547,9 +547,4 @@ function ApplicationForm({ job }: { job: PublicJob }) {
       </div>
     </form>
   );
-}
-
-export function CareersCta() {
-  const copy = useSiteCopy();
-  return <CtaBand title={copy.text('careers.cta.title')} text={copy.text('careers.cta.text')} />;
 }

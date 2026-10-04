@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { ArrowRight, Check, ChevronLeft, ChevronRight, Pause, Play, Quote, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pause, Play, Quote, Star } from 'lucide-react';
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ButtonLink, EmptyState, ErrorState, Skeleton, SkeletonText } from '@/components/ui';
@@ -11,7 +11,6 @@ import type {
   Metric,
   PostCard as PostCardData,
   Price,
-  PublicPackage,
   ServiceCard as ServiceCardData,
   Testimonial,
 } from './api';
@@ -250,48 +249,6 @@ export function PostCard({ post, headingLevel = 3 }: { post: PostCardData; headi
     </article>
   );
 }
-
-export function PackageCard({ pkg, serviceName, serviceSlug }: { pkg: PublicPackage; serviceName?: string; serviceSlug?: string }) {
-  const headingId = useId();
-  const copy = useSiteCopy();
-  const quoteLink = `/get-a-quote?${new URLSearchParams({ ...(serviceSlug ? { service: serviceSlug } : {}), package: pkg.id }).toString()}`;
-  return (
-    <article className={clsx('site-package', pkg.isMostPopular && 'site-package--popular')} aria-labelledby={headingId}>
-      {pkg.isMostPopular && <p className="site-package__badge">{copy.text('shared.pricing.mostPopular')}</p>}
-      <h3 id={headingId} className="site-package__name">
-        {serviceName && <span className="site-package__service">{serviceName}</span>}
-        {pkg.name}
-      </h3>
-      {pkg.description && <p className="site-package__desc">{pkg.description}</p>}
-      <p className="site-package__price">
-        {pkg.isCustomQuote || pkg.price === null ? (
-          <span className="site-package__amount site-package__amount--quote">{copy.text('shared.pricing.customQuote')}</span>
-        ) : (
-          <>
-            <span className="site-package__amount tabular">{marketingPrice(pkg.price, pkg.currency)}</span>{' '}
-            <span className="site-package__period">{PERIOD_SUFFIX[pkg.billingPeriod]}</span>
-          </>
-        )}
-      </p>
-      {pkg.setupFee !== null && pkg.setupFee > 0 && (
-        <p className="site-package__setup">+ {marketingPrice(pkg.setupFee, pkg.currency)} one-time setup</p>
-      )}
-      <ul className="site-package__features">
-        {pkg.features.map((f) => (
-          <li key={f}>
-            <Check aria-hidden="true" />
-            {f}
-          </li>
-        ))}
-      </ul>
-      <ButtonLink to={quoteLink} variant={pkg.isMostPopular ? 'highlight' : 'secondary'} fullWidth>
-        {pkg.isCustomQuote ? 'Request a quote' : 'Get started'}
-        <span className="visually-hidden"> with {serviceName ? `${serviceName} ` : ''}{pkg.name}</span>
-      </ButtonLink>
-    </article>
-  );
-}
-
 export function Stars({ rating }: { rating: number | null }) {
   if (!rating) return null;
   return (
@@ -373,31 +330,6 @@ export function TestimonialCarousel({ items, label = 'Client testimonials' }: { 
         </div>
       )}
     </div>
-  );
-}
-
-export function CtaBand({ title, text }: { title?: string; text?: string }) {
-  const id = useId();
-  const copy = useSiteCopy();
-  return (
-    <section className="site-cta" aria-labelledby={id}>
-      <div className="container">
-        <div className="site-cta__inner">
-          <div>
-            <h2 id={id}>{title ?? copy.text('shared.cta.title')}</h2>
-            <p>{text ?? copy.text('shared.cta.text')}</p>
-          </div>
-          <div className="site-cta__actions">
-            <ButtonLink to={copy.text('shared.cta.primaryUrl')} variant="highlight" size="lg" trailingIcon={<ArrowRight />}>
-              {copy.text('shared.cta.primary')}
-            </ButtonLink>
-            <ButtonLink to={copy.text('shared.cta.secondaryUrl')} variant="secondary" size="lg">
-              {copy.text('shared.cta.secondary')}
-            </ButtonLink>
-          </div>
-        </div>
-      </div>
-    </section>
   );
 }
 

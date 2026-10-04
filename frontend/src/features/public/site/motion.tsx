@@ -1,7 +1,5 @@
-import clsx from 'clsx';
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from 'react';
+import { useEffect, useRef, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
 import { onServerRenderedPage } from '@/lib/ssr';
-import { siteNumber } from './format';
 
 /**
  * Motion for the marketing pages, CSS-first and dependency-free:
@@ -123,90 +121,6 @@ export function useInViewClass<T extends HTMLElement>(): RefObject<T> {
     return () => io.disconnect();
   }, []);
   return ref;
-}
-
-const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
-
-/**
- * A figure that counts up from zero the first time it is visible (1.2s, ease-out). The final value is what assistive
- * technology reads, and the box reserves the final width so nothing shifts while it counts.
- */
-export function CountUp({ value, className, suffix = '' }: { value: number; className?: string; suffix?: string }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const [shown, setShown] = useState<number>(value);
-  const format = (n: number) => siteNumber(n) + suffix;
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || !motionAllowed() || value <= 0) {
-      setShown(value);
-      return;
-    }
-    let frame = 0;
-    let started = false;
-    // Server-rendered: the final figure was painted. It is only reset (to count up later) once the observer has said it
-    // is off screen; one that is visible keeps its value.
-    let first = onServerRenderedPage();
-    if (!first) setShown(0);
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (first) {
-          first = false;
-          if (entry.isIntersecting) {
-            io.disconnect();
-            return;
-          }
-          setShown(0);
-        }
-        if (!entry.isIntersecting || started) return;
-        started = true;
-        io.disconnect();
-        const start = performance.now();
-        const tick = (now: number) => {
-          const t = Math.min(1, (now - start) / 1200);
-          setShown(Math.round(easeOut(t) * value));
-          if (t < 1) frame = requestAnimationFrame(tick);
-        };
-        frame = requestAnimationFrame(tick);
-      },
-      { threshold: 0.4 },
-    );
-    io.observe(el);
-    return () => {
-      io.disconnect();
-      cancelAnimationFrame(frame);
-    };
-  }, [value]);
-
-  return (
-    <span ref={ref} className={clsx('oa-count', className)} style={{ '--oa-count-ch': format(value).length } as CSSProperties}>
-      <span aria-hidden="true">{format(shown)}</span>
-      <span className="visually-hidden">{format(value)}</span>
-    </span>
-  );
-}
-
-/**
- * An endless horizontal marquee (decorative duplicate for the loop is aria-hidden). Pauses on hover and focus, while
- * offscreen, and becomes a static wrapped list when reduced motion is requested.
- */
-export function Marquee({ items, label, className }: { items: ReactNode[]; label: string; className?: string }) {
-  const ref = useInViewClass<HTMLDivElement>();
-  if (items.length === 0) return null;
-  return (
-    <div ref={ref} className={clsx('oa-marquee', className)}>
-      <ul className="oa-marquee__track" aria-label={label}>
-        {items.map((item, i) => (
-          <li key={i}>{item}</li>
-        ))}
-      </ul>
-      <ul className="oa-marquee__track oa-marquee__track--clone" aria-hidden="true">
-        {items.map((item, i) => (
-          <li key={i}>{item}</li>
-        ))}
-      </ul>
-    </div>
-  );
 }
 
 /** Pointer-following glow on hover-capable devices: sets --mx/--my (in px) on the card under the pointer. */

@@ -183,4 +183,25 @@ describe('VerifyEmailPage next handling', () => {
     const link = await screen.findByRole('link', { name: 'Sign in' });
     expect(link).toHaveAttribute('href', '/login?verified=1');
   });
+
+  const used = () => problem(400, 'auth.invalid_token', 'This verification link is invalid or has expired.');
+
+  it('offers to sign in when the single-use link was already used (a mail scanner or a second click)', async () => {
+    mockFetch({ ...anonymous, 'POST /auth/verify-email': used });
+    renderWithApp(<VerifyEmailPage />, { route: verifyRoute('&next=%2Flearn%2Fseo-basics%3Fenrol%3D1'), path: '/verify-email' });
+    expect(await screen.findByRole('heading', { level: 1, name: 'This link has expired' })).toBeInTheDocument();
+    expect(screen.getByText(/Already verified\?/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
+      'href',
+      '/login?next=%2Flearn%2Fseo-basics%3Fenrol%3D1',
+    );
+  });
+
+  it('tells a signed-in, verified person that the used link is not a problem', async () => {
+    mockFetch({ 'POST /auth/refresh': () => json(200, session(makeUser({ emailVerified: true }))), 'POST /auth/verify-email': used });
+    renderWithApp(<VerifyEmailPage />, { route: verifyRoute(''), path: '/verify-email' });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Your email is already verified' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Continue' })).toHaveAttribute('href', '/app');
+    expect(screen.queryByText('This link has expired')).not.toBeInTheDocument();
+  });
 });

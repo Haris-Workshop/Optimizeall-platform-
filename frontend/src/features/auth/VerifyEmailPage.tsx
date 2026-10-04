@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { CircleCheck, MailX } from 'lucide-react';
 import { useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { defaultLandingPath } from '@/app/portals';
 import { safeNextPath } from '@/app/redirects';
 import { Button } from '@/components/ui/Button';
@@ -105,6 +105,25 @@ export function VerifyEmailPage() {
   }
 
   const expired = isApiError(verify.error) && verify.error.code === 'auth.invalid_token';
+  // A used link is not always a problem: mail security scanners and a second click consume the single-use token, and the
+  // person's address is verified already. Signed in and verified, say so; otherwise offer to sign in.
+  if (expired && status === 'authenticated' && user?.emailVerified) {
+    const target = nextFromLink ?? pendingEnrolPath();
+    return (
+      <div className="auth-page">
+        <span className="auth-page__icon auth-page__icon--success" aria-hidden="true">
+          <CircleCheck />
+        </span>
+        <div className="auth-page__header" role="status">
+          <h1 className="auth-page__title">Your email is already verified</h1>
+          <p className="auth-page__subtitle">This link was used once already, and your address is confirmed. You’re all set.</p>
+        </div>
+        <ButtonLink to={defaultLandingPath(user.permissions, target)} size="lg" fullWidth>
+          Continue
+        </ButtonLink>
+      </div>
+    );
+  }
   return (
     <div className="auth-page">
       <span className="auth-page__icon auth-page__icon--danger" aria-hidden="true">
@@ -126,6 +145,17 @@ export function VerifyEmailPage() {
         </Button>
       )}
       <ResendVerificationForm initialEmail={user?.email} idPrefix="verify-expired" />
+      {expired && status !== 'authenticated' && (
+        <p className="auth-page__switch">
+          Already verified?{' '}
+          <Link
+            className="ui-link"
+            to={nextFromLink ? `/login?next=${encodeURIComponent(nextFromLink)}` : '/login'}
+          >
+            Sign in
+          </Link>
+        </p>
+      )}
     </div>
   );
 }

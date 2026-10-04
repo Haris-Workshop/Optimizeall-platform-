@@ -10,7 +10,8 @@ public static class SecurityHeaders
             headers.XContentTypeOptions = "nosniff";
             headers.XFrameOptions = "DENY";
             headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
-            headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+            headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"; // as the web server sends
+            headers["Cross-Origin-Opener-Policy"] = "same-origin";
             headers["Cross-Origin-Resource-Policy"] = "same-origin";
             // Server-rendered pages (/_document) get the web app's CSP from the web server (nginx), not the API's.
             if (!context.Request.Path.StartsWithSegments("/api/docs") && !context.Request.Path.StartsWithSegments("/_document"))

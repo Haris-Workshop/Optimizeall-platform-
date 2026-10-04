@@ -268,6 +268,35 @@ public sealed class WebsiteFormsTests : IClassFixture<ApiFactory>, IAsyncLifetim
     }
 
     [Fact]
+    public async Task Repeated_newsletter_signups_do_not_flood_the_address_with_confirmation_mails()
+    {
+        var client = Client();
+        var email = $"flood-{Guid.NewGuid():N}@example.test";
+        async Task SubscribeAsync() => await client.PostJsonAsync("/api/v1/public/newsletter/subscribe",
+            WebsiteTestKit.Form(await TokenAsync(client), new Dictionary<string, object?> { ["email"] = email, ["source"] = "footer" },
+                ConsentTexts.NewsletterVersion), 202);
+        async Task<string> ConfirmLinkAsync() => (await client.GetJsonAsync($"/api/v1/dev/mailbox?to={Uri.EscapeDataString(email)}"))
+            .GetProperty("links").EnumerateArray().Select(l => l.GetString()!).Single(l => l.Contains("/newsletter/confirm"));
+
+        await SubscribeAsync();
+        var first = await ConfirmLinkAsync();
+        await SubscribeAsync();
+        await SubscribeAsync();
+        Assert.Equal(first, await ConfirmLinkAsync()); // no new mail, and the link in the first one still works
+
+        // After the cooldown a new mail goes out (someone who lost the first one can ask again).
+        await _api.WithDbAsync(async db =>
+        {
+            var row = await db.Set<NewsletterSubscriber>().SingleAsync(s => s.Email == email);
+            row.ConsentAt = DateTime.UtcNow.AddMinutes(-11);
+            await db.SaveChangesAsync();
+            return 0;
+        });
+        await SubscribeAsync();
+        Assert.NotEqual(first, await ConfirmLinkAsync());
+    }
+
+    [Fact]
     public async Task Two_parallel_bookings_of_one_slot_let_exactly_one_succeed()
     {
         var admin = (await _api.CreateClientAsync(Role.Admin)).Client;

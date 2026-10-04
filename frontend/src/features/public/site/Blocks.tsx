@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import { ButtonLink } from '@/components/ui';
-import { isInternalHref } from '@/lib/safeHref';
+import { isExternalHref, isInternalHref } from '@/lib/safeHref';
 import type { CaseStudyCard as CaseStudyCardData, FaqEntry, HomeStat, PageBlock, ServiceCategoryGroup, SiteLink, Testimonial, TrustLogo } from './api';
 import { CaseStudyCard, MetricValue, Section, ServiceCard, TestimonialCarousel } from './components';
 import { SiteIcon } from './icons';
@@ -25,7 +25,7 @@ const list = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
 
 function CtaButton({ value, variant }: { value: SiteLink | null; variant: 'highlight' | 'secondary' }) {
   if (!value || !isInternalHref(value.url)) {
-    if (value && /^https:\/\//.test(value.url))
+    if (value && isExternalHref(value.url))
       return (
         <a className={`ui-button ui-button--${variant} ui-button--lg`} href={value.url} target="_blank" rel="noopener noreferrer">
           {value.label}

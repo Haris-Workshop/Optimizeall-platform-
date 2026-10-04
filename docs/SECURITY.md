@@ -620,3 +620,53 @@ to be named once a fix is released.
 * **Content.** Course documents (packs and staff edits) are validated against the pack contract (no raw HTML outside
   code, no external images, media only from uploads or https); lesson Markdown is rendered by the SPA's safe Markdown
   component (no HTML injection). Lesson media uploads are identified by magic bytes (MP4, WebVTT, PNG/JPEG/WebP).
+
+## 15. Security review, October 2026
+
+A review against the OWASP Top 10 of the whole tree (backend, web app, web server, deployment files) and of the
+newest features: the partner short links and click redirects, the editable robots.txt / sitemaps / llms.txt, the
+site-structure link fields, and the file and export paths. Authentication, authorization (default-deny, permission and
+tenancy contract tests), SSRF (`SafeHttpFetcher` is the only fetcher of caller-chosen URLs; provider base URLs cannot be
+set through the integrations API), injection (no raw SQL with caller input; Markdown, HTML mail and JSON-LD are
+sanitized or encoded on output), CSV formula injection (`Csv.Escape`), uploads (magic-byte sniffing, size and
+dimension limits, metadata stripped, no SVG) and secrets (tree and full history scanned for Google/YouTube client
+secrets and refresh tokens, GitHub, AWS, Stripe, Slack and private-key patterns: none) needed no change.
+
+| Finding | Severity | Resolution |
+|---|---|---|
+| Partner counters: anonymous callers choose the page path of impressions and clicks, so one address could add unbounded rows to `website_partner_stats` | Medium | At most 500 distinct (slot, page) rows per partner and day; further pages are counted under `/other` (`PartnerRules.MaxStatRowsPerPartnerDay`). Test: `Anonymous_visitors_cannot_grow_the_counter_table_without_limit` |
+| Server-rendered pages: URL canonicalization kept a backslash, so `/%5C//evil.example` answered `301 Location: /\/evil.example`, which browsers read as `//evil.example` (open redirect) | Medium | A path containing a backslash is never canonicalized (404). Test: `A_backslash_in_the_path_never_produces_a_redirect_to_another_site` |
+| Newsletter sign-up sent a new confirmation mail on every request for a pending address (mailbox flooding of third parties, and each request invalidated the link of the previous mail) | Medium | One confirmation mail per address per 10 minutes, as the email-marketing sign-up forms already do (`NewsletterService.ConfirmCooldown`). Test: `Repeated_newsletter_signups_do_not_flood_the_address_with_confirmation_mails` |
+| react-router 6.30 (GHSA-wrjc-x8rr-h8h6 open redirect via backslash, GHSA-337j-9hxr-rhxg constructor injection in SSR hydration); the fix exists only in 7.x | Moderate (not reachable: redirects go through `safeNextPath`, the renderer does not use `hydrationData`) | Upgraded to react-router-dom 7.18.4; `npm audit --omit=dev` reports 0 vulnerabilities |
+| API responses lacked `payment=()` in `Permissions-Policy` and `Cross-Origin-Opener-Policy`, which the web server sends | Low | `SecurityHeaders` sends the same values; test `SecurityHeadersTests` |
+| Header menu items and CTA blocks from the site settings fell back to a bare `<a href>` for any non-internal value, so a stored `javascript:` value (written before the API validated links) would have become a link | Low (the API refuses non-http(s) links on save) | The web app links only internal paths and http(s) addresses (`isExternalHref`); test `menuLink.test.tsx` |
+| robots.txt editor: U+0085, U+2028 and U+2029 were not rejected, and some parsers treat them as line breaks (a "comment" could hide a second directive) | Low | Rejected like other control characters. Test: `Unicode_line_breaks_and_control_characters_cannot_smuggle_a_second_line_into_robots_txt` |
+| `Content-Disposition` of uploaded files was built by string concatenation (a non-ASCII file name made the response fail) | Low | Built with RFC 6266 `filename*` encoding |
+
+### Open decision: the Render demo blueprint (`render.yaml`) is not safe to expose as production
+
+`render.yaml` is a staging/demo blueprint and says so, but it is easy to deploy as is and keep. As written it makes the
+whole deployment, including every administrator action, available to anyone who reads this repository:
+
+* `ASPNETCORE_ENVIRONMENT=Staging` and `Database__Seed__1=Demo` seed the demo dataset, which contains staff accounts
+  (`admin@demo.optimizeall.app`, `finance1@…`, `reviewer1@…`, `manager@…`) with the **published** password
+  `DemoAccounts.Password` (`Modules/Seed/DemoSeeder.cs`, also in `docs/DEMO.md`).
+* `appsettings.Staging.json` sets `DevTools:TestLoginEnabled=true`, and the environment allow-list in
+  `TestAccounts.TestLoginEnvironments` includes Staging, so `GET /api/v1/dev/test-accounts` and
+  `POST /api/v1/dev/test-login` (anonymous) sign anyone in as any demo account, administrators included, **without a
+  password and without two-step verification**.
+* `DevTools__MailboxEnabled=true` with `Email__Mode=File` exposes `GET /api/v1/dev/mailbox?to=<address>` to anonymous
+  callers: it returns the newest email sent to **any** address, so a password-reset or verification link for any real
+  user who registers on that deployment can be read by anyone.
+* `Swagger__Enabled=true` publishes the API description at `/api/docs`.
+
+Nothing here is a code defect (each switch is off in Production and documented as demo only), so `render.yaml` was left
+unchanged. Options for the owner, in order of strength:
+
+1. Keep this blueprint for demos only: never point real users, real payment or real mail at it, and never keep real
+   data in its database.
+2. For anything real use `deploy/render/render-mysql.yaml` with `ASPNETCORE_ENVIRONMENT=Production`,
+   `Database__Seed__*` limited to `Baseline`, no `DevTools__*` and `Swagger__Enabled=false` (see DEPLOYMENT.md).
+3. If a public demo must stay reachable, remove `Staging` from `TestLoginEnvironments` for staff roles (or exclude
+   staff roles from `/dev/test-login`), restrict the dev mailbox to demo addresses, and give the demo staff accounts a
+   random password instead of the published one.

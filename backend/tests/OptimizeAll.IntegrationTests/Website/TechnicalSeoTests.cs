@@ -317,6 +317,19 @@ public sealed class TechnicalSeoTests(ApiFactory api) : IClassFixture<ApiFactory
     }
 
     [Theory]
+    [InlineData("/%5C//evil.example")]
+    [InlineData("/%5Cevil.example/")]
+    [InlineData("/%5C%5CEvil.example")]
+    [InlineData("/%5c/evil.example/path/")]
+    public async Task A_backslash_in_the_path_never_produces_a_redirect_to_another_site(string path)
+    {
+        var client = api.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var response = await client.GetAsync("/_document" + path);
+        Assert.Null(response.Headers.Location);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
     [InlineData("/login")]
     [InlineData("/register")]
     [InlineData("/agency/website/seo")]

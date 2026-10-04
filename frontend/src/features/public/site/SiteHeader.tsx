@@ -6,7 +6,7 @@ import { defaultLandingPath } from '@/app/portals';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ButtonLink } from '@/components/ui';
 import { useAuth } from '@/lib/auth/useAuth';
-import { isInternalHref } from '@/lib/safeHref';
+import { isExternalHref, isInternalHref } from '@/lib/safeHref';
 import { type MenuCategory, type MenuItem, useSite } from './api';
 import { useSiteCopy } from './copy';
 import { DEFAULT_PRODUCT_LINKS, DEFAULT_SECONDARY_LINK, productChrome, SiteLogo } from './layout';
@@ -245,7 +245,7 @@ function ServicesMega({ categories, onNavigate }: { categories: MenuCategory[]; 
   );
 }
 
-function MenuLink({ item, className, onClick }: { item: MenuItem; className?: string; onClick?: () => void }) {
+export function MenuLink({ item, className, onClick }: { item: MenuItem; className?: string; onClick?: () => void }) {
   if (!item.url) return <span className={className}>{item.label}</span>;
   if (isInternalHref(item.url))
     return (
@@ -253,6 +253,8 @@ function MenuLink({ item, className, onClick }: { item: MenuItem; className?: st
         {item.label}
       </NavLink>
     );
+  // Only http(s) addresses become links: a stored javascript:/data: value renders as plain text (the API refuses them too).
+  if (!isExternalHref(item.url)) return <span className={className}>{item.label}</span>;
   return (
     <a href={item.url} className={className} target="_blank" rel="noopener noreferrer" onClick={onClick}>
       {item.label}

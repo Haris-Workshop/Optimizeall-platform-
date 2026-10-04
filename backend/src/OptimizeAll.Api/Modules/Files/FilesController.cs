@@ -27,7 +27,10 @@ public sealed class FilesController(IFileService files, ICurrentUser currentUser
         headers.XContentTypeOptions = "nosniff";
         headers.ContentSecurityPolicy = "default-src 'none'; sandbox";
         headers.CacheControl = content.File.IsPublic ? "public, max-age=86400" : "private, max-age=300";
-        headers.ContentDisposition = $"inline; filename=\"{content.File.OriginalFileName.Replace("\"", string.Empty)}\"";
+        // Encoded (RFC 6266 filename*), so a name with non-ASCII letters or quotes can neither break the header nor fail the response.
+        var disposition = new Microsoft.Net.Http.Headers.ContentDispositionHeaderValue("inline");
+        disposition.SetHttpFileName(content.File.OriginalFileName);
+        headers.ContentDisposition = disposition.ToString();
         if (content.File.IsPublic) headers["Cross-Origin-Resource-Policy"] = "cross-origin";
         // Lesson videos need range requests (seeking); everything else is served whole.
         return File(content.Content, content.File.ContentType, enableRangeProcessing: content.File.ContentType == "video/mp4");

@@ -132,6 +132,9 @@ public sealed partial class SeoPageResolver(
     /// </summary>
     public static string? NormalizePath(string path)
     {
+        // Never canonicalize a path with a backslash: browsers read "\" as "/" in a Location header, so "/\//evil.example"
+        // would become the 301 target "/\/evil.example", an open redirect to evil.example. It is just an unknown page (404).
+        if (path is not null && path.Contains('\\')) return null;
         var p = string.IsNullOrEmpty(path) ? "/" : path;
         while (p.Contains("//", StringComparison.Ordinal)) p = p.Replace("//", "/", StringComparison.Ordinal);
         if (p.Length > 1) p = p.TrimEnd('/');

@@ -12,6 +12,22 @@ public sealed class SeoFileOptionsTests
     private static SitemapUrl Url(string path, string group) =>
         new(path, new DateTime(2026, 9, 1, 12, 0, 0, DateTimeKind.Utc), group, Array.Empty<SeoImage>(), Array.Empty<SeoVideo>(), path);
 
+    [Theory]
+    [InlineData("\u2028")]
+    [InlineData("\u0085")]
+    [InlineData("\u2029")]
+    [InlineData("\u0000")]
+    public void Unicode_line_breaks_and_control_characters_cannot_smuggle_a_second_line_into_robots_txt(string separator)
+    {
+        var e = new FieldErrors();
+        SeoFileRules.Robots(new[] { "Disallow: /a" + separator + "Allow: /" }, null, null, e);
+        Assert.True(e.Any);
+
+        e = new FieldErrors();
+        SeoFileRules.Robots(null, "# note" + separator + "User-agent: *\nDisallow: /", null, e);
+        Assert.True(e.Any);
+    }
+
     [Fact]
     public void Robots_additions_are_normalised_and_written_into_every_crawling_group()
     {

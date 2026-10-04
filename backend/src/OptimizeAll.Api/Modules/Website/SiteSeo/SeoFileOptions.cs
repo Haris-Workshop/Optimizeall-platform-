@@ -289,7 +289,7 @@ public static partial class SeoFileRules
         return text.Length == 0 ? null : text;
     }
 
-    [GeneratedRegex(@"[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]")]
+    [GeneratedRegex(@"[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u0085\u2028\u2029]")]
     private static partial Regex ControlRegex();
 
     [GeneratedRegex(@"^[A-Za-z0-9._\-/]{1,80}$")]

@@ -31,6 +31,9 @@ public sealed class NewsletterService(
 {
     public static readonly TimeSpan ConfirmLifetime = TimeSpan.FromHours(48);
 
+    /// <summary>The same address gets a new confirmation mail at most this often (as for the email-marketing sign-up forms).</summary>
+    public static readonly TimeSpan ConfirmCooldown = TimeSpan.FromMinutes(10);
+
     public const string SubscribeMessage = "Almost there! Check your inbox and click the link to confirm your subscription.";
 
     public async Task<NewsletterResultDto> SubscribeAsync(NewsletterSubscribeInput input, CancellationToken ct)
@@ -43,6 +46,10 @@ public sealed class NewsletterService(
 
         var subscriber = await db.Set<NewsletterSubscriber>().FirstOrDefaultAsync(s => s.NormalizedEmail == normalized, ct);
         if (subscriber?.Status == NewsletterStatus.Confirmed) return new NewsletterResultDto("pending", SubscribeMessage);
+        // A confirmation mail was sent to this address a moment ago: send no second one (anyone can type anyone's address,
+        // so repeated signups must not become a way to flood a mailbox) and keep the link in that mail valid.
+        if (subscriber is { Status: NewsletterStatus.Pending, ConsentAt: { } sentAt } && sentAt > now - ConfirmCooldown)
+            return new NewsletterResultDto("pending", SubscribeMessage);
 
         var isNew = subscriber is null;
         subscriber ??= new NewsletterSubscriber { Email = address, NormalizedEmail = normalized };

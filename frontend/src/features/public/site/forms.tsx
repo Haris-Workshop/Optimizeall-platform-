@@ -12,11 +12,16 @@ import { getAttribution } from './attribution';
  * versioned consent and campaign attribution. The server repeats every check.
  */
 
-/** Fetches a fresh form token (and the budget/timeline options) when a form mounts. */
+/**
+ * Fetches a fresh form token (and the budget/timeline options) when a form mounts in the browser. Never on the server:
+ * a token is single-use and timed, so one minted while rendering would be baked into the page's HTML and the visitor's
+ * browser would not ask for its own.
+ */
 export function useFormToken() {
   const query = useQuery({
     queryKey: ['public', 'form-token'],
     queryFn: () => api.get<FormToken>('/public/forms/token'),
+    enabled: typeof window !== 'undefined',
     staleTime: 60 * 60_000,
     gcTime: 0,
     refetchOnWindowFocus: false,

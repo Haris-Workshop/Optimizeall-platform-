@@ -77,7 +77,7 @@ function UnitSlot({ slot, keywords, categories }: { slot: PartnerUnitSlot; keywo
   const { data, isError } = usePartnerPlacement(slot, keywords, categories, pathname, near);
   if (data?.partner) return <PartnerAd partner={data.partner} slot={slot} />;
   if (isError || data) return null; // no partner for this slot and page: nothing to show
-  return <div ref={holder} className={`partner-reserve partner-reserve--${slotVariant(slot)}`} aria-hidden="true" />;
+  return <div ref={holder} className={`partner-reserve partner-reserve--${slotVariant(slot)}`} data-partner-reserve={slot} aria-hidden="true" />;
 }
 
 function ListSlot({ slot }: { slot: PartnerListSlot }) {

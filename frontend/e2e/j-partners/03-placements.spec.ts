@@ -20,10 +20,13 @@ async function expectDisclosedAndSponsored(unit: Locator, partnerNames: string) 
   }
 }
 
-/** Scrolls to a below-the-fold placement: it asks the API only when about to be seen. */
-async function reveal(page: Page, selector: string): Promise<Locator> {
-  const unit = page.locator(selector).first();
-  await unit.scrollIntoViewIfNeeded();
+/**
+ * Scrolls to a below-the-fold placement: it asks the API only when its reserved room (data-partner-reserve) comes within
+ * 700px of the viewport, so the room is what to scroll to; the card replaces it once the answer is there.
+ */
+async function reveal(page: Page, slot: string): Promise<Locator> {
+  const unit = page.locator(`[data-partner-slot="${slot}"]`).first();
+  await page.locator(`[data-partner-reserve="${slot}"], [data-partner-slot="${slot}"]`).first().scrollIntoViewIfNeeded();
   await expect(unit).toBeVisible();
   return unit;
 }
@@ -53,18 +56,18 @@ test('the article end card is the resource card; the blog hub and the services o
   const errors = watchErrors(page);
   const blog = await (await page.request.get('/api/v1/public/blog')).json();
   await page.goto(`/blog/${blog.items[0].slug}`);
-  const end = await reveal(page, '[data-partner-slot="blog.end"]');
+  const end = await reveal(page, 'blog.end');
   await expect(end).toHaveAttribute('data-variant', 'kit');
   await expectDisclosedAndSponsored(end, '');
   await expect(end.getByRole('group', { name: /^Share / })).toBeVisible();
 
   await page.goto('/blog');
-  const bar = await reveal(page, '[data-partner-slot="blog.index"]');
+  const bar = await reveal(page, 'blog.index');
   await expect(bar).toHaveAttribute('data-variant', 'bar');
   await expectDisclosedAndSponsored(bar, '');
 
   await page.goto('/services');
-  const services = await reveal(page, '[data-partner-slot="services.index"]');
+  const services = await reveal(page, 'services.index');
   await expect(services).toHaveAttribute('data-variant', 'bar');
   await expectDisclosedAndSponsored(services, '');
   errors.expectClean('end card and bars');
@@ -73,7 +76,7 @@ test('the article end card is the resource card; the blog hub and the services o
 test('the academy hub has one hero card', async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto('/learn');
-  const hero = await reveal(page, '[data-partner-slot="learn.hub"]');
+  const hero = await reveal(page, 'learn.hub');
   await expect(hero).toHaveAttribute('data-variant', 'hero');
   await expectDisclosedAndSponsored(hero, '');
   await expect(page.locator('[data-variant="hero"]')).toHaveCount(1);

@@ -94,7 +94,9 @@ test('a blog post shows one sponsored unit at its end and the sitemap lists the 
   const blog = await (await page.request.get('/api/v1/public/blog')).json();
   const slug: string = blog.items[0].slug;
   await page.goto(`/blog/${slug}`);
+  // The unit asks the API only when its reserved room is about to be scrolled into view.
   const unit = page.locator('[data-partner-slot="blog.end"]');
+  await page.locator('[data-partner-reserve="blog.end"], [data-partner-slot="blog.end"]').first().scrollIntoViewIfNeeded();
   await expect(unit).toBeVisible();
   await expect(unit.getByText('Sponsored', { exact: true })).toBeVisible();
   await expect(unit).toContainText('Optimize All is the official marketing partner of');

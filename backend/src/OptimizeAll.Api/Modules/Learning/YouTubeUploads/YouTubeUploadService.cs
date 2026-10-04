@@ -1059,7 +1059,8 @@ public sealed class YouTubeUploadService(
         foreach (var file in new[] { staged.Video, staged.Thumbnail })
         {
             if (file is null) continue;
-            try { storage.Delete(file.StorageKey); } catch (Exception) { }
+            try { storage.Delete(file.StorageKey); }
+            catch (Exception ex) { logger.LogWarning("Could not delete staged file {FileId} ({ErrorType})", file.Id, ex.GetType().Name); }
         }
     }
 

@@ -733,6 +733,10 @@
 }
 
 .ui-breadcrumbs a {
+  display: inline-flex;
+  align-items: center;
+  /* WCAG 2.5.8: a target is at least 24px tall, whatever sits next to it on a narrow screen. */
+  min-height: 24px;
   color: var(--color-text-muted);
   text-decoration: none;
 }

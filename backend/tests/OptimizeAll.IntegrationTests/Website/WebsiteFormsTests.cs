@@ -91,6 +91,11 @@ public sealed class WebsiteFormsTests : IClassFixture<ApiFactory>, IAsyncLifetim
 
         var link = WebsiteLinks.Inquiry(inquiry.Id);
         Assert.True(await _api.WithDbAsync(db => db.Set<Notification>().AnyAsync(n => n.UserId == admin.Id && n.LinkUrl == link)));
+
+        // The visitor gets a receipt carrying the reference shown on the confirmation page.
+        var receipt = await client.GetJsonAsync($"/api/v1/dev/mailbox?to={Uri.EscapeDataString(email)}");
+        Assert.Equal("We've received your request", receipt.GetProperty("subject").GetString());
+        Assert.Contains(accepted.GetProperty("reference").GetString()!, receipt.GetProperty("text").GetString());
     }
 
     [Fact]

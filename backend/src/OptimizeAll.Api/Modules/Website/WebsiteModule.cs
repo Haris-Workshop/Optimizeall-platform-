@@ -41,6 +41,7 @@ public static class WebsiteModule
         services.AddScoped<NewsletterService>();
         services.AddScoped<OverviewService>();
         services.AddScoped<IEventHandler<WebsiteInquiryReceived>, InquiryNotificationHandler>();
+        services.AddScoped<IEventHandler<WebsiteInquiryReceived>, InquiryAcknowledgementHandler>();
         services.AddSiteSeo();
 
         services.AddRecurringJob<BlogSchedulerJob>(TimeSpan.FromMinutes(1));

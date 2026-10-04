@@ -13,6 +13,7 @@ public static class EmailTemplateCatalog
     public const string LayoutKey = "notification.layout";
     public const string NotificationPrefix = "notification.";
     public const string NewsletterConfirm = "website.newsletter_confirm";
+    public const string InquiryReceived = "website.inquiry_received";
     public const string BookingConfirmed = "website.booking_confirmed";
     public const string BookingCancelled = "website.booking_cancelled";
     public const string BookingRescheduled = "website.booking_rescheduled";
@@ -90,6 +91,22 @@ public static class EmailTemplateCatalog
                 new EmailVariable("confirmUrl", "The confirmation link.", "https://www.example.com/newsletter/confirm?token=abc", Required: true),
                 new EmailVariable("unsubscribeUrl", "The one-click unsubscribe link.", "https://www.example.com/newsletter/unsubscribe?token=xyz", Required: true),
                 new EmailVariable("hours", "How long the confirmation link stays valid.", "48"),
+                SiteName,
+            },
+            HasHtml: false));
+
+        list.Add(new EmailTemplateDefinition(InquiryReceived, GroupWebsite, "Contact, audit and quote: received",
+            "Sent to the visitor right after they send the contact form, a free audit request or a quote request.",
+            "We've received your request",
+            "Hi {{name}},\n\nThanks for getting in touch. We've received your {{kind}} and a strategist will reply {{reply}}.\n\n" +
+            "Reference: {{reference}}\n\nIf there's anything to add, just reply to this email.\n\n— The {{siteName}} team",
+            null,
+            new[]
+            {
+                new EmailVariable("name", "The visitor's name.", "Ada Lovelace"),
+                new EmailVariable("kind", "What they sent: \"message\", \"free audit request\" or \"quote request\".", "quote request"),
+                new EmailVariable("reply", "When they can expect an answer.", "within two business days"),
+                new EmailVariable("reference", "The request reference.", "OA-7F3K2Q"),
                 SiteName,
             },
             HasHtml: false));

@@ -74,6 +74,7 @@ public sealed class EmailTemplateTests
         foreach (var type in NotificationCatalog.AllTypes)
             Assert.Contains(EmailTemplateCatalog.NotificationKey(type), keys);
         Assert.Contains(EmailTemplateCatalog.NewsletterConfirm, keys);
+        Assert.Contains(EmailTemplateCatalog.InquiryReceived, keys);
         Assert.Contains(EmailTemplateCatalog.BookingConfirmed, keys);
         Assert.Contains(EmailTemplateCatalog.BookingCancelled, keys);
         Assert.Contains(EmailTemplateCatalog.BookingRescheduled, keys);

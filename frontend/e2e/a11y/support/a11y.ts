@@ -299,6 +299,11 @@ async function setTheme(page: Page, theme: 'light' | 'dark') {
   }, theme);
   // Colours cross-fade between themes (CSS transitions): measuring contrast mid-fade reports text that is fine once the
   // theme has settled. Wait for the finite transitions and animations the switch started (infinite loops never end).
+  await settleAnimations(page);
+}
+
+/** Waits until every finite animation and transition has finished (infinite decorative loops are left running). */
+async function settleAnimations(page: Page) {
   await page
     .waitForFunction(
       () =>
@@ -321,7 +326,16 @@ export async function axeLight(page: Page) {
 export async function axeDarkContrast(page: Page) {
   await setTheme(page, 'dark');
   try {
-    return format((await builder(page).withRules(['color-contrast']).analyze()).violations);
+    // A slow machine can still be cross-fading a colour when axe reads it (a page's late-arriving list, a card's
+    // entrance): a real violation is still there when measured again once the animations have finished, a half-faded one
+    // is not. Only the last measurement counts.
+    let found = format((await builder(page).withRules(['color-contrast']).analyze()).violations);
+    for (let attempt = 0; attempt < 3 && found.length > 0; attempt++) {
+      await page.waitForTimeout(750);
+      await settleAnimations(page);
+      found = format((await builder(page).withRules(['color-contrast']).analyze()).violations);
+    }
+    return found;
   } finally {
     await setTheme(page, 'light');
   }

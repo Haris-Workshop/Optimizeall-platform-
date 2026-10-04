@@ -12,6 +12,7 @@ import { type EmploymentType, type JobCard, type PublicJob, type TeamMember, use
 import { useSiteCopy } from '../site/copy';
 import { formatPublished, PublicQueryState } from '../site/components';
 import { ConsentCheckbox, fieldErrorsOf, Honeypot, useFormToken, useRenewFormToken } from '../site/forms';
+import { useBringIntoView } from './leadForm';
 import { headFromSeo, useDocumentHead } from '../site/head';
 import { Markdown } from '../site/Markdown';
 import { useReveal } from '../site/motion';
@@ -406,6 +407,19 @@ export function JobDetailPage() {
 
 const PDF_TYPES = ['application/pdf'];
 
+/** The confirmation that replaces the application form; brought into view like the other forms' confirmations. */
+function ApplicationReceived({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useBringIntoView(ref);
+  return (
+    <div ref={ref} className="oa-co-card">
+      <Alert tone="success" title="Application received">
+        {children}
+      </Alert>
+    </div>
+  );
+}
+
 function ApplicationForm({ job }: { job: PublicJob }) {
   const { data: site } = useSite();
   const copy = useSiteCopy();
@@ -448,11 +462,9 @@ function ApplicationForm({ job }: { job: PublicJob }) {
 
   if (apply.isSuccess)
     return (
-      <div className="oa-co-card">
-        <Alert tone="success" title="Application received">
-          {apply.data.message} Reference {apply.data.reference}.
-        </Alert>
-      </div>
+      <ApplicationReceived>
+        {apply.data.message} Reference {apply.data.reference}.
+      </ApplicationReceived>
     );
 
   return (

@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { Check, Lock } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Alert, ButtonLink, FormField, Input } from '@/components/ui';
 import { api } from '@/lib/api/client';
 import { errorMessage, isApiError } from '@/lib/api/errors';
@@ -179,20 +179,26 @@ export function SubmitRow({ children }: { children: ReactNode }) {
 const SUCCESS_SCROLL_OFFSET = 96;
 
 /**
+ * Scrolls the element into view, just under the sticky header, once it has mounted. The form a confirmation replaces is
+ * far taller than the confirmation: without this the browser keeps the old scroll offset and the visitor lands on the
+ * footer with the confirmation above the fold.
+ */
+export function useBringIntoView(ref: RefObject<HTMLElement>) {
+  useEffect(() => {
+    const top = (ref.current?.getBoundingClientRect().top ?? 0) + window.scrollY - SUCCESS_SCROLL_OFFSET;
+    window.scrollTo({ top: Math.max(0, top) });
+  }, [ref]);
+}
+
+/**
  * The confirmation that replaces a submitted form: a tick, the heading (focused, so it is announced and keyboard users
  * start from it), the message, the reference and two ways onward.
  */
 export function FormSuccess({ title, reference, children }: { title: string; reference?: string; children?: ReactNode }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const card = useRef<HTMLDivElement>(null);
-  // The form that was just submitted was far taller than this card: without scrolling, the browser keeps the old offset
-  // and the visitor lands on the footer with the confirmation above the fold. Bring the confirmation (just under the
-  // sticky header) into view, then give it focus.
-  useEffect(() => {
-    const top = (card.current?.getBoundingClientRect().top ?? 0) + window.scrollY - SUCCESS_SCROLL_OFFSET;
-    window.scrollTo({ top: Math.max(0, top) });
-    heading.current?.focus({ preventScroll: true });
-  }, []);
+  useBringIntoView(card);
+  useEffect(() => heading.current?.focus({ preventScroll: true }), []);
   return (
     <div ref={card} className="oa-co-card oa-co-success" role="status" aria-live="polite">
       <span className="oa-co-success__mark" aria-hidden="true">

@@ -2912,6 +2912,10 @@ svg.site-mega__icon {
   a.oa-co-chip,
   .oa-co-arrowlink,
   .oa-h-arrowlink,
+  .oa-a-textlink,
+  .ax-arrowlink,
+  .oa-a-toc a,
+  .oa-a-chip,
   .oa-co-toc__toggle {
     display: inline-flex;
     align-items: center;

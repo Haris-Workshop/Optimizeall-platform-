@@ -24,7 +24,7 @@ a third to a half of real problems, so the patterns below are also reviewed by h
 | Tables (1.3.1) | `DataTable` renders a real `<table>` with a caption, `scope`d headers and `aria-sort`; below 768 px it becomes a list of cards with the header as a label for every value. Tables that stay tabular on phones (documents, reports) scroll inside a focusable, named `ScrollArea`. | `components/ui/DataTable.tsx` |
 | Charts (1.1.1, 1.4.1) | SVG charts have `<title>`/`<desc>`, a visually hidden data table, direct value labels, and never rely on colour alone. | `components/ui/Charts.tsx` |
 | Motion (2.2.2, 2.3.3) | `prefers-reduced-motion` zeroes every duration token and animation/transition, turns smooth scrolling off and stops the testimonial carousel from auto-advancing (it also has a pause button). | `styles/tokens.css`, `styles/base.css`, `public/site/components.tsx` |
-| Target size (2.5.8) | Buttons and icon buttons are ≥ 32 px (sm) / 40 px (md), nav rows 40 px, the phone bottom bar 64 px; axe's `target-size` rule runs on every audited page. | `Button.css`, `PortalLayout.css` |
+| Target size (2.5.8) | Buttons and icon buttons are ≥ 32 px (sm) / 40 px (md), nav rows 40 px, the phone bottom bar 64 px; axe's `target-size` rule runs on every audited page. On phones and touch screens the public site's standalone links (footer lists, breadcrumbs, legal and contact links, tag chips, share buttons, the brand link, the article contents toggle) are 44 px tall. | `Button.css`, `PortalLayout.css`, `public/site/site.css` (Touch targets) |
 | Reflow (1.4.10) | No horizontal page scroll at 360, 768 or 1280 px; long unbroken values (URLs, ids, e-mails) wrap; wide content scrolls inside its own container. | see "Responsive layout" |
 
 ## Responsive layout
@@ -86,13 +86,15 @@ E2E_SUITE=a11y … npx playwright test pages.spec.ts -g "client"      # one port
   After the first page load it moves between pages with client-side navigations (as people do), which also keeps the
   run well below the API's per-IP limits on session refreshes and public endpoints.
 * `keyboard.spec.ts` — skip links (public site and portals), a visible focus indicator on every stop of the portal
-  chrome, menus (Escape, focus return), the phone navigation drawer (focus trap, Escape, focus restore, axe with the
+  chrome and of five public pages (header, content, footer), menus (Escape, focus return), the phone navigation drawer (focus trap, Escape, focus restore, axe with the
   drawer open, 24 px target), three create dialogs (focus in, trap, Escape, restore, axe inside), the toast live
   region, and reduced motion (duration tokens are 0, opening a drawer runs no animation, no smooth scrolling).
 
 Audited pages (about 125, each at three widths): public website (home, services, a service, industries, case studies,
-a case study, pricing, team, careers, blog, a post, contact, quote, FAQ, creators, a client landing page, a public
-campaign page, an invalid invoice link, sign-in, registration, password reset); participant (all 11 sections and a
+a case study, pricing, team, careers, blog, a post, contact, quote, FAQ, creators, about, how we work, free audit,
+book a consultation, an industry, partners and a partner, accessibility and privacy pages, the Academy hub, learning
+paths, a course, a lesson, certificate verification, the not-found page, a client landing page, a public
+campaign page, an invalid invoice link, sign-in, registration, password reset); every portal's account security page; participant (all 11 sections and a
 campaign); reviewer (all 5 sections); campaign manager (overview, campaigns, a campaign, templates, calendar,
 invitations, experiments, an experiment, analytics, achievements); finance (overview, payments, batches, a batch,
 ledger, approvals, holds, FX rates, schedule); admin (overview, users, a user, roles, settings, content, support,

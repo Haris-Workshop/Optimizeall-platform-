@@ -335,6 +335,18 @@ export async function settle(page: Page) {
   await expect(page.locator('main .ui-skeleton, main [aria-busy="true"]'))
     .toHaveCount(0, { timeout: 10_000 })
     .catch(() => undefined);
+  // Reveal-on-scroll sections start their fade only when they come into view, a moment after the page is ready: walk
+  // down the page once so every section has started (and, below, finished) its entrance before axe measures contrast.
+  await page
+    .evaluate(async () => {
+      const step = Math.max(window.innerHeight * 0.8, 400);
+      for (let y = step; y < document.documentElement.scrollHeight; y += step) {
+        window.scrollTo(0, y);
+        await new Promise((resolve) => setTimeout(resolve, 40));
+      }
+      window.scrollTo(0, 0);
+    })
+    .catch(() => undefined);
   // Entrance animations (the public pages' reveal-on-scroll fades) change opacity for up to a second; axe would measure
   // the contrast of half-faded text. Audit the settled page: wait until every finite animation has finished (infinite
   // decorative loops never do and are left running).

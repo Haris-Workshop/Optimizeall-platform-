@@ -29,7 +29,7 @@ export function App({ queryClient, router: initialRouter }: { queryClient?: Quer
   useEffect(() => document.documentElement.setAttribute('data-app-ready', ''), []);
   return (
     <AppProviders queryClient={queryClient}>
-      <RouterProvider router={router} future={{ v7_startTransition: true }} />
+      <RouterProvider router={router} />
     </AppProviders>
   );
 }

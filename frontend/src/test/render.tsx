@@ -4,7 +4,6 @@ import axe from 'axe-core';
 import type { ReactElement } from 'react';
 import { createMemoryRouter, Outlet, RouterProvider, type RouteObject } from 'react-router-dom';
 import { AppProviders } from '@/app/providers';
-import { routerFuture } from '@/app/router';
 import { AuthProvider } from '@/lib/auth/AuthProvider';
 
 export function testQueryClient(): QueryClient {
@@ -38,11 +37,10 @@ export function renderWithApp(
   );
   const router = createMemoryRouter([{ element: root, children: [...routes, { path, element: ui }] }], {
     initialEntries: [route],
-    future: routerFuture,
   });
   const result = render(
     <AppProviders queryClient={testQueryClient()}>
-      <RouterProvider router={router} future={{ v7_startTransition: true }} />
+      <RouterProvider router={router} />
     </AppProviders>,
   );
   return { ...result, router };

@@ -47,7 +47,7 @@ const columns: DataTableColumn<Row>[] = [
 
 function renderTable(props: Partial<Parameters<typeof DataTable<Row>>[0]> = {}) {
   return render(
-    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <MemoryRouter>
       <DataTable caption="Submissions" columns={columns} rows={rows} getRowId={(r) => r.id} {...props} />
     </MemoryRouter>,
   );
@@ -91,7 +91,7 @@ describe('DataTable', () => {
     function Harness() {
       const [selected, setSelected] = useState<string[]>([]);
       return (
-        <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <MemoryRouter>
           <DataTable
             caption="Submissions"
             columns={columns}
@@ -117,7 +117,7 @@ describe('DataTable', () => {
     const { rerender } = renderTable({ loading: true });
     expect(screen.getByRole('table')).toHaveAttribute('aria-busy', 'true');
     rerender(
-      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <MemoryRouter>
         <DataTable caption="Submissions" columns={columns} rows={[]} getRowId={(r) => r.id} />
       </MemoryRouter>,
     );

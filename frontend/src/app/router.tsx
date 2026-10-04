@@ -239,15 +239,6 @@ export function serverRenderedRouteTree(tree: RouteObject[] = routes): RouteObje
   return keep;
 }
 
-/** Opt into React Router v7 behaviours now so the eventual upgrade is a no-op. */
-export const routerFuture = {
-  v7_fetcherPersist: true,
-  v7_normalizeFormMethod: true,
-  v7_partialHydration: true,
-  v7_relativeSplatPath: true,
-  v7_skipActionErrorRevalidation: true,
-} as const;
-
 export function createAppRouter() {
-  return createBrowserRouter(routes, { future: routerFuture });
+  return createBrowserRouter(routes);
 }

@@ -15,9 +15,9 @@ import { createHash } from 'node:crypto';
 import { dehydrate, QueryClient, type Query, type QueryFunction, type QueryKey } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { renderToString } from 'react-dom/server';
-import { createStaticHandler, createStaticRouter, StaticRouterProvider } from 'react-router-dom/server';
+import { createStaticHandler, createStaticRouter, StaticRouterProvider } from 'react-router';
 import { AppProviders } from './app/providers';
-import { routerFuture, routes } from './app/router';
+import { routes } from './app/router';
 import { extractInlineStyles, injectRenderedPage, pageAssets, type RenderInput, type RenderResult } from './app/ssrDocument';
 import { setTransport } from './lib/api/client';
 import { isApiError } from './lib/api/errors';
@@ -92,14 +92,14 @@ async function render(input: RenderInput): Promise<RenderResult> {
   const started = performance.now();
   const ctx: RequestContext = { modules: new Set(), apiOrigin: input.apiOrigin, headers: input.headers, origin: input.origin };
   return requests.run(ctx, async (): Promise<RenderResult> => {
-    const handler = createStaticHandler(routes, { future: routerFuture });
+    const handler = createStaticHandler(routes);
     const context = await handler.query(new Request(input.origin + input.url));
     if (context instanceof Response) return { rendered: false, reason: `router answered ${context.status}` };
     if (context.statusCode !== 200 || context.errors) return { rendered: false, reason: `router status ${context.statusCode}` };
     const leaf = context.matches.at(-1)?.route;
     if (!(leaf?.handle as { ssr?: boolean } | undefined)?.ssr) return { rendered: false, reason: 'not a server-rendered route' };
 
-    const router = createStaticRouter(handler.dataRoutes, context, { future: routerFuture });
+    const router = createStaticRouter(handler.dataRoutes, context);
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: 30_000, gcTime: Infinity } },
     });

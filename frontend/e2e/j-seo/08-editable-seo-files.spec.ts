@@ -109,8 +109,8 @@ test.describe.serial('editable discovery files and page structure', () => {
     const current = await admin.get<SettingsEnvelope>('/agency/website/settings');
     const original = current.settings;
     const home = [
-      { key: 'newsletter', visible: true },
-      ...original.layouts.home.filter((s) => s.key !== 'newsletter'),
+      { key: 'process', visible: true },
+      ...original.layouts.home.filter((s) => s.key !== 'process'),
     ].map((s) => (s.key === 'testimonials' ? { ...s, visible: false } : s));
     await admin.put<SettingsEnvelope>('/agency/website/settings', {
       settings: { ...original, layouts: { ...original.layouts, home } },
@@ -121,12 +121,12 @@ test.describe.serial('editable discovery files and page structure', () => {
     });
     try {
       const html = await (await request.get('/')).text();
-      const newsletter = html.indexOf('Get marketing insights in your inbox');
+      const processAt = html.indexOf('A process built for accountability');
       const services = html.indexOf('Every channel, one accountable team');
-      expect(newsletter).toBeGreaterThan(0);
-      expect(newsletter).toBeLessThan(services);
+      expect(processAt).toBeGreaterThan(0);
+      expect(processAt).toBeLessThan(services);
       expect(html).toContain('href="/contact"');
-      if (SSR) expect(html).toContain('class="oa-h-newsletter');
+      if (SSR) expect(html).toContain('class="oa-h-process');
 
       const errors: string[] = [];
       page.on('console', (m) => {
@@ -137,9 +137,9 @@ test.describe.serial('editable discovery files and page structure', () => {
       await expect(page.locator('html[data-app-ready]')).toHaveCount(1, { timeout: 30_000 });
       // Without server rendering the sections arrive after the app is ready (lazy data): wait for both before comparing.
       await expect(page.getByRole('heading', { level: 2, name: 'Every channel, one accountable team' })).toBeVisible({ timeout: 30_000 });
-      await expect(page.getByRole('heading', { level: 2, name: 'Get marketing insights in your inbox' })).toBeAttached({ timeout: 30_000 });
+      await expect(page.getByRole('heading', { level: 2, name: 'A process built for accountability' })).toBeAttached({ timeout: 30_000 });
       const titles = await page.getByRole('heading', { level: 2 }).allTextContents();
-      expect(titles.indexOf('Get marketing insights in your inbox')).toBeLessThan(
+      expect(titles.indexOf('A process built for accountability')).toBeLessThan(
         titles.indexOf('Every channel, one accountable team'),
       );
       await expect(

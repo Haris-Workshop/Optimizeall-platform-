@@ -140,8 +140,8 @@ test.describe.serial('SEO files and site structure', () => {
 
       await editor.getByRole('tab', { name: /^Page layout/ }).click();
       const home = editor.getByRole('list', { name: 'Home page sections' });
-      // Newsletter to the top (10 steps up), testimonials hidden.
-      for (let i = 0; i < 10; i++) await home.getByRole('button', { name: 'Move Newsletter up' }).click();
+      // "How we work" to the top (4 steps up, above Services), testimonials hidden.
+      for (let i = 0; i < 4; i++) await home.getByRole('button', { name: 'Move How we work up' }).click();
       await home.getByRole('switch', { name: /Testimonials/ }).click();
       await shot(editor, 'settings-page-layout');
 
@@ -155,15 +155,15 @@ test.describe.serial('SEO files and site structure', () => {
 
       // The server-rendered home page follows the new order; the app keeps it after hydration.
       const html = (await anonGet('/_document/')).text;
-      expect(html.indexOf('Get marketing insights in your inbox')).toBeLessThan(
+      expect(html.indexOf('A process built for accountability')).toBeLessThan(
         html.indexOf('Every channel, one accountable team'),
       );
       const visitorPage = await openPublic(browser, '/');
       // Sections arrive after the app is ready when the page is not server-rendered: wait for both before comparing.
       await expect(visitorPage.getByRole('heading', { level: 2, name: 'Every channel, one accountable team' })).toBeVisible({ timeout: 30_000 });
-      await expect(visitorPage.getByRole('heading', { level: 2, name: 'Get marketing insights in your inbox' })).toBeAttached({ timeout: 30_000 });
+      await expect(visitorPage.getByRole('heading', { level: 2, name: 'A process built for accountability' })).toBeAttached({ timeout: 30_000 });
       const h2 = await visitorPage.getByRole('heading', { level: 2 }).allTextContents();
-      expect(h2.indexOf('Get marketing insights in your inbox')).toBeLessThan(
+      expect(h2.indexOf('A process built for accountability')).toBeLessThan(
         h2.indexOf('Every channel, one accountable team'),
       );
       await visitorPage.goto('/learn');

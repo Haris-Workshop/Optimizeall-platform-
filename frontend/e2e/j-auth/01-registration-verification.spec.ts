@@ -204,7 +204,7 @@ test.describe.serial('registration and email verification', () => {
     expect((session.res.json!.user as { emailVerified: boolean }).emailVerified).toBe(false);
   });
 
-  test('the mailbox link verifies the email once; the same link again reads "expired"', async () => {
+  test('the mailbox link verifies the email once; the same link again tells the verified user so and the API refuses the used token', async () => {
     const link = linkIn(user().email, /verify/i, '/verify-email');
     await page.goto(`${link.pathname}${link.search}`);
     await expect(page.getByRole('heading', { name: 'Your email is verified' })).toBeVisible();
@@ -212,8 +212,9 @@ test.describe.serial('registration and email verification', () => {
     await expect(page).toHaveURL(/\/app$/);
     await expect(page.getByRole('button', { name: 'Resend verification email' })).toHaveCount(0);
 
+    // Signed in and already verified: the used link says so (others read "expired", see the tampered link above).
     await page.goto(`${link.pathname}${link.search}`);
-    await expect(page.getByRole('heading', { name: 'This link has expired' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Your email is already verified' })).toBeVisible();
     await expect(
       publicApi.post('/auth/verify-email', { token: link.searchParams.get('token') }),
     ).rejects.toMatchObject({

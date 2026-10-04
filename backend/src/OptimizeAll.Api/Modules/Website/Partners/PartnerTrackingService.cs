@@ -75,11 +75,30 @@ public sealed class PartnerTrackingService(AppDbContext db, IDatabaseDialect dia
             var paths = hits.Select(h => h.Path).Distinct().ToList();
             var rows = await db.Set<WebsitePartnerStat>()
                 .Where(s => s.Day == day && partnerIds.Contains(s.PartnerId) && paths.Contains(s.PagePath)).ToListAsync(ct);
-            foreach (var hit in hits)
+            // Anonymous callers choose the page path, so the number of distinct rows per partner and day is capped: past
+            // the cap new pages are counted under "/other" (the totals stay right, the table cannot be grown at will).
+            var rowCounts = await db.Set<WebsitePartnerStat>().Where(s => s.Day == day && partnerIds.Contains(s.PartnerId))
+                .GroupBy(s => s.PartnerId).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(g => g.Key, g => g.Count, ct);
+            foreach (var original in hits)
             {
+                var hit = original;
                 var row = rows.FirstOrDefault(r => r.PartnerId == hit.PartnerId && r.Slot == hit.Slot && r.PagePath == hit.Path);
                 if (row is null)
                 {
+                    rowCounts.TryGetValue(hit.PartnerId, out var existing);
+                    if (existing >= PartnerRules.MaxStatRowsPerPartnerDay)
+                    {
+                        hit = original with { Path = PartnerRules.OverflowPath };
+                        row = rows.FirstOrDefault(r => r.PartnerId == hit.PartnerId && r.Slot == hit.Slot && r.PagePath == hit.Path);
+                        if (row is null)
+                            row = await db.Set<WebsitePartnerStat>().FirstOrDefaultAsync(
+                                s => s.Day == day && s.PartnerId == hit.PartnerId && s.Slot == hit.Slot && s.PagePath == hit.Path, ct);
+                        if (row is not null && !rows.Contains(row)) rows.Add(row);
+                    }
+                }
+                if (row is null)
+                {
+                    rowCounts[hit.PartnerId] = rowCounts.GetValueOrDefault(hit.PartnerId) + 1;
                     row = new WebsitePartnerStat { PartnerId = hit.PartnerId, Slot = hit.Slot, PagePath = hit.Path, Day = day };
                     db.Add(row);
                     rows.Add(row);

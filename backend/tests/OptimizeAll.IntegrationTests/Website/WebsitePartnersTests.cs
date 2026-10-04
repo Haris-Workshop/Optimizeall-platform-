@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using OptimizeAll.Api.Modules.Website.Partners;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using OptimizeAll.Domain.Audit;
@@ -410,6 +411,32 @@ public sealed class WebsitePartnersTests(ApiFactory api) : IClassFixture<ApiFact
 
         await (await admin.GetAsync($"{Admin}/report?from=2026-05-01&to=2026-04-01")).ShouldFailAsync(400, "website.invalid_range");
         await (await admin.GetAsync($"{Admin}/report?from=0001-01-01")).ShouldFailAsync(400); // the global date guard answers first
+    }
+
+    [Fact]
+    public async Task Anonymous_visitors_cannot_grow_the_counter_table_without_limit()
+    {
+        var admin = await api.AdminAsync();
+        var slug = Unique("flood");
+        var created = await admin.PostJsonAsync(Admin, Partner(slug, "https://flood.example/", PartnerSlots.BlogEnd), 201);
+        var id = created.GetProperty("id").GetGuid();
+        var total = 0;
+        // 540 distinct pages in batches of 20: past the per-partner daily cap the rest are counted under /other.
+        for (var batch = 0; batch < 27; batch++)
+        {
+            var items = Enumerable.Range(0, 20).Select(i => new { partner = slug, slot = "blog.end", path = $"/blog/post-{batch}-{i}" }).ToArray();
+            var result = await Visitor().PostJsonAsync($"{Public}/impressions", new { items }, 202);
+            total += result.GetProperty("accepted").GetInt32();
+        }
+        Assert.Equal(540, total);
+        var (rows, impressions, other) = await api.WithDbAsync(async db =>
+        {
+            var all = await db.Set<WebsitePartnerStat>().AsNoTracking().Where(s => s.PartnerId == id).ToListAsync();
+            return (all.Count, all.Sum(r => r.Impressions), all.Where(r => r.PagePath == PartnerRules.OverflowPath).Sum(r => r.Impressions));
+        });
+        Assert.Equal(PartnerRules.MaxStatRowsPerPartnerDay + 1, rows);
+        Assert.Equal(540, impressions);
+        Assert.Equal(40, other);
     }
 
     // ---------------------------------------------------------------- offers

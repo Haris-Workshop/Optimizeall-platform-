@@ -18,6 +18,11 @@ public static partial class PartnerRules
     public const int MaxOfferings = 16;
     public const int MaxPathLength = 200;
     public const int MaxImpressionBatch = 20;
+
+    /// <summary>Distinct (slot, page) counter rows one partner may get per day; further pages are counted under <see cref="OverflowPath"/>.</summary>
+    public const int MaxStatRowsPerPartnerDay = 500;
+
+    public const string OverflowPath = "/other";
     public const string DefaultRelationship = "Optimize All is the official marketing partner of {Partner}";
     public const string PartnerPlaceholder = "{Partner}";
 

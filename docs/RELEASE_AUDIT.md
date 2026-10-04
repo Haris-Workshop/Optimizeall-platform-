@@ -24,7 +24,7 @@ this branch; fixes made during the audit are listed with before → after values
 | # | Item | Result | Evidence |
 |---|---|---|---|
 | 1 | Lighthouse ≥ 95 **desktop** (Perf, SEO, A11y, BP) | **Pass** | After server rendering: Perf 97.5–100 (median of 3), A11y 100, SEO 100, BP 100 (96 on the lesson page, see below) |
-| 1 | Lighthouse ≥ 95 **mobile** Performance | **Pass** (when the CPU is not contended) | 14 pages, median of 5, Lighthouse and Chromium at real-time priority on the shared sandbox: 97–99 on every page, ≥ 94 in every single run; plain runs at load 16–20 give 70–87 (the machine, see "Performance re-measure (third pass)") |
+| 1 | Lighthouse ≥ 95 **mobile** Performance | **Pass** (when the CPU is not contended) | 14 pages, median of 5, Lighthouse and Chromium at real-time priority on the shared sandbox: median ≥ 95 on every page and no run below 94; plain runs at load 16–20 give 70–87 (the machine, see "Performance re-measure (third pass)") |
 | 1 | LCP < 2.5 s | **Pass** | Mobile simulated 2.10–2.41 s on all 12 pages (was 3.70–4.53 s); desktop 0.44–0.58 s (was 0.79–0.98 s) |
 | 1 | INP < 200 ms | **Pass** except the mobile menu (232–432 ms, noisy) | /pricing 560 → 136 ms, /learn 984 → 176 ms, blog 144, contact 104, lesson 168 (4× CPU) |
 | 1 | CLS < 0.1 | **Pass** | Lighthouse 0–0.054 on all 24 runs (was 0.18 /services, 0.23 lesson); 4×-CPU phone check ≤ 0.076 on 22 pages (was up to 0.28) |
@@ -167,61 +167,73 @@ click in the first moments after the page appears can arrive before hydration (l
 
 ## Performance re-measure (third pass, 2026-10-04)
 
-Done after the home/Academy hero clean-ups and the partner placements and SEO editors landed. Lighthouse 12.8 (CLI,
-default simulated throttling), Chromium 141 headless, production nginx + the server renderer (`scripts/serve-web-nginx.sh`)
-in front of the API (SQLite, Baseline + Demo seed), 14 public pages × mobile and desktop × **5 runs, median**.
+Done after the home/Academy hero clean-ups, the partner placements and the SEO editors landed, and again after the
+react-router 7 upgrade. Lighthouse 12.8 (CLI, default simulated throttling), Chromium 141 headless, production nginx +
+the server renderer (`scripts/serve-web-nginx.sh`) in front of the API (SQLite, Baseline + Demo seed), 14 public pages ×
+mobile and desktop × **5 runs, median**, twice (140 runs each).
 
-**Machine load and how it was handled.** The sandbox has 4 shared vCPUs and was never quiet: the load average during the
-140 runs was 4.7 minimum, 13.8 median, 29.9 maximum (other agents' builds and test suites). Lighthouse's simulated mobile
-throttling multiplies the main-thread time it *observes* by 4, so on a busy machine the score measures the machine:
-the same build scored 70–87 on mobile when run plainly at load 16–20 (column "plain, load 16–20" below, 1 run, taken
-before the fix of the measuring method) and 94–99 with Lighthouse and Chromium given real-time CPU priority
+**Machine load and how it was handled.** The sandbox has 4 shared vCPUs and was never reliably quiet: the load average
+during the runs was 4.7 / 13.8 / 29.9 (min / median / max) in the first set and 3.3 / 5.3 / 16.6 in the second (other
+agents' builds and test suites). Lighthouse's simulated mobile throttling multiplies the main-thread time it *observes*
+by 4, so on a busy machine the score measures the machine: the same build scored 70–87 on mobile when run plainly at
+load 16–20 (column "plain" below, 1 run) and 94–99 with Lighthouse and Chromium given real-time CPU priority
 (`chrt -r 30`; the API, renderer and nginx at `nice -10`) so that the other agents' work could not steal the page's
-CPU time. The "median" columns use the prioritised method, which approximates a quiet machine; every page was also
-run 5× to show the spread. Baseline for noise: `/partners` (a small page, no hydration work) scores 98 in all five
-prioritised runs and 87 plain under load, i.e. the load alone is worth about 11 points on the lightest page and 25–30
-on the heavy ones. Treat plain-load numbers as an upper bound on the damage the machine does, not as the page's speed.
+CPU time. The median columns use the prioritised method, which approximates a quiet machine. Baseline for noise:
+`/partners` (small page, no heavy hydration) scores 96–98 in every prioritised run and 87 plain under load, i.e. load
+alone is worth about 10 points on the lightest page and 25–30 on the heavy ones. Treat plain-load numbers as an upper
+bound on what the machine does to the page, not as the page's speed.
 
-| Page | Mobile Perf (5 runs) | Mobile LCP · TBT · CLS | Mobile plain, load 16–20 | Desktop Perf | Desktop LCP · TBT | Desktop plain, load 16–20 |
+Final build (react-router 7, page copy split by prefix; entry JS 159.0 KiB). Mobile Perf is the median of five with the
+runs in brackets; "plain" is one run at load 16–20 on the build before the router upgrade.
+
+| Page | Mobile Perf (5 runs) | Mobile LCP · TBT · CLS | Mobile plain | Desktop Perf | Desktop LCP · TBT | Desktop plain |
 |---|---|---|---|---|---|---|
-| `/` | **98** (98,98,98,98,98) | 2.30 s · 15 ms · 0.000 | 70 | **100** | 0.53 s · 0 ms | 98 |
-| `/about` | **97** (97,97,97,97,97) | 2.31 s · 2 ms · 0.000 | 72 | **100** | 0.57 s · 0 ms | 96 |
-| `/blog` | **97** (94,97,98,97,97) | 2.45 s · 62 ms · 0.000 | 77 | **100** | 0.58 s · 0 ms | 100 |
-| `/blog/google-business-profile-checklist` | **97.5** (97,97,98,98; 1 run lost to NO_NAVSTART) | 2.29 s · 44 ms · 0.000 | 81 | **100** | 0.51 s · 0 ms | 100 |
-| `/case-studies/northwind-outdoors-organic-growth` | **98** (98,98,98,98,98) | 2.29 s · 10 ms · 0.000 | 74 | **100** | 0.51 s · 0 ms | 100 |
-| `/contact` | **97** (98,97,96,94,98) | 2.28 s · 108 ms · 0.000 | 79 | **100** | 0.52 s · 0 ms | 100 |
-| `/creators` | **99** (99,99,99,99,99) | 2.12 s · 42 ms · 0.000 | 79 | **100** | 0.47 s · 0 ms | 100 |
-| `/learn` | **97** (97,97,97,97,97) | 2.44 s · 22 ms · 0.000 | 73 | **100** | 0.64 s · 54 ms | 97 |
-| `/learn/prompt-engineering-foundations` | **97** (97,97,97,97,97) | 2.45 s · 10 ms · 0.000 | 80 | **100** | 0.57 s · 0 ms | 100 |
-| `/learn/…/how-ai-assistants-respond` | **97** (97,97,97,97,96) | 2.44 s · 24 ms · 0.000 | 83 | **100** | 0.57 s · 0 ms | 98 |
-| `/partners` | **98** (98,98,98,98,98) | 2.21 s · 8 ms · 0.000 | 87 | **100** | 0.50 s · 0 ms | 100 |
-| `/pricing` | **97.5** (98,97,96,98; 1 run lost to NO_NAVSTART) | 2.27 s · 107 ms · 0.000 | 70 | **100** | 0.56 s · 0 ms | 89 |
-| `/services` | **98** (98,98,98,98,98) | 2.29 s · 19 ms · 0.000 | 71 | **100** | 0.51 s · 0 ms | 94 |
-| `/services/seo` | **98** (98,98,98,98,97) | 2.28 s · 24 ms · 0.000 | 72 | **100** | 0.53 s · 0 ms | 100 |
+| `/` | **96** (98,96,97,96,96) | 2.28 s · 26 ms · 0.000 | 70 | **100** | 0.52 s · 0 ms | 98 |
+| `/about` | **96** (98,96,96,95,95) | 2.28 s · 49 ms · 0.000 | 72 | **100** | 0.56 s · 0 ms | 96 |
+| `/blog` | **96** (97,97,95,96,95) | 2.43 s · 36 ms · 0.000 | 77 | **100** | 0.57 s · 0 ms | 100 |
+| `/blog/google-business-profile-checklist` | **97** (97,96,96,98,98) | 2.28 s · 34 ms · 0.000 | 81 | **100** | 0.51 s · 0 ms | 100 |
+| `/case-studies/northwind-outdoors-organic-growth` | **96** (95,96,98,96,98) | 2.28 s · 16 ms · 0.000 | 74 | **100** | 0.51 s · 0 ms | 100 |
+| `/contact` | **96** (96,98,96,96,96) | 2.28 s · 70 ms · 0.000 | 79 | **100** | 0.51 s · 0 ms | 100 |
+| `/creators` | **98** (98,99,97,97,99) | 2.12 s · 55 ms · 0.000 | 79 | **100** | 0.47 s · 0 ms | 100 |
+| `/learn` | **97** (97,97,96,95,97) | 2.40 s · 32 ms · 0.000 | 73 | **100** | 0.63 s · 4 ms | 97 |
+| `/learn/prompt-engineering-foundations` | **95** (97,95,97,95,95) | 2.38 s · 9 ms · 0.000 | 80 | **100** | 0.57 s · 0 ms | 100 |
+| `/learn/prompt-engineering-foundations/how-ai-assistants-respond` | **97** (97,95,97,97,95) | 2.37 s · 5 ms · 0.000 | 83 | **100** | 0.57 s · 0 ms | 98 |
+| `/partners` | **96** (96,96,96,98,98) | 2.21 s · 60 ms · 0.000 | 87 | **100** | 0.49 s · 0 ms | 100 |
+| `/pricing` | **96** (97,96,97,94,96) | 2.28 s · 100 ms · 0.000 | 70 | **100** | 0.51 s · 0 ms | 89 |
+| `/services` | **97** (95,98,97,98,96) | 2.28 s · 37 ms · 0.000 | 71 | **100** | 0.51 s · 0 ms | 94 |
+| `/services/seo` | **96** (96,96,96,96,96) | 2.27 s · 53 ms · 0.000 | 72 | **100** | 0.53 s · 0 ms | 100 |
 
-All 14 pages are ≥ 94 in every single run on mobile (median ≥ 97) and 100 on desktop (median of five); LCP < 2.5 s on
-all (the closest are `/blog` 2.45 s and the Academy pages 2.44–2.45 s), CLS 0. What separates 97 from 100 on mobile is
-network-bound (simulated slow-4G): HTML, ~45–50 KiB of render-blocking CSS and the two preloaded Latin font files
-(118 KiB) share a 1.6 Mbit/s link, FCP 1.2–1.7 s, LCP is the hero text painted right after the CSS (render delay is
+All 14 pages: mobile median ≥ 95 and no run below 94, desktop 100 in all five runs, LCP < 2.5 s (closest `/blog` 2.43 s
+and the Academy pages 2.37–2.40 s), CLS 0, INP unchanged (e2e `j-seo` Core Web Vitals). The first set of runs, on the
+build before the router upgrade (entry JS 167.3 KiB), gave mobile medians of 97–99 (94–98 per run); the upgrade costs
+1–2 points and 20–50 ms of TBT, because react-router 7 ships only its "development" build files (no separate production build; its chunk is
+75.9 KiB gzip against 66.4 KiB for react-router 6) that is parsed and run on every page. What separates 96 from 100 on mobile
+is network-bound (simulated slow-4G): the HTML, ~45–50 KiB of render-blocking CSS and the two preloaded Latin font files
+(118 KiB) share a 1.6 Mbit/s link, FCP is 1.2–1.7 s and LCP is the hero text painted right after the CSS (render delay is
 80 % of it). Tried and rejected: dropping the font preloads frees the link but FCP goes 1.5 → 2.2 s and CLS 0 → 0.03
-(fallback-font swap), so they stay. The earlier passes (5 of 12 pages ≥ 95 in the median) were measured plainly under load, which explains most of
-the difference; the prioritised method was not applied to the older builds, so this pass does not claim a page got
-faster, only that the measurement is no longer dominated by the machine.
+(fallback-font swap), so they stay. The earlier passes (5 of 12 pages ≥ 95 in the median) were measured plainly under
+load, which explains most of the difference; the prioritised method was not applied to the older builds, so this pass
+does not claim a page got faster, only that the measurement is no longer dominated by the machine. Two runs hit
+Lighthouse's NO_NAVSTART trace failure and were repeated.
 
-**What changed in this pass.** The one measured weight problem in the entry was `siteCopy.json` (84 kB raw, 17 KiB gzip):
-the page-copy catalog with the admin editor's labels, types and placeholders, bundled into the entry only so that
-public pages can read their default wording synchronously. The app now bundles just the key → text map of the same
-file (a Vite virtual module, `virtual:site-copy-defaults`, `vite.config.ts`; the full catalog is only imported by the
-copy tests): entry JS 171.7 → 167.3 KiB gzip. Images, caching and compression were checked and need nothing: partner
-logos are 128/256 px WebP with `srcset`, content covers are 16–20 KB and lazy below the fold (the LCP cover on `/blog` is
-eager and discovered at 170 ms), hashed assets and fonts are `immutable` for a year, HTML is gzip'd (home 158 KB →
-27 KB) and `no-cache`.
+**What changed in this pass.** The one measured weight problem in the entry was `siteCopy.json` (84 kB raw, 17 KiB
+gzip): the page-copy catalog with the admin editor's labels, types and placeholders, bundled into the entry only so that
+public pages can read their default wording synchronously. Now (1) only the key → text map of the same file is bundled
+(not the editor's labels), and (2) it is split by key prefix into virtual modules (`virtual:site-copy/<prefix>`,
+`frontend/siteCopy.ts`) that each module registers when it loads: a build-time transform adds the import to every module that
+reads the copy hook and mentions a key of that prefix, so the entry keeps only the header, footer and cookie words and
+a page's words arrive with the page's chunk. A test (`frontend/siteCopy.test.ts`) checks that every module gets the
+prefixes of the keys it reads. Entry JS: 171.7 KiB (before) → 167.3 KiB (map only) → 169.8 KiB (react-router 7 landed:
++9.5 KiB) → **159.0 KiB** (split). Images, caching and compression were checked and need nothing: partner logos are
+128/256 px WebP with `srcset`, content covers are 16–20 KB and lazy below the fold (the LCP cover on `/blog` is eager and
+discovered at 170 ms), hashed assets and fonts are `immutable` for a year, HTML is gzip'd (home 158 KB → 27 KB) and
+`no-cache`.
 
 ## Bundle (gzip, `npm run budget`)
 
 | | Before | After | CI budget |
 |---|---|---|---|
-| Entry JS (module script + modulepreloads) | 227.1 KiB | 167.3 KiB (161.4 after SSR, 171.7 before the copy-defaults change) | 170 KiB |
+| Entry JS (module script + modulepreloads) | 227.1 KiB | 159.0 KiB (161.4 after SSR; 171.7 and 169.8 on the way, see the performance re-measure) | 170 KiB |
 | Entry CSS (render-blocking) | 49.9 KiB | 27.3 KiB | 30 KiB |
 | Largest lazy chunk | 18.6 KiB | 19.0 KiB | 25 KiB |
 | Largest lazy stylesheet | 9.1 KiB | 9.1 KiB | 12 KiB |

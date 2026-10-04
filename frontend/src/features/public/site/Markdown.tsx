@@ -300,6 +300,7 @@ export function Markdown({ source, className, minLevel = 2, interlude }: Markdow
       case 'code':
         return (
           // Keyboard users can scroll a long line: a scrollable region has to be focusable (WCAG 2.1.1).
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrollable region must be focusable
           <pre key={key} tabIndex={0} role="group" aria-label="Code">
             <code>{block.text}</code>
           </pre>

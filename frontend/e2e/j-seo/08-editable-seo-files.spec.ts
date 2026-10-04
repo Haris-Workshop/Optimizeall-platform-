@@ -135,6 +135,9 @@ test.describe.serial('editable discovery files and page structure', () => {
       page.on('pageerror', (e) => errors.push(e.message));
       await page.goto('/');
       await expect(page.locator('html[data-app-ready]')).toHaveCount(1, { timeout: 30_000 });
+      // Without server rendering the sections arrive after the app is ready (lazy data): wait for both before comparing.
+      await expect(page.getByRole('heading', { level: 2, name: 'Every channel, one accountable team' })).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByRole('heading', { level: 2, name: 'Get marketing insights in your inbox' })).toBeAttached({ timeout: 30_000 });
       const titles = await page.getByRole('heading', { level: 2 }).allTextContents();
       expect(titles.indexOf('Get marketing insights in your inbox')).toBeLessThan(
         titles.indexOf('Every channel, one accountable team'),

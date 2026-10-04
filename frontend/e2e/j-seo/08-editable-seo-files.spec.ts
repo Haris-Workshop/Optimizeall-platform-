@@ -126,7 +126,7 @@ test.describe.serial('editable discovery files and page structure', () => {
       expect(processAt).toBeGreaterThan(0);
       expect(processAt).toBeLessThan(services);
       expect(html).toContain('href="/contact"');
-      if (SSR) expect(html).toContain('class="oa-h-process');
+      if (SSR) expect(html).toContain('oa-h-section oa-h-process');
 
       const errors: string[] = [];
       page.on('console', (m) => {

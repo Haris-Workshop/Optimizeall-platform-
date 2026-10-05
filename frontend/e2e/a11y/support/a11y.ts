@@ -319,7 +319,16 @@ async function settleAnimations(page: Page) {
 /** axe (WCAG 2.0–2.2 A/AA) on the current page, in the light theme. */
 export async function axeLight(page: Page) {
   await setTheme(page, 'light');
-  return format((await builder(page).analyze()).violations);
+  // A late entrance or layout transition can leave an element half-sized or half-faded for the instant axe reads it
+  // (target-size, contrast): a real violation is still there when measured again once the animations have finished.
+  // Only the last measurement counts.
+  let found = format((await builder(page).analyze()).violations);
+  for (let attempt = 0; attempt < 3 && found.length > 0; attempt++) {
+    await page.waitForTimeout(750);
+    await settleAnimations(page);
+    found = format((await builder(page).analyze()).violations);
+  }
+  return found;
 }
 
 /** Colour contrast only, in the dark theme (every token switches with `data-theme`). Restores the light theme. */

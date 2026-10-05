@@ -153,7 +153,14 @@ EOF
     # Registry credentials live only for this pull, in a throw-away Docker config (nothing stays on the server).
     local token
     token="$(cat)"
+    # Keep registry credentials in a throw-away config, but preserve discovery of a user-installed Compose plugin.
+    # Some hosts install docker-compose under ~/.docker/cli-plugins rather than a system plugin directory; changing
+    # DOCKER_CONFIG without carrying that directory across makes `docker compose` disappear mid-deploy.
+    local original_docker_config="${DOCKER_CONFIG:-$HOME/.docker}"
     DOCKER_CONFIG="$(mktemp -d)"
+    if [ -d "$original_docker_config/cli-plugins" ]; then
+      ln -s "$original_docker_config/cli-plugins" "$DOCKER_CONFIG/cli-plugins"
+    fi
     export DOCKER_CONFIG
     trap 'rm -rf "$DOCKER_CONFIG"' EXIT
     if [ -n "$token" ]; then

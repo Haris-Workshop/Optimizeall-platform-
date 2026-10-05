@@ -1,0 +1,152 @@
+name: Deploy
+
+# Deploys every push to this branch to production (docs/VPS.md):
+#   1. builds the API, migrator and web images from the pushed commit and pushes them to GitHub's container registry
+#      (ghcr.io/<owner>/optimizeall-{api,migrator,web}:<commit sha>);
+#   2. asks the server to run that version: one SSH request, "deploy <commit sha>", with a deploy key the server
+#      restricts to exactly that request (no shell, no file copy). The server pulls the images, applies migrations,
+#      starts the new version in its isolated stack and waits for /health/ready.
+# Each run is a GitHub deployment to the environment "production" (repository sidebar → Deployments).
+# Roll back: Actions → Deploy → Run workflow with the full commit sha of an earlier deploy as "tag" (no rebuild).
+#
+# Settings, all on the environment "production", which only this branch may use (docs/VPS.md § GitHub settings):
+# secrets DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS, DEPLOY_HOST; variable PUBLIC_BASE_URL. Forks and other branches get no
+# secrets, so they cannot deploy.
+
+on:
+  push:
+    branches: ["claude/optimize-all-platform-i3j5id"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Deploy the images of an earlier commit (its full 40-character sha) instead of building this branch"
+        required: false
+        default: ""
+
+concurrency:
+  group: deploy-production
+  # A deploy is never stopped halfway; a newer push waits for it and GitHub keeps only the newest waiting run.
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  images:
+    name: Build and push images
+    if: inputs.tag == ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Registry name
+        id: registry
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Same build cache scopes as ci.yml's docker job, so an image CI already built is mostly reused.
+      - name: API image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          target: runtime
+          push: true
+          tags: ${{ steps.registry.outputs.name }}/optimizeall-api:${{ github.sha }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Migrator image (EF Core migrations bundle)
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          target: migrator
+          push: true
+          tags: ${{ steps.registry.outputs.name }}/optimizeall-migrator:${{ github.sha }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=api
+
+      - name: Web image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          push: true
+          tags: ${{ steps.registry.outputs.name }}/optimizeall-web:${{ github.sha }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+  deploy:
+    name: Deploy to the server
+    needs: images
+    # Also runs when "images" was skipped (redeploy of an earlier tag), never when it failed.
+    if: ${{ !cancelled() && (needs.images.result == 'success' || needs.images.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+    environment:
+      name: production
+      url: ${{ vars.PUBLIC_BASE_URL }}
+    env:
+      TAG: ${{ inputs.tag || github.sha }}
+      PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
+    steps:
+      - name: Check the request and the deploy settings
+        env:
+          HAS_KEY: ${{ secrets.DEPLOY_SSH_KEY != '' }}
+          HAS_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS != '' }}
+          HAS_HOST: ${{ secrets.DEPLOY_HOST != '' }}
+        run: |
+          [[ "$TAG" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::tag must be a full 40-character commit sha, got: $TAG"; exit 1; }
+          missing=()
+          [ "$HAS_KEY" = true ] || missing+=("secret DEPLOY_SSH_KEY")
+          [ "$HAS_KNOWN_HOSTS" = true ] || missing+=("secret DEPLOY_KNOWN_HOSTS")
+          [ "$HAS_HOST" = true ] || missing+=("secret DEPLOY_HOST")
+          [ -n "$PUBLIC_BASE_URL" ] || missing+=("variable PUBLIC_BASE_URL")
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::Deploying is not set up: add ${missing[*]} to the environment \"production\" (docs/VPS.md § GitHub settings)"
+            exit 1
+          fi
+
+      - name: SSH key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          (umask 077 && printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key)
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      # The key can only make this one request. The job's own token (stdin) lets the server pull this repository's
+      # images once; it expires when the job ends.
+      - name: Deploy ${{ env.TAG }}
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$REGISTRY_TOKEN" | ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=30 "deploy-optimizeall@$DEPLOY_HOST" "deploy $TAG"
+
+      - name: Smoke test (the public address answers)
+        run: |
+          for path in /health/ready /; do
+            code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "${PUBLIC_BASE_URL%/}$path" || true)"
+            if [ "$code" != 200 ]; then
+              echo "::error::${PUBLIC_BASE_URL%/}$path answered ${code:-nothing} (the app is up on the server; check DNS and the reverse proxy, docs/VPS.md)"
+              exit 1
+            fi
+          done
+          echo "${PUBLIC_BASE_URL} is up"

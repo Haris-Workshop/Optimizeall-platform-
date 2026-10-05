@@ -1,0 +1,58 @@
+# Optional overlay for a SHARED server: fences the stack off from everything else running on the host
+# (docs/VPS.md § Shared server). Used by scripts/deploy-server.sh when .env.production has ISOLATED=true; needs the
+# local MySQL overlay (LOCAL_MYSQL=true) too.
+#
+#   * Own networks with fixed address ranges: "edge" (web ↔ API, and the API's outbound internet for SMTP, Google,
+#     YouTube) and "data" (API/migrations ↔ MySQL), which is internal: MySQL has no route to the internet, to the
+#     host or to any other container. Nothing else on the host joins these networks.
+#   * The only published port is the web container's, on 127.0.0.1 (WEB_PORT); the host's reverse proxy forwards the
+#     site's domain to it. Host services listening on 127.0.0.1 (other databases, caches, APIs) are not reachable
+#     from the containers.
+#   * Memory, CPU and process limits on every container, so the stack cannot starve the host's other services.
+#   * Data stays in this project's own volumes (optimizeall_mysql-data, optimizeall_api-storage).
+
+services:
+  web:
+    networks: [edge]
+    deploy:
+      resources:
+        limits:
+          pids: 512
+
+  api:
+    networks: [edge, data]
+    deploy:
+      resources:
+        limits:
+          pids: 512
+
+  migrate:
+    networks: [data]
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512m
+          pids: 512
+
+  mysql:
+    networks: [data]
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1g
+          pids: 512
+
+networks:
+  edge:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${EDGE_SUBNET:-172.30.10.0/24}
+  data:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: ${DATA_SUBNET:-172.30.11.0/24}

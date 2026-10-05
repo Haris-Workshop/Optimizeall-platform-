@@ -1,0 +1,62 @@
+# Optional overlay for deploy/docker-compose.production.example.yml: MySQL 8 as a container on the same server, for a
+# single-VPS installation without a managed database. scripts/deploy-server.sh adds it when .env.production has
+# LOCAL_MYSQL=true (the default it writes); see docs/VPS.md.
+#
+#   docker compose --env-file .env.production --env-file release.env \
+#     -f docker-compose.production.yml -f docker-compose.mysql.yml up -d
+#
+# secrets/db_connection_string then points at this container:
+#   Server=mysql;Port=3306;Database=optimizeall;User=optimizeall;Password=<secrets/mysql_password>;SslMode=None;AllowPublicKeyRetrieval=true;
+# The data lives in the named volume mysql-data: back it up (docs/VPS.md § Backups).
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+      - --max-allowed-packet=64M
+      # Sized for a small server next to the API (raise it on a bigger one).
+      - --innodb-buffer-pool-size=256M
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
+      MYSQL_DATABASE: optimizeall
+      MYSQL_USER: optimizeall
+      MYSQL_PASSWORD_FILE: /run/secrets/mysql_password
+      TZ: UTC
+    secrets: [mysql_root_password, mysql_password]
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      # TCP (not the socket) so the temporary init server, which has networking disabled, doesn't count as healthy.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root --password=\"$$(cat /run/secrets/mysql_root_password)\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  migrate:
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  api:
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+secrets:
+  mysql_root_password:
+    file: ${SECRETS_DIR:-./secrets}/mysql_root_password
+  mysql_password:
+    file: ${SECRETS_DIR:-./secrets}/mysql_password
+
+volumes:
+  mysql-data:

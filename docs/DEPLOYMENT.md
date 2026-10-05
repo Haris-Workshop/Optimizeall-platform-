@@ -155,8 +155,9 @@ docker build -t registry.example.com/optimizeall-web:$TAG frontend
 docker push registry.example.com/optimizeall-{api,migrator,web}:$TAG
 ```
 
-CI (`.github/workflows/ci.yml`, job `docker`) builds all three on every push without publishing; add a
-publish job with registry credentials when a registry is chosen.
+CI (`.github/workflows/ci.yml`, job `docker`) builds all three on every push without publishing. The Deploy
+workflow (`.github/workflows/deploy.yml`) publishes them to GitHub's container registry, tagged with the commit sha,
+and deploys them to a VPS on every push to the main branch: [VPS.md](VPS.md).
 
 ### 5.2 Reverse proxy and TLS
 

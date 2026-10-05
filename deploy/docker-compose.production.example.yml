@@ -141,6 +141,9 @@ services:
       API_UPSTREAM: http://api:8080
       # Extra CSP img-src hosts; keep in sync with the API's Content__AllowedImageHosts__N.
       IMG_SRC_EXTRA: ${IMG_SRC_EXTRA:-}
+      # CIDRs of the reverse proxy in front of this container, whose X-Forwarded-For nginx then trusts for the client
+      # address (a proxy on the host reaches it from the Docker bridge, e.g. 172.16.0.0/12). Empty: trust none.
+      REAL_IP_FROM: ${REAL_IP_FROM:-}
     # Bind to loopback: the TLS reverse proxy / load balancer on this host forwards to it.
     ports:
       - "127.0.0.1:${WEB_PORT:-8080}:8080"

@@ -1,0 +1,26 @@
+#!/bin/bash
+# Forced command of the GitHub Actions deploy key for Optimize All (~deploy-optimizeall/.ssh/authorized_keys runs
+# it through sudo; /etc/sudoers.d/deploy-keys allows nothing else).
+#
+# Accepts exactly one request, "deploy <40-hex commit sha>", and deploys the images
+# ghcr.io/haris-workshop/optimizeall-{api,migrator,web}:<sha> into the isolated stack in /opt/optimizeall. The registry
+# token arrives on stdin. The compose files and settings on this server are never taken from the request, so the key
+# can only choose WHICH published version runs inside the fenced stack. Anything else is refused and logged
+# (journalctl -t deploy-optimizeall).
+set -euo pipefail
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+request="${1:-}"
+if [[ ! "$request" =~ ^deploy\ ([0-9a-f]{40})$ ]]; then
+  logger -t deploy-optimizeall "refused request: $(printf '%q' "${request:0:120}")"
+  echo "refused: the only accepted request is 'deploy <40-hex commit sha>'" >&2
+  exit 64
+fi
+tag="${BASH_REMATCH[1]}"
+
+exec 9>/run/lock/deploy-optimizeall.lock
+flock -w 1800 9 || { echo "another deploy is still running" >&2; exit 75; }
+logger -t deploy-optimizeall "deploying $tag"
+/opt/optimizeall/deploy-server.sh deploy "$tag" ghcr.io/haris-workshop deploy && rc=0 || rc=$?
+logger -t deploy-optimizeall "deploy of $tag finished with exit code $rc"
+exit "$rc"

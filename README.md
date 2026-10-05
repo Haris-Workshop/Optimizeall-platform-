@@ -13,7 +13,7 @@ managers, finance and administrators.
 | Frontend | React 18 + TypeScript (Vite), bespoke accessible design system, TanStack Query — `frontend/` |
 | Backend | ASP.NET Core 8 Web API (C#), EF Core 8 + Pomelo — `backend/` |
 | Database | MySQL 8 (utf8mb4) **or** SQLite (`Database__Provider`), EF Core migrations for each provider |
-| Delivery | Docker images, Docker Compose staging stack (MySQL + Mailpit + API + nginx web), GitHub Actions CI |
+| Delivery | Docker images, Docker Compose staging stack (MySQL + Mailpit + API + nginx web), GitHub Actions CI, automatic deploys of every push to a VPS ([docs/VPS.md](docs/VPS.md)) |
 
 ## Quick start (local)
 

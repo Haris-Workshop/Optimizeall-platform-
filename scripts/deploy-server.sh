@@ -121,6 +121,37 @@ remove_old_images() {
       done
 }
 
+wait_until_healthy() {
+  local port code=""
+  port="$(setting WEB_PORT 8080)"
+  for _ in $(seq 1 60); do
+    code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$port/health/ready" || true)"
+    [ "$code" = 200 ] && return 0
+    sleep 5
+  done
+  echo "${code:-no answer}"
+  return 1
+}
+
+rollback_previous() {
+  local failed_tag="$1" reason="$2" previous_tag
+  [ -s release.previous.env ] || die "deploy: $failed_tag failed ($reason), and there is no previous release to restore"
+  previous_tag="$(grep -s '^RELEASE_TAG=' release.previous.env | cut -d= -f2)"
+  [ -n "$previous_tag" ] || die "deploy: $failed_tag failed ($reason), and release.previous.env is invalid"
+
+  cp release.env "release.failed-${failed_tag}.env"
+  cp release.previous.env release.env
+  echo "deploy: $failed_tag failed ($reason); rolling back to $previous_tag"
+  compose up -d --remove-orphans || die "rollback: could not start previous release $previous_tag"
+  wait_until_healthy >/dev/null || {
+    compose ps || true
+    compose logs --tail 80 api web || true
+    die "rollback: previous release $previous_tag did not become healthy"
+  }
+  echo "deploy: rollback complete; $previous_tag is live"
+  return 1
+}
+
 deploy() {
   local tag="${1:?usage: deploy-server.sh deploy TAG REGISTRY [USER] [PUBLIC_BASE_URL] [ADMIN_EMAIL]}"
   local registry="${2:?usage: deploy-server.sh deploy TAG REGISTRY [USER] [PUBLIC_BASE_URL] [ADMIN_EMAIL]}"
@@ -181,20 +212,14 @@ EOF
   echo "deploy: starting $tag"
   if ! compose up -d --remove-orphans; then
     compose logs --tail 80 migrate api || true
-    die "deploy: $tag did not start (log above). Previous release: $(grep -s '^RELEASE_TAG=' release.previous.env | cut -d= -f2)"
+    rollback_previous "$tag" "migration or containers did not start"
   fi
 
-  local port code=""
-  port="$(setting WEB_PORT 8080)"
-  for _ in $(seq 1 60); do
-    code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$port/health/ready" || true)"
-    [ "$code" = 200 ] && break
-    sleep 5
-  done
-  if [ "$code" != 200 ]; then
+  local health_result
+  if ! health_result="$(wait_until_healthy)"; then
     compose ps || true
     compose logs --tail 80 api web || true
-    die "deploy: $tag is not ready after 5 minutes (/health/ready: ${code:-no answer})"
+    rollback_previous "$tag" "health check failed (/health/ready: ${health_result:-no answer})"
   fi
 
   remove_old_images

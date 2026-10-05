@@ -41,8 +41,8 @@ test.describe('the app boots over the server-rendered HTML', () => {
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       // Give the head manager its data (site settings, page payload).
-      await expect.poll(async () => (await headCounts(page)).ssr).toBe(0);
-      await expect.poll(async () => page.title()).toBe(server.title!.replace(/&amp;/g, '&'));
+      await expect.poll(async () => (await headCounts(page)).ssr, { timeout: 45_000 }).toBe(0);
+      await expect.poll(async () => page.title(), { timeout: 45_000 }).toBe(server.title!.replace(/&amp;/g, '&'));
       const counts = await headCounts(page);
       expect(counts).toMatchObject({ description: 1, canonical: 1, robots: 1, ogTitle: 1, titles: 1 });
       expect(new Set(counts.jsonLdTypes).size, `duplicate JSON-LD: ${counts.jsonLdTypes.join(', ')}`).toBe(

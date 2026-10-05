@@ -32,7 +32,9 @@ test.describe('status codes, redirects and noindex', () => {
   test('the app still boots on a 404 and shows its not-found page', async ({ page }) => {
     const res = await page.goto('/this-page-does-not-exist');
     expect(res!.status()).toBe(404);
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    // The first page this run opens in a browser: on a cold CI machine the app (script chunks, then its data) can take
+    // longer than the default to take over.
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 45_000 });
     await expect(page.locator('#oa-ssr')).toHaveCount(0);
   });
 

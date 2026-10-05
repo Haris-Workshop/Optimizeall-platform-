@@ -32,8 +32,32 @@ permissions:
   contents: read
 
 jobs:
+  security:
+    name: Block high/critical dependency vulnerabilities
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Audit NuGet dependencies (including transitive)
+        run: |
+          dotnet restore backend/OptimizeAll.sln
+          dotnet list backend/OptimizeAll.sln package --vulnerable --include-transitive | tee nuget-audit.txt
+          ! grep -qE '\b(High|Critical)\b' nuget-audit.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Audit npm dependencies
+        working-directory: frontend
+        run: npm audit --audit-level=high
+
   images:
     name: Build and push images
+    needs: security
     if: inputs.tag == ''
     runs-on: ubuntu-latest
     timeout-minutes: 45

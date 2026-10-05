@@ -120,7 +120,10 @@ export function CalendarPage() {
   // because the second request still carried the stamp the first one replaced.
   const lastMove = useRef(new Map<string, { from: string; scheduledAt: string; concurrencyStamp: string }>());
   const moveQueue = useRef(new Map<string, Promise<void>>());
+  /** Moves that were asked for and have not answered yet (the keyboard focus follows the post until none is left). */
+  const pendingMoves = useRef(0);
   const move = (post: PostSummary, target: (currentIso: string) => string) => {
+    pendingMoves.current++;
     const run = async () => {
       const known = lastMove.current.get(post.id);
       const current =
@@ -139,7 +142,12 @@ export function CalendarPage() {
       });
       if (refocus.current?.id === post.id) refocus.current.at = updated.scheduledAt;
     };
-    const next = (moveQueue.current.get(post.id) ?? Promise.resolve()).then(run).catch(() => undefined); // errors are toasted
+    const next = (moveQueue.current.get(post.id) ?? Promise.resolve())
+      .then(run)
+      .catch(() => undefined) // errors are toasted
+      .finally(() => {
+        pendingMoves.current--;
+      });
     moveQueue.current.set(post.id, next);
   };
 
@@ -172,9 +180,11 @@ export function CalendarPage() {
     if (!follow) return;
     const target = gridRef.current?.querySelector<HTMLButtonElement>(`button[data-post-id="${follow.id}"]`);
     if (target && document.activeElement !== target) target.focus();
-    // Once the calendar shows the post where the last move put it, stop following it.
+    // Once every move has answered and the calendar shows the post where the last one put it, stop following it. (An
+    // earlier move's reload can arrive while a later one is still on its way: that chip is replaced again.)
     const shown = query.data?.posts.find((p) => p.id === follow.id)?.scheduledAt;
-    if (follow.at && shown && new Date(shown).getTime() === new Date(follow.at).getTime()) refocus.current = null;
+    if (pendingMoves.current === 0 && follow.at && shown && new Date(shown).getTime() === new Date(follow.at).getTime())
+      refocus.current = null;
   }, [query.data]);
 
   const chip = (p: PostSummary) => (

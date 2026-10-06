@@ -41,6 +41,8 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
+          cache: true
+          cache-dependency-path: "**/*.csproj"
       - name: Audit NuGet dependencies (including transitive)
         run: |
           dotnet restore backend/OptimizeAll.sln
@@ -57,7 +59,8 @@ jobs:
 
   images:
     name: Build and push images
-    needs: security
+    # Build alongside the audit. Images may enter the private registry, but cannot be deployed
+    # unless both the audit and every image build succeed.
     if: inputs.tag == ''
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -108,14 +111,16 @@ jobs:
           push: true
           tags: ${{ steps.registry.outputs.name }}/optimizeall-web:${{ github.sha }}
           labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          build-args: OPTIMIZEALL_VERSION=${{ github.sha }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
 
   deploy:
     name: Deploy to the server
-    needs: images
-    # Also runs when "images" was skipped (redeploy of an earlier tag), never when it failed.
-    if: ${{ !cancelled() && (needs.images.result == 'success' || needs.images.result == 'skipped') }}
+    needs: [security, images]
+    # Also runs when "images" was skipped (redeploy of an earlier tag), but never when the
+    # vulnerability audit or an image build failed.
+    if: ${{ !cancelled() && needs.security.result == 'success' && (needs.images.result == 'success' || needs.images.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -164,7 +169,9 @@ jobs:
           printf '%s' "$REGISTRY_TOKEN" | ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             -o ServerAliveInterval=30 "deploy-optimizeall@$DEPLOY_HOST" "deploy $TAG"
 
-      - name: Smoke test (the public address answers)
+      - name: Smoke test (the public address serves this version)
+        env:
+          REQUIRE_VERSION: ${{ inputs.tag == '' }}
         run: |
           for path in /health/ready /; do
             code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "${PUBLIC_BASE_URL%/}$path" || true)"
@@ -173,4 +180,12 @@ jobs:
               exit 1
             fi
           done
-          echo "${PUBLIC_BASE_URL} is up"
+          live="$(curl -fsS --max-time 30 "${PUBLIC_BASE_URL%/}/version?deploy=${TAG:0:12}" || true)"
+          if printf '%s' "$live" | grep -qF "$TAG"; then
+            echo "${PUBLIC_BASE_URL} is up and serves $TAG"
+          elif [ "$REQUIRE_VERSION" = true ]; then
+            echo "::error::${PUBLIC_BASE_URL} does not serve $TAG; /version returned: ${live:-nothing}"
+            exit 1
+          else
+            echo "::warning::could not confirm that ${PUBLIC_BASE_URL} serves redeployed tag $TAG"
+          fi

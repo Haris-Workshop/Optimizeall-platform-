@@ -1,8 +1,8 @@
 name: CI
 
 on:
-  push:
-    branches: ["claude/optimize-all-platform-i3j5id"]
+  # Direct production pushes use deploy.yml's fast security/build/deploy/version-check path.
+  # Keep the long validation suite on pull requests and explicit manual runs.
   pull_request:
   workflow_dispatch:
 

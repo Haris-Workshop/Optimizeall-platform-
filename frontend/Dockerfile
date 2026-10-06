@@ -34,6 +34,9 @@ RUN npm run build
 # ---------------------------------------------------------------------------------------------------------
 FROM nginxinc/nginx-unprivileged:${NGINX_VERSION}-alpine AS runtime
 
+ARG OPTIMIZEALL_VERSION=unknown
+ENV OPTIMIZEALL_VERSION=${OPTIMIZEALL_VERSION}
+
 # Node.js for the server renderer of public pages (server/ssr-server.mjs, started by 40-optimizeall-ssr.sh next to
 # nginx; docs/SEO_CRO.md § Rendering). The renderer is one self-contained bundle (dist-ssr/): no node_modules.
 USER root

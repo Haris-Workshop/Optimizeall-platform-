@@ -10,6 +10,7 @@
 #                     space separated (default empty: uploaded videos and captions only)
 #   ${OA_SSR_PROXY}   the server renderer for pages (server/ssr-server.mjs), set by 12-optimizeall-platform.envsh:
 #                     http://127.0.0.1:$SSR_PORT (default 3000), started in this container by 40-optimizeall-ssr.sh
+#   ${OPTIMIZEALL_VERSION} immutable commit SHA baked into the image for deployment verification
 #
 # Serves the Vite SPA and reverse-proxies the API on the same origin:
 #   /api/     REST API (+ Swagger UI at /api/docs when enabled on the API)
@@ -215,6 +216,15 @@ server {
         access_log off;
         default_type text/plain;
         return 200 "ok\n";
+    }
+
+    # Public, cache-proof proof of the exact immutable image currently answering for this domain.
+    location = /version {
+        access_log off;
+        default_type text/plain;
+        add_header Cache-Control "no-store" always;
+        add_header X-OptimizeAll-Version "${OPTIMIZEALL_VERSION}" always;
+        return 200 "OptimizeAll ${OPTIMIZEALL_VERSION}\n";
     }
 
     # ---------------------------------------------------------------- SPA

@@ -1,17 +1,23 @@
 # This workflow will build a .NET project
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
 #
-# Quick .NET build + test of the API on every push/PR to this branch. The solution lives in backend/; integration tests
-# run on SQLite here (no database service needed). The full pipeline — MySQL integration tests, frontend and E2E — is
-# ci.yml.
+# Quick .NET build + test after production-branch pushes that touch the backend. The solution lives in backend/;
+# integration tests run on SQLite here (no database service needed). Pull requests use ci.yml's more complete MySQL +
+# SQLite matrix, so duplicating this workflow there only wastes runner time.
 
 name: .NET
 
 on:
   push:
     branches: [ "claude/optimize-all-platform-i3j5id" ]
-  pull_request:
-    branches: [ "claude/optimize-all-platform-i3j5id" ]
+    # Documentation, frontend and policy-only commits cannot affect the .NET solution.
+    paths:
+      - "backend/**"
+      - "global.json"
+      - "scripts/export-openapi.sh"
+      - "scripts/regenerate-migrations.sh"
+      - "scripts/upgrade-baseline-mysql.sh"
+      - ".github/workflows/dotnet.yml"
 
 jobs:
   build:

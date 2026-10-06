@@ -22,9 +22,63 @@ env:
   NODE_VERSION: "22"
 
 jobs:
+  changes:
+    name: Select required checks
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      e2e: ${{ steps.filter.outputs.e2e }}
+      docker: ${{ steps.filter.outputs.docker }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Select checks from changed files
+        id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          # Manual runs are exhaustive. Pull requests run only suites that the changed files can affect.
+          if [ "$EVENT_NAME" = workflow_dispatch ]; then
+            for check in backend frontend e2e docker; do
+              echo "$check=true" >> "$GITHUB_OUTPUT"
+            done
+            exit 0
+          fi
+
+          files=$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")
+          changed() { grep -Eq "$1" <<<"$files"; }
+          backend=false; frontend=false; e2e=false; docker=false
+
+          if changed '^\.github/workflows/ci\.yml$'; then
+            backend=true; frontend=true; e2e=true; docker=true
+          fi
+          if changed '^(backend/|global\.json$|scripts/(export-openapi|regenerate-migrations|upgrade-baseline-mysql)\.sh$)'; then
+            backend=true; frontend=true; e2e=true; docker=true
+          fi
+          if changed '^frontend/'; then
+            frontend=true; e2e=true; docker=true
+          fi
+          if changed '^scripts/(e2e-journeys|serve-web-nginx|test-all|test-web-nginx)\.sh$'; then
+            frontend=true; e2e=true
+          fi
+          if changed '^(deploy/|scripts/deploy-server\.sh$)'; then
+            docker=true
+          fi
+          {
+            echo "backend=$backend"
+            echo "frontend=$frontend"
+            echo "e2e=$e2e"
+            echo "docker=$docker"
+          } >> "$GITHUB_OUTPUT"
+
   # ----------------------------------------------------------------------------------------------------
   backend:
     name: Backend (build + unit + integration, ${{ matrix.provider }})
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     # The MySQL integration suite alone takes ~27 min (each test class creates its own database).
     timeout-minutes: 50
@@ -103,6 +157,8 @@ jobs:
   # ----------------------------------------------------------------------------------------------------
   frontend:
     name: Frontend (typecheck + lint + test + build)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -151,7 +207,10 @@ jobs:
   # ----------------------------------------------------------------------------------------------------
   e2e:
     name: End-to-end (Playwright, Chromium, ${{ matrix.group }})
-    needs: [backend, frontend]
+    # E2E builds its own API. It only needs the frontend artifact, so waiting for both 27-minute backend matrix jobs
+    # delayed feedback without adding protection; backend tests still run independently and must pass when selected.
+    needs: [changes, frontend]
+    if: always() && needs.changes.outputs.e2e == 'true' && needs.frontend.result == 'success'
     runs-on: ubuntu-latest
     # The ~22 suites took 74+ min in one job (a11y ~10 min, crawl ~11 min, j-content ~7 min, plus a browser install that
     # took 11 min on a slow apt mirror) and no longer fitted 90 minutes. They run as five parallel groups of ~15-20 min of
@@ -493,7 +552,11 @@ jobs:
       # `vite preview` (seoShell plugin) and with the production nginx configuration (SSI shell includes).
       - name: Install nginx (production web server configuration for j-seo)
         if: matrix.group == 'seo'
-        run: sudo apt-get update && sudo apt-get install -y nginx-light || sudo apt-get install -y nginx
+        run: |
+          sudo apt-get update
+          if ! sudo apt-get install -y nginx-light; then
+            sudo apt-get install -y nginx
+          fi
 
       - name: nginx serves pages as HTML whatever the API answers (stub API; scripts/test-web-nginx.sh)
         if: matrix.group == 'seo'
@@ -558,6 +621,8 @@ jobs:
   # ----------------------------------------------------------------------------------------------------
   docker:
     name: Docker images (build only)
+    needs: changes
+    if: needs.changes.outputs.docker == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

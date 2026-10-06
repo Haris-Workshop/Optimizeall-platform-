@@ -1,9 +1,16 @@
 name: Security
 
 on:
+  # Production deploys already run both audits. On pull requests, repeat them only when dependency definitions change.
   pull_request:
-  push:
-    branches: ["claude/optimize-all-platform-i3j5id"]
+    paths:
+      - "backend/**/*.csproj"
+      - "backend/Directory.Build.props"
+      - "backend/Directory.Packages.props"
+      - "global.json"
+      - "frontend/package.json"
+      - "frontend/package-lock.json"
+      - ".github/workflows/security.yml"
   schedule:
     - cron: "17 5 * * 1" # weekly, Monday 05:17 UTC: catch newly published advisories
   workflow_dispatch:

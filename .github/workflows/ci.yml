@@ -631,7 +631,7 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       - name: Build API image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: backend
           target: runtime
@@ -641,7 +641,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=api
 
       - name: Build migrator image (EF Core migrations bundle)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: backend
           target: migrator
@@ -650,7 +650,7 @@ jobs:
           cache-from: type=gha,scope=api
 
       - name: Build web image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: frontend
           push: false

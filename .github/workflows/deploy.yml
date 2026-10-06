@@ -84,7 +84,7 @@ jobs:
 
       # Same build cache scopes as ci.yml's docker job, so an image CI already built is mostly reused.
       - name: API image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: backend
           target: runtime
@@ -95,7 +95,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=api
 
       - name: Migrator image (EF Core migrations bundle)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: backend
           target: migrator
@@ -105,7 +105,7 @@ jobs:
           cache-from: type=gha,scope=api
 
       - name: Web image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: frontend
           push: true

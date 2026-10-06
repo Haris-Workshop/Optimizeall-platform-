@@ -36,7 +36,9 @@ if [ -z "${SSR_PORT:-}" ]; then
   for SSR_PORT in $(seq 39100 39300); do port_in_use "$SSR_PORT" || break; done
 fi
 # Same substitution as the nginx image's envsubst step: only these variables, nothing else.
+OPTIMIZEALL_VERSION="${OPTIMIZEALL_VERSION:-local-test}"
 sed -e "s|\${OA_SSR_PROXY}|http://127.0.0.1:$SSR_PORT|g" -e "s|\${OA_API_PROXY}|$API_UPSTREAM|g" -e "s|\${IMG_SRC_EXTRA}||g" -e "s|\${MEDIA_SRC_EXTRA}||g" \
+    -e "s|\${OPTIMIZEALL_VERSION}|$OPTIMIZEALL_VERSION|g" \
     -e "s|listen       8080;|listen       127.0.0.1:$PORT;|" \
     -e "s|root  /usr/share/nginx/html;|root  $DIST;|" \
     -e "s|/etc/nginx/snippets/|$WORK_DIR/snippets/|g" \

@@ -26,6 +26,7 @@ jobs:
     name: Select required checks
     runs-on: ubuntu-latest
     outputs:
+      catalog: ${{ steps.filter.outputs.catalog }}
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
       e2e: ${{ steps.filter.outputs.e2e }}
@@ -42,7 +43,7 @@ jobs:
         run: |
           # Manual runs are exhaustive. Pull requests run only suites that the changed files can affect.
           if [ "$EVENT_NAME" = workflow_dispatch ]; then
-            for check in backend frontend e2e docker; do
+            for check in catalog backend frontend e2e docker; do
               echo "$check=true" >> "$GITHUB_OUTPUT"
             done
             exit 0
@@ -50,12 +51,20 @@ jobs:
 
           files=$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")
           changed() { grep -Eq "$1" <<<"$files"; }
-          backend=false; frontend=false; e2e=false; docker=false
+          catalog=false; backend=false; frontend=false; e2e=false; docker=false
 
           if changed '^\.github/workflows/ci\.yml$'; then
-            backend=true; frontend=true; e2e=true; docker=true
+            catalog=true; backend=true; frontend=true; e2e=true; docker=true
           fi
-          if changed '^(backend/|global\.json$|scripts/(export-openapi|regenerate-migrations|upgrade-baseline-mysql)\.sh$)'; then
+          if changed '^backend/src/OptimizeAll\.Api/Modules/Learning/Catalog/.*\.json$'; then
+            catalog=true
+          fi
+          # Course-pack JSON is validated by the focused catalog job below. Any executable backend change still
+          # selects the full MySQL/SQLite, frontend, E2E and container validation path.
+          backend_files=$(printf '%s\n' "$files" \
+            | grep -E '^(backend/|global\.json$|scripts/(export-openapi|regenerate-migrations|upgrade-baseline-mysql)\.sh$)' \
+            | grep -Ev '^backend/src/OptimizeAll\.Api/Modules/Learning/Catalog/.*\.json$' || true)
+          if [ -n "$backend_files" ]; then
             backend=true; frontend=true; e2e=true; docker=true
           fi
           if changed '^frontend/'; then
@@ -68,11 +77,35 @@ jobs:
             docker=true
           fi
           {
+            echo "catalog=$catalog"
             echo "backend=$backend"
             echo "frontend=$frontend"
             echo "e2e=$e2e"
             echo "docker=$docker"
           } >> "$GITHUB_OUTPUT"
+
+  # ----------------------------------------------------------------------------------------------------
+  catalog:
+    name: Learning catalog validation
+    needs: changes
+    # The full backend suite already contains these tests. Run only this small gate for catalog-JSON-only changes.
+    if: needs.changes.outputs.catalog == 'true' && needs.changes.outputs.backend != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore unit-test dependencies
+        run: dotnet restore backend/tests/OptimizeAll.UnitTests
+
+      - name: Validate course packs and learning paths
+        run: >-
+          dotnet test backend/tests/OptimizeAll.UnitTests -c Release --no-restore
+          --filter "FullyQualifiedName~OptimizeAll.UnitTests.Learning.CoursePackTests|FullyQualifiedName~OptimizeAll.UnitTests.Learning.LearningPathTests"
 
   # ----------------------------------------------------------------------------------------------------
   backend:

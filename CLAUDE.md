@@ -22,6 +22,9 @@
   reproduce the failure where practical, and fix its cause. Only correct a threshold when evidence shows that the
   check is measuring the wrong thing or is nondeterministic, and record that reason in the commit.
 * Do not push a sequence of speculative CI-fix commits. Make one evidence-based fix and run CI once.
+* Batch content and catalogue authoring locally and push one reviewed batch after running its focused validation. Do
+  not push per-file, per-agent, or "WIP checkpoint" commits merely to preserve progress: every push starts a billed
+  CI run.
 * Before committing, review `git status` and the complete diff, remove accidental or generated changes, and run the
   smallest relevant validation followed by all required checks. Never add database dumps, secrets, credentials,
   private customer data, or environment files to Git.
